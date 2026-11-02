@@ -55,7 +55,7 @@ openspec/
 ├── specs/                               # LIVING specs: shipped ground truth
 │   └── <capability>/spec.md             #   one folder per capability (e.g. openspec-addon)
 ├── changes/
-│   ├── <id>-<slug>/                     # ONE ACTIVE CHANGE (e.g. w1.2-data-ingestion)
+│   ├── <id>-<slug>/                     # ONE ACTIVE CHANGE (e.g. w1-2-data-ingestion)
 │   │   ├── research.md                  #   Gate 0: options, tradeoffs, Go/No-Go
 │   │   ├── proposal.md                  #   Gate 1: intent, scope, YAGNI exclusions
 │   │   ├── specs/<capability>/spec.md   #   Gate 2: DELTA spec for that capability
@@ -73,8 +73,9 @@ openspec/
 4. A bugfix that alters a living requirement edits `openspec/specs/` directly in the same branch (B3), with no delta.
 
 **Conventions**
+- **Change naming:** roadmap IDs normalize dots to hyphens (`W1.2` → `w1-2-<slug>`, branch `feat/w1-2-<slug>`) so `openspec new change` (`[a-z0-9-]+` only) accepts them.
 - **Capability path:** the folder name under `specs/` (for example `identity/user-auth`). A modified capability uses the exact existing path.
-- **Requirement header:** `### Requirement: REQ-<DOMAIN>-<N> <Name>` (or `NFR-<DOMAIN>-<N>` for budgets). Keys are never reused; deprecated ones stay, marked `[DEPRECATED by <change>]`.
+- **Requirement header:** `### Requirement: REQ-<DOMAIN>-<N> <Name>` (or `NFR-<DOMAIN>-<N>` for budgets). Keys are never reused; deprecated ones keep their exact header in `## MODIFIED Requirements` and place `**[DEPRECATED by <change>]**` at the start of the requirement body (or use `## RENAMED Requirements` when changing a header).
 - **Wording and scenarios:** requirement text uses MUST or SHALL. Scenarios use exactly four hashtags (`#### Scenario:`) with WHEN and THEN.
 - **New capabilities:** a delta for a new capability starts with `## Purpose`. Never add it to a delta for an existing capability.
 - **Gates:** each artifact ends with an unticked `## Review Gate` box; a human ticks and commits it before the next artifact is created.

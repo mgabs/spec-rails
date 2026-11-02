@@ -1,3 +1,4 @@
+@REQ-OSA-25 @NFR-OSA-8
 Feature: Spec-Rails on top of OpenSpec in a fresh repository
   REQ-OSA-25, NFR-OSA-8
 

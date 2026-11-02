@@ -64,7 +64,8 @@ Why this shape: the protocol and rules ship with the addon (`openspec/spec-rails
 spec-rails/
 ├── bin/
 │   ├── spec-rails            # Installer (`spec-rails [init] [target-repo]`)
-│   └── spec-rails-check      # Gate & lane check (hook + CI)
+│   ├── spec-rails-check      # Gate & lane check (hook + CI)
+│   └── spec-rails-verify     # CI-only traceability, evidence & rail verifier
 ├── schemas/spec-rails/       # OpenSpec schema + artifact templates (copied into target repos)
 ├── templates/                # spec-rails-ci.yml, bug-report.md, roadmap.md, mutation configs, pre-commit config
 ├── rules/                    # AGENTS.md (always-on guardrails), WORKFLOW.md (canonical protocol, shipped to openspec/spec-rails/)
@@ -87,7 +88,7 @@ Prerequisites: an existing `openspec init` project, OpenSpec ≥ 1.15.0 on `PATH
 /path/to/spec-rails/bin/spec-rails [init] [target-repo]
 ```
 
-Copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: spec-rails` in `openspec/config.yaml` (other keys preserved), installs the branch-protection hook, CI workflow, mutation templates, and agent rules (`openspec/spec-rails/`, which `openspec update` does not regenerate), keeps any existing `.pre-commit-config.yaml`, and ignores `.worktrees/`. Re-running is a no-op. Spec requirements use `### Requirement: REQ-<DOMAIN>-<N> <name>` headers in OpenSpec delta specs. Gate and lane check: `bin/spec-rails-check`. See `openspec/spec-rails/WORKFLOW.md` §7.
+Copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: spec-rails` in `openspec/config.yaml` (other keys preserved), installs the branch-protection hook, CI workflow, mutation templates, agent rules (`openspec/spec-rails/`, which `openspec update` does not regenerate), and `.agents/skills/spec-rails/SKILL.md` automatically, keeps any existing `.pre-commit-config.yaml`, and ignores `.worktrees/`. Re-running is a no-op. Spec requirements use `### Requirement: REQ-<DOMAIN>-<N> <name>` headers in OpenSpec delta specs. Gate and lane check: `bin/spec-rails-check`. See `openspec/spec-rails/WORKFLOW.md` §7.
 
 ### Documentation & Guides
 
@@ -95,7 +96,7 @@ Copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: 
 - **Architecture & Methodology Wiki**: [docs/WIKI.md](docs/WIKI.md)
 - **Review Harness & Agent Steering**: [github.com/mgabs/lgtm](https://github.com/mgabs/lgtm)
 - **How-To 1**: [Bootstrap a New Project](docs/how-tos/01-bootstrap-new-project.md)
-- **How-To 2**: [Drive Feature Lifecycle (Gates 1–6)](docs/how-tos/02-drive-feature-lifecycle.md)
+- **How-To 2**: [Drive Feature Lifecycle (Gates 0–6)](docs/how-tos/02-drive-feature-lifecycle.md)
 - **How-To 3**: [Parallel Worktrees & Multi-Agent Streams](docs/how-tos/03-parallel-worktrees-multi-agent.md)
 - **How-To 4**: [Fast-Track Bugfix Protocol](docs/how-tos/04-fast-track-bugfix.md)
 - **How-To 5**: [Configure AI Agents](docs/how-tos/05-configure-ai-agents.md)

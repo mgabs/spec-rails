@@ -1,3 +1,4 @@
+@REQ-OSA-22 @NFR-OSA-6
 Feature: Installed self-copies stay in sync with their sources
   As a Spec-Rails maintainer
   We want the test suite to fail when an installed copy drifts from its source

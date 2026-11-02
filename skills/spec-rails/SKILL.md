@@ -9,7 +9,7 @@ description: >-
 
 # Spec-Rails Skill
 
-Follow [openspec/spec-rails/WORKFLOW.md](../../openspec/spec-rails/WORKFLOW.md). Create a change with `openspec new change <id>-<slug>` and generate each artifact with `openspec instructions <artifact> --change <id>-<slug>` (or `/opsx-propose`).
+Follow `openspec/spec-rails/WORKFLOW.md`. Normalize roadmap IDs to lowercase hyphens (`W1.2` → `w1-2-<slug>`) and create a change with `openspec new change <id>-<slug>`. For gated planning, generate one artifact at a time with `openspec instructions <artifact> --change <id>-<slug>`, pausing for a human to tick and commit its `## Review Gate` checkbox before generating the next file (note: `/opsx-propose` drafts all artifacts at once and will block commits until Gates 0–3 are reviewed and ticked). Run `/opsx-apply` and `/opsx-archive` only after Gate 4 is ticked by a human.
 
 ## 0. The Ponytail Mindset & Strict YAGNI
 
@@ -32,13 +32,13 @@ Follow [openspec/spec-rails/WORKFLOW.md](../../openspec/spec-rails/WORKFLOW.md).
    - If **Go**: Update `docs/ROADMAP.md` to `🚀 In Progress` via `chore/roadmap-<id>`.
    - If **No-Go**: Commit `research.md` to `openspec/changes/archive/<id>-<slug>/`, mark `❌ Dropped` in `docs/ROADMAP.md` with rationale via `chore/roadmap-<id>`, and prune feature branch.
 2. **Gate 1 (Proposal)**: Generate `proposal.md` for the chosen option. Stop for human review.
-3. **Gate 2 (Specs)**: OpenSpec delta specs (`### Requirement: REQ-X-N name`, MUST/SHALL, at least one scenario). MODIFIED/REMOVED repeat the existing header exactly. Stop for human review.
+3. **Gate 2 (Specs)**: OpenSpec delta specs (`### Requirement: REQ-X-N name`, MUST/SHALL, at least one scenario). MODIFIED/REMOVED repeat the existing header verbatim (for deprecated requirements, keep the exact header and put `**[DEPRECATED by <change>]**` at the start of the body). Stop for human review.
 4. **Gate 3 (Design)**: Generate `design.md`. Stop for human review.
-5. **Gate 4 (Tasks)**: Generate `tasks.md` with DAG and worktree streams. Stop for human review.
-6. **Apply (Gate 5.x)**: Per vertical slice:
-   - **5.x-A**: Write BDD `.feature` scenarios $\rightarrow$ **Stop for Gate 5.x human approval**.
+5. **Gate 4 (Tasks)**: Generate `tasks.md` with DAG and worktree streams. Stop for human review before running `/opsx-apply` or spawning slice worktrees.
+6. **Apply (Gate 5.x)**: Only after Gate 4 is ticked by a human, execute per vertical slice:
+   - **5.x-A**: Write BDD `.feature` scenarios $\rightarrow$ **Stop for Gate 5.x human approval** (never self-tick Gate 5.x sign-off boxes).
    - **5.x-B**: Write failing unit tests (`Red`) tested locally, then implement minimal code (`Green`). Commit tests + code together. Line & branch coverage $\ge 95\%$.
    - **5.x-C**: Run mutation testing $\rightarrow$ achieve $100\%$ kill score on core logic (no exemptions: kill, delete dead code, or restructure equivalent mutants).
-7. **Gate 6 (Archive & Merge)**: Ensure all stream worktrees are merged, removed, and pruned (`git worktree prune`). Rebase onto `main`, re-verify rails, run `openspec validate <change>` then `openspec archive <change> --yes` (syncs deltas into `openspec/specs/` and archives the change), merge `--ff-only`, and update `docs/ROADMAP.md` to `✅ Shipped`.
+7. **Gate 6 (Archive & Merge)**: Ensure all stream worktrees are merged, removed, and pruned (`git worktree prune`). Tick completed slice items and the final integration task in `tasks.md` (with `Evidence:` on Red/Green/Coverage/Mutation tasks), rebase onto `main`, re-verify rails, run `openspec validate <change>`, then run `openspec archive <change> --yes` (or `/opsx-archive`; syncs deltas into `openspec/specs/` and archives the change), merge `--ff-only`, and update `docs/ROADMAP.md` to `✅ Shipped`.
 
-Never tick a Review Gate box yourself. Run `openspec validate` after stream rebases, and run `spec-rails-check` before committing. See `openspec/spec-rails/WORKFLOW.md` §7.
+Never tick a Gate 0–4 Review Gate box or Gate 5.x sign-off box yourself. Run `openspec validate` after stream rebases, and run `spec-rails-check` before committing. See `openspec/spec-rails/WORKFLOW.md` §7.

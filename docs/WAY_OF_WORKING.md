@@ -79,7 +79,7 @@ flowchart LR
 ### 3.1 Feature Lane (`feat/<id>-<slug>`)
 - **Use when**: Adding new functionality, modifying existing user-visible behavior, or refactoring architectural boundaries that impact specifications.
 - **Lifecycle**: Gates 0 through 6 (§4).
-- **Branch naming**: `feat/<id>-<slug>` (e.g., `feat/w1.1-token-contracts`).
+- **Branch naming**: `feat/<id>-<slug>` with roadmap IDs lowercased and dots normalized to hyphens (e.g., `W1.1` → `feat/w1-1-token-contracts`).
 - **Target**: Merged into `main` via `--ff-only` upon completing Gate 6.
 
 ### 3.2 Bugfix Lane (`fix/<slug>`)
@@ -91,7 +91,7 @@ flowchart LR
 ### 3.3 Chore Lane (`chore/<slug>`)
 - **Use when**: Zero behavior change — documentation updates, formatting, dependency updates, CI/workflow adjustments, and refactors that leave every existing test unchanged.
 - **Lifecycle**: No gates required. Must pass pre-commit hooks, linters, and the full test suite.
-- **Branch naming**: `chore/<slug>` (e.g., `chore/way-of-working-doc`, `chore/roadmap-w1.1`).
+- **Branch naming**: `chore/<slug>` (e.g., `chore/way-of-working-doc`, `chore/roadmap-w1-1`).
 - **Rule**: If a chore turns out to alter runtime behavior, stop immediately and restart in the Feature or Bugfix lane.
 
 ---
@@ -108,8 +108,8 @@ sequenceDiagram
     participant Git as Git Repo / Worktrees
 
     Human->>Agent: Assign Roadmap ID (W1.1)
-    Agent->>Git: Checkout chore/roadmap-w1.1, mark In Progress
-    Agent->>Git: Checkout feat/w1.1-slug
+    Agent->>Git: Checkout chore/roadmap-w1-1, mark In Progress
+    Agent->>Git: Checkout feat/w1-1-slug
     Agent->>Agent: Draft research.md (2-3 options)
     Agent->>Human: Present Gate 0 (Research & Tradeoffs)
     Human-->>Agent: Gate 0 Approved (Go: Option A)
@@ -118,7 +118,7 @@ sequenceDiagram
     Agent->>Human: Present Gate 1 (Proposal)
     Human-->>Agent: Gate 1 Approved
 
-    Agent->>Agent: Draft openspec/changes/id/spec.md (Full Capability Spec)
+    Agent->>Agent: Draft openspec/changes/<id>-<slug>/specs/<capability>/spec.md (Delta Spec)
     Agent->>Human: Present Gate 2 (Specs)
     Human-->>Agent: Gate 2 Approved
 
@@ -157,10 +157,10 @@ sequenceDiagram
 - **Goal**: Lock down the problem, user stories, quantifiable success metrics, and strict **Out-of-Scope (YAGNI)** boundaries.
 - **Rule**: Out-of-Scope items in `proposal.md` are binding prohibitions for the remainder of the feature.
 
-### Gate 2: Full Capability Specifications
+### Gate 2: Capability Delta Specifications
 - **Artifact**: `openspec/changes/<id>-<slug>/specs/<capability>/spec.md`
-- **Goal**: Formalize behavioral requirements (`REQ-*`), non-functional requirements (`NFR-*`), and Given/When/Then scenarios.
-- **Rule**: **Delta specs**. Write `## ADDED|MODIFIED|REMOVED Requirements` with `### Requirement: REQ-<DOMAIN>-<N> <name>` headers; MODIFIED/REMOVED repeat the existing header exactly. `openspec archive` merges the deltas into `openspec/specs/` at Gate 6.
+- **Goal**: Formalize behavioral requirements (`REQ-*`), non-functional requirements (`NFR-*`), and Given/When/Then scenarios via `openspec new change` and `openspec instructions specs --change <id>-<slug>`.
+- **Rule**: **Delta specs**. Write `## ADDED|MODIFIED|REMOVED Requirements` with `### Requirement: REQ-<DOMAIN>-<N> <name>` headers; MODIFIED/REMOVED repeat the existing header verbatim (place `**[DEPRECATED by <change>]**` at the start of the requirement body rather than editing the header). `openspec archive` merges the deltas into `openspec/specs/` at Gate 6.
 
 ### Gate 3: Architecture & Design
 - **Artifact**: `openspec/changes/<id>-<slug>/design.md`
@@ -220,10 +220,10 @@ flowchart LR
 When Gate 4 identifies orthogonal streams, execute them in parallel Git worktrees without repository contamination:
 
 ```text
-spec-rails/                           <-- Root worktree (main or feat/<id>)
+spec-rails/                           <-- Root worktree (main or feat/<id>-<slug>)
 ├── .worktrees/
-│   ├── w1.1-stream-a/           <-- Isolated worktree for Stream A (feat/w1.1/a)
-│   └── w1.1-stream-b/           <-- Isolated worktree for Stream B (feat/w1.1/b)
+│   ├── w1-1-stream-a/           <-- Isolated worktree for Stream A (feat/w1-1/a)
+│   └── w1-1-stream-b/           <-- Isolated worktree for Stream B (feat/w1-1/b)
 ```
 
 ### Worktree Invariants
@@ -276,9 +276,9 @@ Every repository initialized with `spec-rails` contains active pre-commit and CI
 ### Mutation Testing Rails
 - **100% Mutation Kill Score** on domain logic, zero exemptions.
 - Reference configurations in `templates/mutation/`:
-  - **Rust**: [templates/mutation/cargo-mutants.toml](file:///Users/mmetawea/Workbench/spec-rails/templates/mutation/cargo-mutants.toml)
-  - **JS / TS**: [templates/mutation/stryker.config.json](file:///Users/mmetawea/Workbench/spec-rails/templates/mutation/stryker.config.json)
-  - **Python**: [templates/mutation/mutmut.ini](file:///Users/mmetawea/Workbench/spec-rails/templates/mutation/mutmut.ini)
+  - **Rust**: [templates/mutation/cargo-mutants.toml](../templates/mutation/cargo-mutants.toml)
+  - **JS / TS**: [templates/mutation/stryker.config.json](../templates/mutation/stryker.config.json)
+  - **Python**: [templates/mutation/mutmut.ini](../templates/mutation/mutmut.ini)
 
 ---
 

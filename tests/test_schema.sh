@@ -85,5 +85,23 @@ for name in research proposal spec design tasks; do
   assert_eq "1" "$(tail -n 1 "$tpl" | grep -c '^- \[ \] \*\*Gate [0-4] ')" "REQ-OSA-4 $name.md ends with the gate box"
 done
 
+assert_eq "0" "$(grep -c 'Evidence:' "$SCHEMA_DIR/templates/tasks.md" || true)" \
+  "tasks.md template has no self-matching Evidence: literal"
+
+for term in "**[DEPRECATED by <change>]**:specs" "MODIFIED Requirements:specs" "GIVEN/WHEN/THEN:specs" "MUST NOT be ticked by \`/opsx-apply\`:tasks"; do
+  text="${term%%:*}"
+  id="${term##*:}"
+  body="$(awk -v id="$id" '$0 == "  - id: " id { on = 1; next } /^  - id: / { on = 0 } /^apply:/ { on = 0 } on' "$SCHEMA")"
+  case "$body" in
+    *"$text"*) PASSED=$((PASSED + 1)) ;;
+    *) echo "FAIL: '$id' instruction lacks '$text'"; FAILED=$((FAILED + 1)) ;;
+  esac
+done
+
+case "$apply_text" in
+  *"MUST NOT be ticked by \`/opsx-apply\`"*) PASSED=$((PASSED + 1)) ;;
+  *) echo "FAIL: apply instruction lacks '/opsx-apply' gate prohibition"; FAILED=$((FAILED + 1)) ;;
+esac
+
 echo "Schema checks: $PASSED passed, $FAILED failed"
 [ "$FAILED" -eq 0 ]

@@ -12,6 +12,7 @@ for tool in openspec jq git; do
   fi
 done
 
+START_TS="$(date +%s)"
 FAILED=0
 PASSED=0
 
@@ -33,6 +34,18 @@ assert_contains() {
 
 SCRATCH="$(mktemp -d /tmp/spec-rails-e2e-XXXXXX)"
 trap 'rm -rf "$SCRATCH"' EXIT
+
+# ---- Sub-test: missing openspec on PATH skips cleanly with exit 0 ----
+NO_OS_BIN="$SCRATCH/no-openspec-bin"
+mkdir -p "$NO_OS_BIN"
+for util in sh dirname; do
+  ln -s "$(command -v "$util")" "$NO_OS_BIN/$util"
+done
+SKIP_RC=0
+SKIP_OUT="$(PATH="$NO_OS_BIN" sh "$REPO_ROOT/tests/test_e2e.sh" 2>&1)" || SKIP_RC=$?
+assert_eq "0" "$SKIP_RC" "missing openspec exits 0"
+assert_contains "SKIP:" "$SKIP_OUT" "missing openspec prints SKIP:"
+
 P="$SCRATCH/proj"
 mkdir -p "$P"
 cd "$P"
@@ -67,6 +80,48 @@ git add "$D/research.md"
 RC=0
 OUT="$(git commit -q -m "tick gate 0" 2>&1)" || RC=$?
 assert_eq "0" "$RC" "ticked gate allows commit"
+
+# ---- Complete Gates 1-3 + tasks.md and validate with real OpenSpec CLI ----
+printf '# Proposal\n\n## Intent\nAdd demo capability for end-to-end verification.\n\n## Capabilities\n\n### New Capabilities\n- `demo-cap`: Demo capability behavior.\n\n## Scope\n\n### In-Scope\n- Demo behavior.\n\n### Out-of-Scope (YAGNI)\n- Extra features.\n\n## Review Gate\n- [x] **Gate 1 Approval**: x\n' > "$D/proposal.md"
+mkdir -p "$D/specs/demo-cap"
+cat <<'EOF' > "$D/specs/demo-cap/spec.md"
+# Spec Delta
+
+## Purpose
+Defines the demo capability behavior and verification rules for fresh-repository end-to-end validation.
+
+## ADDED Requirements
+
+### Requirement: REQ-DEMO-1 Demo behavior
+The system MUST work.
+
+#### Scenario: Happy path
+- **GIVEN** setup
+- **WHEN** action
+- **THEN** result
+
+## Review Gate
+- [x] **Gate 2 Approval**: x
+EOF
+printf '# Architecture & Technical Design\n\n## 1. Overview & Invariants\nPure core vs. I/O shell.\n\n## Review Gate\n- [x] **Gate 3 Approval**: x\n' > "$D/design.md"
+printf '# Tasks\n\n## 3. Slice 1: Demo\n- [ ] 3.1 Implement demo\n\n## Review Gate\n- [ ] **Gate 4 Approval**: x\n' > "$D/tasks.md"
+
+git add "$D/proposal.md" "$D/specs/demo-cap/spec.md" "$D/design.md" "$D/tasks.md"
+RC=0
+OUT="$(git commit -q -m "complete planning gates 1-4" 2>&1)" || RC=$?
+assert_eq "0" "$RC" "ticked gates 1-3 allow downstream artifacts"
+
+RC=0
+OUT="$(openspec validate demo 2>&1)" || RC=$?
+assert_eq "0" "$RC" "openspec validate accepts demo change ($OUT)"
+
+ELAPSED=$(( $(date +%s) - START_TS ))
+if [ "$ELAPSED" -le 20 ]; then
+  PASSED=$((PASSED + 1))
+else
+  echo "FAIL: NFR-OSA-8 budget exceeded (${ELAPSED}s > 20s)"
+  FAILED=$((FAILED + 1))
+fi
 
 echo "E2E Summary: Passed: $PASSED, Failed: $FAILED"
 [ "$FAILED" -eq 0 ]

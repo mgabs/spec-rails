@@ -12,10 +12,22 @@ When a regression, runtime panic, or dogfood defect is discovered, this guide de
 
 ---
 
-## Step 1: Gate B1 — Log Bug Report & Root Cause
+## Step 1: Spawn Isolated Bugfix Worktree
 
-1. Copy the bug report template:
+Branch directly off the target base branch (`main` or `master`) **first**, so the bug report and fix live together on `fix/<slug>` without dirtying `main`:
+
+```bash
+git worktree add .worktrees/fix-token-expiry -b fix/token-expiry main
+cd .worktrees/fix-token-expiry
+```
+
+---
+
+## Step 2: Gate B1 — Log Bug Report & Root Cause
+
+1. Inside `.worktrees/fix-token-expiry`, copy the bug report template into `docs/bug-reports/`:
    ```bash
+   mkdir -p docs/bug-reports
    date_str=$(date +%Y-%m-%d)
    cp openspec/spec-rails/bug-report.md "docs/bug-reports/${date_str}-token-expiry-panic.md"
    ```
@@ -25,23 +37,7 @@ When a regression, runtime panic, or dogfood defect is discovered, this guide de
    - Expected vs Actual behavior
    - Root cause analysis
    - Remediation plan
-3. Obtain Gate B1 human approval before touching code.
-
----
-
-## Step 2: Spawn Isolated Bugfix Worktree
-
-Branch directly off the target base branch (`main` or `master`):
-
-```bash
-git worktree add .worktrees/fix-token-expiry -b fix/token-expiry main
-```
-
-Navigate to the worktree:
-
-```bash
-cd .worktrees/fix-token-expiry
-```
+3. Obtain Gate B1 human approval before touching production code.
 
 ---
 
@@ -64,7 +60,7 @@ cd .worktrees/fix-token-expiry
 2. Run the full test suite to guarantee zero regressions.
 3. Check mutation resistance if applicable.
 4. If the defect came from or affects living specs or docs, fix them in this branch.
-5. Commit the regression test and fix together.
+5. Commit the bug report, regression test, and fix together (so CI spec-to-code audit sees `docs/bug-reports/` in the PR).
 
 ---
 

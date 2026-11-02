@@ -8,7 +8,7 @@ Baseline: `main` · Status: Active
 
 ```mermaid
 flowchart LR
-    W1[Wave 1: Protocol & Rails] --> W2[Wave 2: CI & Review Harness Pairing] --> W3[Wave 3: OpenSpec Addon]
+    W1[Wave 1: Protocol & Rails] --> W2[Wave 2: CI & Review Harness Pairing] --> W3[Wave 3: OpenSpec Addon] --> W4[Wave 4: OpenSpec Addon Hardening]
 ```
 
 ---
@@ -45,17 +45,24 @@ Status Legend (changed only on `main` via `chore/roadmap-<id>` branches; see `op
 | ID | Item | Effort | Depends on | Status | Spec / Feature Dir | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **W3.1** | OpenSpec Integration Review | M | W2.4 | ✅ | `openspec/changes/archive/2026-10-30-w3.1-openspec-addon/` | Gate 0 Go: Option A (`spec-rails` schema + thin installer); adopt OpenSpec delta specs and `openspec/` layout |
-| **W3.2** | `spec-rails` OpenSpec Schema & Templates | M | W3.1 | ✅ | | `research` artifact, gate footers, slice-loop `apply.instruction` |
+| **W3.2** | `spec-rails` OpenSpec Schema & Templates | M | W3.1 | ✅ | `schemas/spec-rails/` | `research` artifact, gate footers, slice-loop `apply.instruction` |
 | **W3.3** | Gate-to-OpenSpec Mapping | M | W3.2 | ✅ | `rules/WORKFLOW.md` §7 | `REQ-*`/`NFR-*` convention in deltas; Gate 6 reduced to rails + `openspec archive` |
-| **W3.4** | Installer CLI | M | W3.2 | ✅ | | Idempotent POSIX wiring into existing `openspec/` project |
-| **W3.5** | Gate Enforcement | M | W3.2, W3.4 | ✅ | | CI/pre-commit Review Gate and lane checks via `openspec status --json` |
+| **W3.4** | Installer CLI | M | W3.2 | ✅ | `bin/spec-rails` | Idempotent POSIX wiring into existing `openspec/` project |
+| **W3.5** | Gate Enforcement | M | W3.2, W3.4 | ✅ | `bin/spec-rails-check` | CI/pre-commit Review Gate and lane checks via `openspec status --json` |
 | **W3.6** | Worktree Streams vs Delta Specs | S | W3.3 | ✅ | `rules/WORKFLOW.md` §7 | Rebase + `openspec validate` discipline |
 | **W3.7** | Bugfix Lane & Roadmap Mapping | S | W3.3 | ✅ | `rules/WORKFLOW.md` §7 | B1–B3 representation; `ROADMAP.md` vs OpenSpec initiatives |
-| **W3.8** | Self-Migration to Addon Layout | L | W3.2–W3.5 | ✅ | | `specs/` → `openspec/`; docs, skill, rules, tests |
+| **W3.8** | Self-Migration to Addon Layout | L | W3.2–W3.5 | ✅ | `openspec/specs/openspec-addon/spec.md` | `specs/` → `openspec/`; docs, skill, rules, tests |
 | **W3.9** | Addon Hygiene | S | W3.8 | ✅ | `openspec/changes/archive/2026-10-30-w3-9-addon-hygiene/` | CI audit layout, self-copy sync (REQ-OSA-21, 22) |
 | **W3.10** | Cleanup & Docs | S | W3.9 | ✅ | `openspec/changes/archive/2026-10-30-w3-10-cleanup-docs/` | Dead code removal, docs lint, OpenSpec-native docs (REQ-OSA-23, 24) |
 | **W3.11** | Fresh-Repo End-to-End | S | W3.10 | ✅ | `openspec/changes/archive/2026-10-30-w3-11-fresh-repo-e2e/` | Real-CLI test in a new repo (REQ-OSA-25) |
 | **W3.12** | Test-Rails CI Verifier | S | W3.11 | ✅ | `openspec/changes/archive/2026-10-30-w3-12-test-rails-ci/` | CI-only traceability, evidence and config-driven test commands (REQ-OSA-26 to 28) |
+| **W3.13** | Consolidate Layout & Drop `specs/` | S | W3.12 | ✅ | `openspec/changes/archive/2026-11-02-w3-13-consolidate-layout/` | Ship `WORKFLOW.md` to `openspec/spec-rails/`; move roadmap and bug reports to `docs/` (REQ-OSA-29, 30) |
+
+### Wave 4: OpenSpec Addon Hardening
+
+| ID | Item | Effort | Depends on | Status | Spec / Feature Dir | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **W4.1** | OpenSpec v1.15/v1.16 Boundary, Gate & Rail Hardening | M | W3.13 | ✅ | `openspec/changes/archive/2026-11-02-w4-1-openspec-hardening/` | Transitive gate DAG check, OpenSpec store/JSON boundary, auto-installed skill, rail & hygiene hardening (REQ-OSA-31, 32) |
 
 ---
 
@@ -70,3 +77,12 @@ Status Legend (changed only on `main` via `chore/roadmap-<id>` branches; see `op
 - [x] All W2 items marked `✅ Shipped`.
 - [x] GitHub Actions workflow template verified.
 - [x] Pre-commit hook active with zero bypass allowed.
+
+### Wave 3 Exit Criteria
+- [x] All W3 items marked `✅ Shipped`.
+- [x] `spec-rails` schema, installer, gate/lane check, and CI verifier green on `make test`.
+- [x] Legacy `specs/` directory eliminated in favor of `openspec/` and `docs/`.
+
+### Wave 4 Exit Criteria
+- [x] All W4 items marked `✅ Shipped`.
+- [x] OpenSpec v1.15/v1.16 compatibility, transitive gate enforcement, skill sync, and 100% requirement traceability verified.

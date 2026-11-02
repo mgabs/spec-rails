@@ -12,7 +12,7 @@ Every change travels through exactly one lane. Pick it before touching anything.
 | **Bugfix** | `fix/<slug>` | Merged behavior contradicts spec, docs, or user intent | B1 → B3 (§3) |
 | **Chore** | `chore/<slug>` | Zero behavior change: docs, formatting, tooling/CI config, refactors that keep every existing test unchanged | None (Rule 5) |
 
-- `<id>` is the work item ID from `docs/ROADMAP.md`, lowercased (e.g., roadmap `W1.2` → `feat/w1.2-data-ingestion`, `openspec/changes/w1.2-data-ingestion/`).
+- `<id>` is the work item ID from `docs/ROADMAP.md`, lowercased with dots normalized to hyphens so `openspec new change` (`[a-z0-9-]+` only) accepts it (e.g., roadmap `W1.2` → `feat/w1-2-data-ingestion`, `openspec/changes/w1-2-data-ingestion/`).
 - If a chore turns out to change behavior, stop and restart in the Feature or Bugfix lane.
 
 ### Rule 1: Never Commit on `main`
@@ -34,7 +34,7 @@ Never merge a branch whose rails were verified only against a stale base.
   1. **Contract Lock**: Shared domain types, interfaces, or contracts MUST be implemented, tested, and committed to the feature branch *before* spawning parallel worktrees.
   2. **Worktree Hygiene**:
      - `.worktrees/` MUST be in root `.gitignore`.
-     - **Stale lock safety**: If git reports `.git/index.lock` exists, first verify no git process is running (`pgrep -fl git`). Remove the lock only when none is running. Never delete a lock while another agent may be mid-operation; doing so can corrupt the index.
+     - **Lock safety**: NEVER force-delete `.git/index.lock` (risks index corruption under concurrent agents). Isolate concurrent streams in separate Git worktrees (`.worktrees/<id>-<stream>`) so each agent has an independent worktree index (`.git/worktrees/<name>/index`) without lock contention.
      - **Shared config invariant**: Worktree operations MUST NEVER mutate shared repository config. If `core.bare` was flipped to `true`, restore it with `git config core.bare false`.
   3. **Spawn Isolated Worktree**:
      ```bash
@@ -153,7 +153,7 @@ flowchart TD
 ### Gate 2: Specifications
 - **Artifacts**: `openspec/changes/<id>-<slug>/specs/<capability>/spec.md`
 - **Delta Specs**: Feature specs are OpenSpec delta specs (`## ADDED|MODIFIED|REMOVED Requirements`), never full copies.
-  - **Existing capability**: MODIFIED/REMOVED deltas repeat the existing requirement header exactly. Deprecated keys stay, marked `[DEPRECATED by <id>]`; keys are never reused.
+  - **Existing capability**: MODIFIED/REMOVED deltas repeat the existing `### Requirement: REQ-... <Name>` header verbatim so OpenSpec header matching succeeds. For deprecated requirements, keep the exact header and place `**[DEPRECATED by <change>]**` at the start of the requirement body (or use `## RENAMED Requirements` when changing a header); keys are never reused.
   - **New capability**: ADDED requirements, starting with `## Purpose`.
   - Headers are `### Requirement: REQ-<DOMAIN>-<N> <name>`; bodies contain `MUST`/`SHALL`; every requirement has at least one `#### Scenario:`.
   - `openspec archive` merges the deltas into `openspec/specs/` at Gate 6.
@@ -185,9 +185,9 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    BR[Defect Found] --> GB1[Gate B1: Bug Report & Triage]
-    GB1 --> WT[Spawn .worktrees/fix-slug off main]
-    WT --> T_Red["Regression Test: Red (uncommitted)"]
+    BR[Defect Found] --> WT[Spawn .worktrees/fix-slug off main]
+    WT --> GB1[Gate B1: Bug Report & Triage]
+    GB1 --> T_Red["Regression Test: Red (uncommitted)"]
     T_Red --> GB2[Gate B2: Reproduction Confirmed]
     GB2 --> C_Green[Minimal Fix: Green + Commit]
     C_Green --> GB3[Gate B3: Sign-off]
@@ -196,13 +196,14 @@ flowchart TD
 ```
 
 ### Gate B1: Bug Report & Triage
+- Spawn an isolated worktree first so the bug report belongs to the fix branch/PR:
+  `git worktree add .worktrees/fix-<slug> -b fix/<slug> main && cd .worktrees/fix-<slug>`
 - **Artifact**: `docs/bug-reports/<date>-<slug>.md`
 - **Mandatory Sections**: Status & Metadata, Summary, Steps to Reproduce, Expected vs Actual, Root Cause Analysis, Remediation Plan.
 - **Gate**: Human approval before code changes.
 
 ### Gate B2: Reproduction Confirmed (Red-First)
-- `git worktree add .worktrees/fix-<slug> -b fix/<slug> main`
-- Write the regression test *before touching production code*. It MUST fail on unmodified code.
+- Inside `.worktrees/fix-<slug>`, write the regression test *before touching production code*. It MUST fail on unmodified code.
 - Show the failing output to the human. The Red test stays uncommitted (Rule 4).
 - **Gate**: Human confirms the test reproduces the real defect.
 
@@ -268,8 +269,8 @@ All steps on the feature branch unless stated otherwise:
 2. Rebase the feature branch onto `main` (Rule 2).
 3. Full test suite: $100\%$ pass, $\ge 95\%$ line and branch coverage.
 4. Full-project mutation suite: $100\%$ kill score on core logic.
-5. Run `openspec validate <change>` (also required after every stream rebase).
-6. Tick every item in `tasks.md` and the Gate 6 box.
+5. Tick every completed slice item and the final integration task in `tasks.md` (with `Evidence:` on Red/Green/Coverage/Mutation items).
+6. Run `openspec validate <id>-<slug>` (also required after every stream rebase).
 7. Sync and archive in one step (no Spec-Rails-owned copy or move):
    ```bash
    openspec archive <id>-<slug> --yes
@@ -290,7 +291,7 @@ Spec-Rails is an addon on an OpenSpec project (`spec-rails [init] [dir]`, requir
 - **Gates**: each artifact template ends with an unticked `## Review Gate` box. A human ticks it and commits it before the next artifact is created. `spec-rails-check` (pre-commit and CI) fails if an artifact exists whose upstream gate is unticked, and fails commits on `main`/`master`.
 - **Streams**: after rebasing a stream onto the feature branch, run `openspec validate <change>` in addition to the test suite.
 - **Requirement IDs**: `REQ-*`/`NFR-*` live in the change's delta specs and are synced into `openspec/specs/` by `openspec archive`; Gate 6 adds only the rails (tests, mutation, `openspec validate`) around that command.
-- **Parallel streams and deltas**: streams of one change share its delta specs. Apply Rule 3.7 (strictly additive) to delta spec edits, and give each stream distinct `REQ-*` IDs to avoid collisions.
+- **Parallel streams, delta specs, and `tasks.md`**: shared capability delta specs are locked at Gate 2 on the feature branch before spawning parallel slice worktrees (Rule 3.1); if streams must edit a shared delta spec, apply Rule 3.7 (strictly additive) with distinct `REQ-*` IDs. Update `tasks.md` slice checkboxes on the parent feature branch when integrating streams (or confine edits to each stream's own slice section) to avoid rebase collisions.
 - **Bugfix lane**: B1–B3 stay outside `openspec/changes/`; the report in `docs/bug-reports/` is the artifact. A fix that alters a living requirement edits `openspec/specs/` directly in the same branch (B3), with no delta change.
 - **Roadmap vs OpenSpec**: `docs/ROADMAP.md` tracks delivery status of initiatives (one row = one or more changes); OpenSpec tracks each change's artifacts. The row's Spec / Feature Dir points at the change or its archive.
 - **Update survival**: Spec-Rails rules live in `openspec/spec-rails/`, outside files regenerated by `openspec update`.

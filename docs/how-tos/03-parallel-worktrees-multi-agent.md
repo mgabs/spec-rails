@@ -6,7 +6,7 @@ When a feature contains orthogonal tasks with zero mutual dependencies, Spec-Rai
 
 ## 1. Identify Orthogonal Streams (Gate 4)
 
-In `openspec/changes/<feature>/tasks.md`, analyze the dependency DAG:
+In `openspec/changes/w1-2-data-pipeline/tasks.md` (where roadmap `W1.2` normalizes dots to hyphens), analyze the dependency DAG after shared capability delta specs are locked at Gate 2:
 
 ```mermaid
 flowchart TD
@@ -15,23 +15,24 @@ flowchart TD
 ```
 
 - `Stream A` and `Stream B` depend on `Core`, but do not depend on each other.
-- They can execute concurrently in separate Git worktrees.
+- Shared capability delta specs are locked and approved on the feature branch at Gate 2 before spawning parallel worktrees.
+- They can execute concurrently in separate Git worktrees, giving each agent an independent worktree index without `.git/index.lock` contention.
 
 ---
 
 ## 2. Spawn Worktrees
 
-Ensure your base feature branch is committed and up to date:
+Ensure your base feature branch (with Gate 4 ticked) is committed and up to date:
 
 ```bash
-git checkout feat/01-data-pipeline
+git checkout feat/w1-2-data-pipeline
 ```
 
 Spawn isolated worktrees:
 
 ```bash
-git worktree add .worktrees/01-storage -b feat/01/storage
-git worktree add .worktrees/01-api -b feat/01/api
+git worktree add .worktrees/w1-2-storage -b feat/w1-2/storage
+git worktree add .worktrees/w1-2-api -b feat/w1-2/api
 ```
 
 ---
@@ -39,9 +40,10 @@ git worktree add .worktrees/01-api -b feat/01/api
 ## 3. Dispatch Agents to Worktrees
 
 When delegating tasks to subagents:
-- Point the subagent workspace directly to `.worktrees/01-storage`.
+- Point the subagent workspace directly to `.worktrees/w1-2-storage`.
 - In Antigravity / AGY, configure subagent invocation with `Workspace: 'share'` or point to the worktree path.
-- The subagent executes Gate 5.x (BDD $\rightarrow$ Unit Red $\rightarrow$ Code Green $\rightarrow$ Mutation Kill) completely isolated inside its worktree.
+- The subagent executes Gate 5.x (BDD $\rightarrow$ Unit Red $\rightarrow$ Code Green $\rightarrow$ Mutation Kill) completely isolated inside its worktree (never self-ticking Gate 5.x sign-off boxes).
+- Update `tasks.md` slice checkboxes on the parent feature branch when integrating streams (or confine edits to that stream's own slice section) to avoid rebase collisions.
 
 ---
 
@@ -49,30 +51,33 @@ When delegating tasks to subagents:
 
 When Stream A completes and passes Gate 5.x:
 
-1. Checkout the feature branch:
+1. Inside the stream worktree, rebase onto the feature branch, re-run tests, and validate the OpenSpec change:
    ```bash
-   git checkout feat/01-data-pipeline
+   git -C .worktrees/w1-2-storage rebase feat/w1-2-data-pipeline
+   openspec validate w1-2-data-pipeline
    ```
-2. Fast-forward merge the stream:
+2. Checkout the feature branch and fast-forward merge the stream:
    ```bash
-   git merge --ff-only feat/01/storage
+   git checkout feat/w1-2-data-pipeline
+   git merge --ff-only feat/w1-2/storage
    ```
 3. Remove the completed worktree, delete stream branch, and prune:
    ```bash
-   git worktree remove .worktrees/01-storage
-   git branch -d feat/01/storage
+   git worktree remove .worktrees/w1-2-storage
+   git branch -d feat/w1-2/storage
    git worktree prune
    ```
 
 ---
 
-## 5. Rebase Dependent Streams
+## 5. Rebase Subsequent Streams
 
-If Stream B requires code introduced by Stream A:
+Before merging Stream B (or if Stream B needs code introduced by Stream A):
 
 ```bash
-cd .worktrees/01-api
-git rebase feat/01-data-pipeline
+cd .worktrees/w1-2-api
+git rebase feat/w1-2-data-pipeline
+openspec validate w1-2-data-pipeline
 ```
 
-Resolve any rebasing conflicts inside the worktree, run the test suite, and continue execution.
+Resolve any rebasing conflicts additively inside the worktree, re-run the test and mutation suites, and merge `--ff-only`.

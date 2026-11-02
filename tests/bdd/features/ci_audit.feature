@@ -1,3 +1,4 @@
+@REQ-OSA-21 @REQ-OSA-30
 Feature: CI spec-to-code audit understands the openspec/ layout
   As a team using Spec-Rails on OpenSpec
   We want the CI audit to accept OpenSpec changes as spec backing

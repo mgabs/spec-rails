@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Run Test Suite
@@ -13,6 +16,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install OpenSpec CLI
+        run: npm install -g @fission-ai/openspec
 
       - name: Lint shell scripts with ShellCheck
         uses: ludeeus/action-shellcheck@2.0.0
@@ -26,3 +37,6 @@ jobs:
 
       - name: Run Test Suite
         run: make test
+
+      - name: Verify Test Rails
+        run: sh bin/spec-rails-verify

@@ -14,10 +14,11 @@ When working in a repository containing `openspec/spec-rails/WORKFLOW.md`:
    - Out-of-Scope (YAGNI) boundaries in `proposal.md` are binding prohibitions; reject any requirement bleed.
    - Minimal blast radius: touch only files strictly necessary for the active task.
    - Ruthless deletion: delete dead code immediately upon mutation survival. Any code not provably required is dead code.
-2. **Pick a Lane First**: Feature (`feat/<id>-<slug>`, Gates 0–6), Bugfix (`fix/<slug>`, Gates B1–B3), or Chore (`chore/<slug>`, zero behavior change, no gates). Never commit on `main`/`master`.
-3. **Strict Human Gates**: Stop and obtain explicit human approval at every gate. A gate passes only when its Review Gate checkbox is ticked and committed.
+2. **Pick a Lane First**: Feature (`feat/<id>-<slug>` with dots normalized to hyphens, e.g. `W1.2` → `w1-2-<slug>`, Gates 0–6), Bugfix (`fix/<slug>`, Gates B1–B3), or Chore (`chore/<slug>`, zero behavior change, no gates). Never commit on `main`/`master`.
+3. **Strict Human Gates**: Stop and obtain explicit human approval at every gate. A gate passes only when its Review Gate checkbox is ticked by a human and committed; NEVER self-tick Gate 0–4 or Gate 5.x sign-off boxes.
+   - **Gated Planning & OpenSpec Commands**: Create changes with `openspec new change <id>-<slug>` and draft one artifact at a time via `openspec instructions <artifact> --change <id>-<slug>`, pausing for human Review Gate sign-off before generating the next file (note: `/opsx-propose` drafts all planning artifacts in one pass, which blocks commits under `spec-rails-check` until Gates 0–3 are reviewed and ticked). Run `/opsx-apply` and `/opsx-archive` (`openspec archive <id>-<slug> --yes`) only after Gate 4 is ticked by a human.
    - **Features**: Gate 0 (`research.md`) → Gate 1 (`proposal.md`) → Gate 2 (`specs/<cap>/spec.md` OpenSpec delta specs, see WORKFLOW §7) → Gate 3 (`design.md`) → Gate 4 (`tasks.md`) → Gate 5.x (BDD per slice) → Gate 6 (Sync, Archive, Merge; `openspec archive`).
-   - **Bugs**: Gate B1 (`docs/bug-reports/<date>-<slug>.md`) → Gate B2 (Red regression test shown, uncommitted) → Gate B3 (Green fix + docs/spec sync + merge).
+   - **Bugs**: Spawn `.worktrees/fix-<slug>` off `main` first → Gate B1 (`docs/bug-reports/<date>-<slug>.md` inside worktree) → Gate B2 (Red regression test shown, uncommitted) → Gate B3 (Green fix + docs/spec sync + merge).
 4. **Testing Rails**:
    - Red before Green. Red tests are never committed alone; commit them together with Green.
    - $\ge 95\%$ line and branch coverage; $100\%$ mutation kill score, no exemptions (kill, delete dead code, or restructure equivalent mutants away).
