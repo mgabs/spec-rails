@@ -9,7 +9,7 @@ description: >-
 
 # Spec-Rails Skill
 
-Follow [specs/WORKFLOW.md](../../specs/WORKFLOW.md). Create a change with `openspec new change <id>-<slug>` and generate each artifact with `openspec instructions <artifact> --change <id>-<slug>` (or `/opsx-propose`).
+Follow [openspec/spec-rails/WORKFLOW.md](../../openspec/spec-rails/WORKFLOW.md). Create a change with `openspec new change <id>-<slug>` and generate each artifact with `openspec instructions <artifact> --change <id>-<slug>` (or `/opsx-propose`).
 
 ## 0. The Ponytail Mindset & Strict YAGNI
 
@@ -29,8 +29,8 @@ Follow [specs/WORKFLOW.md](../../specs/WORKFLOW.md). Create a change with `opens
 ## 2. Gate Execution Checklist
 
 1. **Gate 0 (Research & Tradeoffs)**: Generate `research.md` in `openspec/changes/<id>-<slug>/`. Present 2–3 options, tradeoffs, and breaking changes. Stop for human developer decision.
-   - If **Go**: Update `specs/ROADMAP.md` to `🚀 In Progress` via `chore/roadmap-<id>`.
-   - If **No-Go**: Commit `research.md` to `openspec/changes/archive/<id>-<slug>/`, mark `❌ Dropped` in `specs/ROADMAP.md` with rationale via `chore/roadmap-<id>`, and prune feature branch.
+   - If **Go**: Update `docs/ROADMAP.md` to `🚀 In Progress` via `chore/roadmap-<id>`.
+   - If **No-Go**: Commit `research.md` to `openspec/changes/archive/<id>-<slug>/`, mark `❌ Dropped` in `docs/ROADMAP.md` with rationale via `chore/roadmap-<id>`, and prune feature branch.
 2. **Gate 1 (Proposal)**: Generate `proposal.md` for the chosen option. Stop for human review.
 3. **Gate 2 (Specs)**: OpenSpec delta specs (`### Requirement: REQ-X-N name`, MUST/SHALL, at least one scenario). MODIFIED/REMOVED repeat the existing header exactly. Stop for human review.
 4. **Gate 3 (Design)**: Generate `design.md`. Stop for human review.
@@ -41,4 +41,4 @@ Follow [specs/WORKFLOW.md](../../specs/WORKFLOW.md). Create a change with `opens
    - **5.x-C**: Run mutation testing $\rightarrow$ achieve $100\%$ kill score on core logic (no exemptions: kill, delete dead code, or restructure equivalent mutants).
 7. **Gate 6 (Archive & Merge)**: Ensure all stream worktrees are merged, removed, and pruned (`git worktree prune`). Rebase onto `main`, re-verify rails, run `openspec validate <change>` then `openspec archive <change> --yes` (syncs deltas into `openspec/specs/` and archives the change), merge `--ff-only`, and update `specs/ROADMAP.md` to `✅ Shipped`.
 
-Never tick a Review Gate box yourself. Run `openspec validate` after stream rebases, and run `spec-rails-check` before committing. See `specs/WORKFLOW.md` §7.
+Never tick a Review Gate box yourself. Run `openspec validate` after stream rebases, and run `spec-rails-check` before committing. See `openspec/spec-rails/WORKFLOW.md` §7.

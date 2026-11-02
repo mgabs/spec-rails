@@ -37,7 +37,7 @@ Add the Spec-Rails rules to `CLAUDE.md` in your project root:
 ```markdown
 # Spec-Rails Protocol
 This repository enforces Spec-Driven, Testing-Railed Development (Spec-Rails).
-Always consult `specs/WORKFLOW.md` before starting work.
+Always consult `openspec/spec-rails/WORKFLOW.md` before starting work.
 - Never edit code without human sign-off at Gates 1–4.
 - Always use feature branches (`feat/*`) or isolated worktrees (`.worktrees/*`).
 - Always write failing tests first (Red) before implementation (Green).
@@ -57,6 +57,6 @@ globs: **/*
 alwaysApply: true
 ---
 
-Follow `specs/WORKFLOW.md`. Never make production changes directly on main.
+Follow `openspec/spec-rails/WORKFLOW.md`. Never make production changes directly on main.
 Strictly follow human review gates 1 to 6. Always write tests before code.
 ```

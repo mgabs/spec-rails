@@ -37,6 +37,7 @@ SCRATCH="$(mktemp -d /tmp/spec-rails-installer-XXXXXX)"
 trap 'rm -rf "$SCRATCH"' EXIT
 STUB="$SCRATCH/stub"
 mkdir -p "$STUB"
+# shellcheck disable=SC2016
 printf '#!/bin/sh\n[ "$1" = "--version" ] && echo "${STUB_OPENSPEC_VERSION:-1.15.0}"\nexit 0\n' > "$STUB/openspec"
 chmod +x "$STUB/openspec"
 STUB_PATH="$STUB:$PATH"
@@ -106,7 +107,8 @@ assert_file_exists "$P/openspec/spec-rails/mutation/mutmut.ini" "mutmut template
 assert_file_exists "$P/.git/hooks/pre-commit" "git hook installed"
 assert_eq "1" "$(grep -c '^\.worktrees/$' "$P/.gitignore")" ".worktrees/ once"
 assert_eq "" "$(cmp "$REPO_ROOT/rules/AGENTS.md" "$P/openspec/spec-rails/AGENTS.md" 2>&1)" "agent rules copied outside openspec-generated files"
-[ ! -e "$P/specs" ] && PASSED=$((PASSED + 1)) || { echo "FAIL: legacy specs/ must not be created"; FAILED=$((FAILED + 1)); }
+assert_eq "" "$(cmp "$REPO_ROOT/rules/WORKFLOW.md" "$P/openspec/spec-rails/WORKFLOW.md" 2>&1)" "workflow protocol shipped with the addon"
+if [ ! -e "$P/specs" ]; then PASSED=$((PASSED + 1)); else echo "FAIL: legacy specs/ must not be created"; FAILED=$((FAILED + 1)); fi
 
 # ---- Scenario: idempotent re-run (REQ-OSA-13) ----
 before="$(snapshot "$P")"
@@ -184,7 +186,7 @@ run_install "$P"
 assert_eq "0" "$RC" "non-git exits 0"
 assert_contains "warning" "$OUT" "non-git warns"
 assert_eq "schema: spec-rails" "$(cat "$P/openspec/config.yaml")" "non-git still wires config"
-[ ! -e "$P/.git" ] && PASSED=$((PASSED + 1)) || { echo "FAIL: .git created"; FAILED=$((FAILED + 1)); }
+if [ ! -e "$P/.git" ]; then PASSED=$((PASSED + 1)); else echo "FAIL: .git created"; FAILED=$((FAILED + 1)); fi
 
 # ---- Scenario: rules outside openspec-regenerated files (REQ-OSA-15) ----
 case "$P/openspec/spec-rails/AGENTS.md" in

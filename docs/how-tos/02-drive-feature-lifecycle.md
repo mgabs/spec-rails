@@ -112,4 +112,4 @@ For each vertical slice:
    git checkout main
    git merge --ff-only feat/w1-1-user-authentication
    ```
-5. Mark `✅ Shipped` in `specs/ROADMAP.md` through a `chore/roadmap-w1.1` branch.
+5. Mark `✅ Shipped` in `docs/ROADMAP.md` through a `chore/roadmap-w1.1` branch.

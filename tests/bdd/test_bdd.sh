@@ -26,7 +26,7 @@ assert_file() {
 }
 
 echo "=========================================================="
-echo "Running BDD Acceptance Tests: specs/WORKFLOW.md Lifecycle"
+echo "Running BDD Acceptance Tests: openspec/spec-rails/WORKFLOW.md Lifecycle"
 echo "=========================================================="
 
 # Setup scratch test repo
@@ -53,6 +53,7 @@ PATH="$STUB_DIR:$PATH" sh "$BIN" . >/dev/null
 
 assert_file "openspec/schemas/spec-rails/schema.yaml" "openspec/schemas/spec-rails/schema.yaml exists"
 assert_file "openspec/spec-rails/AGENTS.md" "Spec-Rails agent rules installed"
+assert_file "openspec/spec-rails/WORKFLOW.md" "Spec-Rails workflow protocol installed"
 assert_file ".github/workflows/spec-rails-ci.yml" "CI workflow installed"
 assert_file ".pre-commit-config.yaml" ".pre-commit-config.yaml exists"
 if grep -qx "schema: spec-rails" openspec/config.yaml; then
@@ -68,10 +69,10 @@ else
 fi
 
 # Scenarios below seed templates and ROADMAP by hand to exercise the lifecycle without the installer
-mkdir -p openspec/changes openspec/specs openspec/changes/archive specs/bug-reports specs/templates
-cp "$SPEC_RAILS_ROOT/schemas/spec-rails/templates/"*.md specs/templates/
-cp "$SPEC_RAILS_ROOT/templates/bug-report.md" specs/templates/
-cp "$SPEC_RAILS_ROOT/templates/roadmap.md" specs/ROADMAP.md
+mkdir -p openspec/changes openspec/specs openspec/changes/archive docs/bug-reports docs/templates
+cp "$SPEC_RAILS_ROOT/schemas/spec-rails/templates/"*.md docs/templates/
+cp "$SPEC_RAILS_ROOT/templates/bug-report.md" docs/templates/
+cp "$SPEC_RAILS_ROOT/templates/roadmap.md" docs/ROADMAP.md
 rm -rf "$STUB_DIR"
 
 git checkout -q -b chore/bootstrap-spec-rails
@@ -86,7 +87,7 @@ echo "Scenario 2: Feature Gate 0 Go decision advances to Proposal and preserves 
 # 1. Start Gate 0 Research on feature branch
 git checkout -q -b feat/w1.1-core-contracts
 mkdir -p openspec/changes/w1.1-core-contracts/specs
-cp specs/templates/research.md openspec/changes/w1.1-core-contracts/research.md
+cp docs/templates/research.md openspec/changes/w1.1-core-contracts/research.md
 
 # Fill in Gate 0 approval: Option A chosen
 printf "\n## Decision\n- [x] Option A: Standard Library\n" >> openspec/changes/w1.1-core-contracts/research.md
@@ -96,15 +97,15 @@ git commit -q -m "docs(w1.1): Gate 0 research - Option A chosen"
 # 2. Update ROADMAP.md to In Progress via chore lane on main
 git checkout -q main
 git checkout -q -b chore/roadmap-w1.1
-sed -i '' -e 's/| \*\*W1.1\*\* | Core Domain Models | S | — | ⬜/| **W1.1** | Core Domain Models | S | — | 🚀/' specs/ROADMAP.md || \
-  sed -i -e 's/| \*\*W1.1\*\* | Core Domain Models | S | — | ⬜/| **W1.1** | Core Domain Models | S | — | 🚀/' specs/ROADMAP.md
-git add specs/ROADMAP.md
+sed -i '' -e 's/| \*\*W1.1\*\* | Core Domain Models | S | — | ⬜/| **W1.1** | Core Domain Models | S | — | 🚀/' docs/ROADMAP.md || \
+  sed -i -e 's/| \*\*W1.1\*\* | Core Domain Models | S | — | ⬜/| **W1.1** | Core Domain Models | S | — | 🚀/' docs/ROADMAP.md
+git add docs/ROADMAP.md
 git commit -q -m "chore: mark W1.1 in progress in ROADMAP"
 git checkout -q main
 git merge -q --ff-only chore/roadmap-w1.1
 git branch -q -d chore/roadmap-w1.1
 
-assert_file "specs/ROADMAP.md" "ROADMAP updated to 🚀 on main"
+assert_file "docs/ROADMAP.md" "ROADMAP updated to 🚀 on main"
 
 # 3. Complete feature implementation on feature branch
 git checkout -q feat/w1.1-core-contracts
@@ -128,7 +129,7 @@ cat <<EOF > openspec/changes/w1.1-core-contracts/tasks.md
 - [x] 1.1 Core models implemented and verified
 EOF
 
-git add specs/ openspec/ src/ tests/
+git add docs/ openspec/ src/ tests/
 git commit -q -m "feat(w1.1): implement verified token contracts"
 
 # 4. Gate 6: Sync to living, archive lifecycle, rebase on main, merge --ff-only
@@ -149,7 +150,7 @@ echo ""
 echo "Scenario 3: Feature Gate 0 No-Go archives research and drops item without dirtying code"
 git checkout -q -b feat/w1.2-unfeasible
 mkdir -p openspec/changes/w1.2-unfeasible
-cp specs/templates/research.md openspec/changes/w1.2-unfeasible/research.md
+cp docs/templates/research.md openspec/changes/w1.2-unfeasible/research.md
 printf "\n## Decision\n- [x] No-Go: Rejected due to prohibitive latency\n" >> openspec/changes/w1.2-unfeasible/research.md
 git add openspec/changes/w1.2-unfeasible/research.md
 git commit -q -m "docs(w1.2): Gate 0 research concludes No-Go"
@@ -159,9 +160,9 @@ git checkout -q main
 git checkout -q -b chore/roadmap-w1.2-drop
 mkdir -p openspec/changes/archive/w1.2-unfeasible
 git show feat/w1.2-unfeasible:openspec/changes/w1.2-unfeasible/research.md > openspec/changes/archive/w1.2-unfeasible/research.md
-sed -i '' -e 's/| \*\*W1.2\*\* | Data Ingestion | M | W1.1 | ⬜/| **W1.2** | Data Ingestion | M | W1.1 | ❌/' specs/ROADMAP.md || \
-  sed -i -e 's/| \*\*W1.2\*\* | Data Ingestion | M | W1.1 | ⬜/| **W1.2** | Data Ingestion | M | W1.1 | ❌/' specs/ROADMAP.md
-git add openspec/changes/archive/w1.2-unfeasible specs/ROADMAP.md
+sed -i '' -e 's/| \*\*W1.2\*\* | Data Ingestion | M | W1.1 | ⬜/| **W1.2** | Data Ingestion | M | W1.1 | ❌/' docs/ROADMAP.md || \
+  sed -i -e 's/| \*\*W1.2\*\* | Data Ingestion | M | W1.1 | ⬜/| **W1.2** | Data Ingestion | M | W1.1 | ❌/' docs/ROADMAP.md
+git add openspec/changes/archive/w1.2-unfeasible docs/ROADMAP.md
 git commit -q -m "chore: archive W1.2 research as No-Go and mark dropped in ROADMAP"
 
 git checkout -q main
@@ -197,9 +198,9 @@ echo ""
 echo "Scenario 5: Fast-track bugfix reproduces defect red-first, fixes green, and updates living specs"
 # Discover defect: validate("") should return False
 date_str="$(date +%Y-%m-%d)"
-mkdir -p specs/bug-reports .worktrees
-bug_report="specs/bug-reports/${date_str}-empty-token-bug.md"
-cp specs/templates/bug-report.md "$bug_report"
+mkdir -p docs/bug-reports .worktrees
+bug_report="docs/bug-reports/${date_str}-empty-token-bug.md"
+cp docs/templates/bug-report.md "$bug_report"
 
 # Spawn bugfix worktree off main
 git worktree add -q .worktrees/fix-empty-token -b fix/empty-token main

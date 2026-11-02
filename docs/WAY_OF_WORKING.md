@@ -2,6 +2,8 @@
 
 > **Spec-Driven, Testing-Railed Development** — An engineering handbook for humans and autonomous AI agents.
 
+> **Where things live**: the gate-by-gate protocol ships with the addon as `openspec/spec-rails/WORKFLOW.md`; change artifacts live in `openspec/changes/<id>-<slug>/`; delivery status (`docs/ROADMAP.md`) and bug reports (`docs/bug-reports/`) live in `docs/`. See [Wiki §1.6](WIKI.md#16-where-things-live-and-why-docs).
+
 ---
 
 ## 1. Executive Summary & Core Invariants
@@ -147,7 +149,7 @@ sequenceDiagram
 - **Artifact**: `openspec/changes/<id>-<slug>/research.md`
 - **Goal**: Investigate 2–3 viable technical options, verify ground truth in code/docs, identify breaking changes, and recommend an approach before writing code.
 - **Decision**:
-  - **Go**: Update `specs/ROADMAP.md` to `🚀 In Progress` via chore lane; proceed to Gate 1.
+  - **Go**: Update `docs/ROADMAP.md` to `🚀 In Progress` via chore lane; proceed to Gate 1.
   - **No-Go**: Commit `research.md` to `openspec/changes/archive/<id>-<slug>/`, mark `❌ Dropped` in roadmap with rationale via chore lane, and delete the feature branch.
 
 ### Gate 1: Proposal & YAGNI Boundaries
@@ -181,7 +183,7 @@ Each slice `x` runs three non-negotiable steps:
 2. Rebase feature branch onto `main` and re-run all test and mutation rails.
 3. Run `openspec validate <change>`, then `openspec archive <id>-<slug> --yes` (merges deltas into `openspec/specs/` and archives the change to `openspec/changes/archive/`).
 4. Merge feature branch into `main` via `git merge --ff-only`.
-5. Mark item `✅ Shipped` in `specs/ROADMAP.md` via chore lane.
+5. Mark item `✅ Shipped` in `docs/ROADMAP.md` via chore lane.
 
 ---
 
@@ -191,14 +193,14 @@ When a defect is discovered in production, do not spawn a feature lifecycle. Use
 
 ```mermaid
 flowchart LR
-    B1["Gate B1: Bug Report\nspecs/bug-reports/date-slug.md"] --> B2["Gate B2: Red Test First\nFailing regression test"]
+    B1["Gate B1: Bug Report\ndocs/bug-reports/date-slug.md"] --> B2["Gate B2: Red Test First\nFailing regression test"]
     B2 --> B3["Gate B3: Minimal Green\nFix + living spec sync"]
     B3 --> Merge["Rebase & Merge --ff-only to main"]
 ```
 
 1. **Gate B1 (Bug Report & Reproduction)**:
    - Create isolated worktree: `git worktree add .worktrees/fix-<slug> -b fix/<slug> main`.
-   - Copy `templates/bug-report.md` to `specs/bug-reports/<YYYY-MM-DD>-<slug>.md`.
+   - Copy `templates/bug-report.md` to `docs/bug-reports/<YYYY-MM-DD>-<slug>.md`.
    - Fill in actual behavior, expected behavior, root cause hypothesis, and affected `REQ-*`. Stop for human sign-off.
 2. **Gate B2 (Red Regression Test First)**:
    - Write a unit or integration regression test that reproduces the defect.

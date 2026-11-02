@@ -1,6 +1,6 @@
 # Spec-Rails (Spec-Driven, Testing-Railed Development) Rules
 
-When working in a repository containing `specs/WORKFLOW.md`:
+When working in a repository containing `openspec/spec-rails/WORKFLOW.md`:
 
 0. **Pre-Execution Invariant (Zero Direct Edits to main)**:
    - Before invoking `edit_file`, `write_file`, or running mutating commands, ALWAYS verify the active branch: `git branch --show-current`.
@@ -17,7 +17,7 @@ When working in a repository containing `specs/WORKFLOW.md`:
 2. **Pick a Lane First**: Feature (`feat/<id>-<slug>`, Gates 0–6), Bugfix (`fix/<slug>`, Gates B1–B3), or Chore (`chore/<slug>`, zero behavior change, no gates). Never commit on `main`/`master`.
 3. **Strict Human Gates**: Stop and obtain explicit human approval at every gate. A gate passes only when its Review Gate checkbox is ticked and committed.
    - **Features**: Gate 0 (`research.md`) → Gate 1 (`proposal.md`) → Gate 2 (`specs/<cap>/spec.md` OpenSpec delta specs, see WORKFLOW §7) → Gate 3 (`design.md`) → Gate 4 (`tasks.md`) → Gate 5.x (BDD per slice) → Gate 6 (Sync, Archive, Merge; `openspec archive`).
-   - **Bugs**: Gate B1 (`specs/bug-reports/<date>-<slug>.md`) → Gate B2 (Red regression test shown, uncommitted) → Gate B3 (Green fix + docs/spec sync + merge).
+   - **Bugs**: Gate B1 (`docs/bug-reports/<date>-<slug>.md`) → Gate B2 (Red regression test shown, uncommitted) → Gate B3 (Green fix + docs/spec sync + merge).
 4. **Testing Rails**:
    - Red before Green. Red tests are never committed alone; commit them together with Green.
    - $\ge 95\%$ line and branch coverage; $100\%$ mutation kill score, no exemptions (kill, delete dead code, or restructure equivalent mutants away).
@@ -27,5 +27,5 @@ When working in a repository containing `specs/WORKFLOW.md`:
    - Inspect `git status` and `git diff` before every commit.
    - Before any merge: rebase onto target, re-verify rails, merge `--ff-only`.
    - After any worktree merge: immediately remove worktree (`git worktree remove`), delete branch (`git branch -d`), and prune metadata (`git worktree prune`).
-   - `specs/ROADMAP.md` changes only on `main` via `chore/roadmap-<id>`.
+   - `docs/ROADMAP.md` changes only on `main` via `chore/roadmap-<id>`.
 6. **LGTM Directive Preemption**: Review directives (`#ref file:line`) in `.lgtm/reviews/` or chat preempt all forward work. Halt `tasks.md`, resolve, verify, then resume.

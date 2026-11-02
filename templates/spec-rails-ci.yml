@@ -26,10 +26,10 @@ jobs:
 
           CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
           CODE_CHANGES=$(echo "$CHANGED_FILES" | grep -v -E '^(specs/|openspec/|docs/|\.github/|.*\.md$)' || true)
-          SPEC_CHANGES=$(echo "$CHANGED_FILES" | grep -E '^(openspec/(changes|specs)/|specs/bug-reports/)' || true)
+          SPEC_CHANGES=$(echo "$CHANGED_FILES" | grep -E '^(openspec/(changes|specs)/|docs/bug-reports/)' || true)
 
           if [ -n "$CODE_CHANGES" ] && [ -z "$SPEC_CHANGES" ]; then
-            echo "ERROR: Code modified without an openspec/ change or specs/bug-reports/ entry"
+            echo "ERROR: Code modified without an openspec/ change or docs/bug-reports/ entry"
             echo "Modified files:"
             echo "$CODE_CHANGES"
             exit 1

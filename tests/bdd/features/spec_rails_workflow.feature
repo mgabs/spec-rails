@@ -6,18 +6,18 @@ Feature: Spec-Rails Workflow Lifecycle
   Scenario: Bootstrap a clean repository with Spec-Rails structure
     Given a fresh git repository
     When I initialize Spec-Rails using "bin/spec-rails"
-    Then the directory "specs/" should contain "WORKFLOW.md" and "ROADMAP.md"
-    And the directories "openspec/changes", "openspec/specs", "openspec/changes/archive", "specs/bug-reports" should exist
+    Then the file "openspec/spec-rails/WORKFLOW.md" should exist
+    And the directories "openspec/changes", "openspec/specs", "openspec/changes/archive" should exist
     And the file ".pre-commit-config.yaml" should be configured
     And ".worktrees/" should be ignored in ".gitignore"
 
   Scenario: Feature Gate 0 Go decision advances to Proposal and preserves living specs
     Given an initialized Spec-Rails repository
-    When a developer selects item "W1.1" from "specs/ROADMAP.md"
+    When a developer selects item "W1.1" from "docs/ROADMAP.md"
     And starts feature branch "feat/w1.1-core-contracts"
     And conducts Gate 0 research in "openspec/changes/w1.1-core-contracts/research.md"
     And developer approves Option A
-    Then the status in "specs/ROADMAP.md" can be updated to In Progress
+    Then the status in "docs/ROADMAP.md" can be updated to In Progress
     And Gate 1 proposal and Gate 2 full capability specs can be drafted
 
   Scenario: Feature Gate 0 No-Go archives research and drops item without dirtying code
@@ -25,7 +25,7 @@ Feature: Spec-Rails Workflow Lifecycle
     When a developer researches item "W1.2" on branch "feat/w1.2-unfeasible-service"
     And Gate 0 research reveals the feature is unfeasible
     Then the research artifact is archived to "openspec/changes/archive/w1.2-unfeasible-service/research.md"
-    And "specs/ROADMAP.md" records status "❌ Dropped" with rationale
+    And "docs/ROADMAP.md" records status "❌ Dropped" with rationale
     And the feature branch is deleted with zero production code changes
 
   Scenario: Chore lane merges zero-behavior-change commits without gates

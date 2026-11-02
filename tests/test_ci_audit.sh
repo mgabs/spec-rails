@@ -45,7 +45,8 @@ audit_case() {
 
 audit_case "openspec change passes" 0 feat/x src/app.sh openspec/changes/w1-1-x/proposal.md
 audit_case "living spec passes" 0 feat/x src/app.sh openspec/specs/core/spec.md
-audit_case "bug report passes" 0 fix/x src/app.sh specs/bug-reports/2026-01-01-x.md
+audit_case "bug report passes" 0 fix/x src/app.sh docs/bug-reports/2026-01-01-x.md
+audit_case "legacy specs/bug-reports path fails" 1 fix/x src/app.sh specs/bug-reports/2026-01-01-x.md
 audit_case "code without spec fails" 1 feat/x src/app.sh
 case "$LAST_OUT" in
   *src/app.sh*) PASSED=$((PASSED + 1)) ;;
