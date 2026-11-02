@@ -2,7 +2,7 @@
 
 Spec-Rails (Spec-Driven, Testing-Railed Development) is an engineering and AI-agent orchestration framework designed to eliminate hallucinated scope, stale documentation, untested regressions, and branch contamination in autonomous and pair-programming development.
 
-For the comprehensive operational handbook, see [WAY_OF_WORKING.md](WAY_OF_WORKING.md).
+For the comprehensive operational handbook, see [WAY_OF_WORKING.md](WAY_OF_WORKING.md). Delivery status: [ROADMAP.md](ROADMAP.md); design note: [DESIGN.md](DESIGN.md).
 
 ---
 
@@ -32,6 +32,54 @@ For the comprehensive operational handbook, see [WAY_OF_WORKING.md](WAY_OF_WORKI
 - Every project must maintain active pre-commit hooks (`.pre-commit-config.yaml`).
 - Before any commit: inspect `git status` / `git diff`, run all linters, and execute all tests.
 - Never bypass hooks using `git commit --no-verify` or `-n`. If a check fails, resolve the defect before committing.
+
+### 1.6 Where Things Live (and Why `docs/`)
+There is no `specs/` folder. Each artifact has one home, chosen by who owns it:
+
+| Artifact | Home | Why |
+| :--- | :--- | :--- |
+| Capability specs, changes, archive | `openspec/specs/`, `openspec/changes/` | OpenSpec owns them; identical to upstream OpenSpec, so the CLI works unchanged. |
+| Schema and templates | `openspec/schemas/spec-rails/` | The artifact graph is OpenSpec's extension point. |
+| Protocol (`WORKFLOW.md`), `AGENTS.md`, `rails.conf`, checks | `openspec/spec-rails/` | Same text for every adopter, so it ships with the addon and survives `openspec update`. Agents in a target repo can actually read it. |
+| Delivery status (`ROADMAP.md`) | `docs/` | Per-project data that spans changes; upstream OpenSpec has no roadmap concept, so it does not belong in `openspec/`. |
+| Bug reports (`bug-reports/`) | `docs/` | Per-project triage records with no OpenSpec equivalent; a docs path is also what the CI audit accepts as spec-backing for fix PRs. |
+
+Why `docs/` rather than `specs/`: `specs/` was easily confused with `openspec/specs/` (living specs), and it mixed the addon's protocol with project data. `docs/` is the conventional place humans look for project records, needs no new top-level folder, and keeps `openspec/` pure.
+
+### 1.7 Specs Structure
+Two kinds of spec exist: **delta specs** (proposed, inside a change) and **living specs** (shipped, under `openspec/specs/`). Everything is plain Markdown.
+
+```text
+openspec/
+├── config.yaml                          # schema: spec-rails
+├── specs/                               # LIVING specs: shipped ground truth
+│   └── <capability>/spec.md             #   one folder per capability (e.g. openspec-addon)
+├── changes/
+│   ├── <id>-<slug>/                     # ONE ACTIVE CHANGE (e.g. w1.2-data-ingestion)
+│   │   ├── research.md                  #   Gate 0: options, tradeoffs, Go/No-Go
+│   │   ├── proposal.md                  #   Gate 1: intent, scope, YAGNI exclusions
+│   │   ├── specs/<capability>/spec.md   #   Gate 2: DELTA spec for that capability
+│   │   ├── design.md                    #   Gate 3: architecture, budgets, test strategy
+│   │   └── tasks.md                     #   Gate 4: DAG, streams, vertical slices
+│   └── archive/YYYY-MM-DD-<id>-<slug>/  # finished or dropped changes (same five artifacts)
+├── schemas/spec-rails/                  # schema + artifact templates (installed copy)
+└── spec-rails/                          # WORKFLOW.md, AGENTS.md, rails.conf, checks
+```
+
+**Lifecycle of a spec**
+1. A change creates a delta at `openspec/changes/<id>-<slug>/specs/<capability>/spec.md` (Gate 2).
+2. The delta uses `## ADDED`, `## MODIFIED`, `## REMOVED` or `## RENAMED Requirements`. A MODIFIED block repeats the full updated requirement and its exact header.
+3. At Gate 6, `openspec archive` merges the requirement blocks into `openspec/specs/<capability>/spec.md` and moves the change folder into `changes/archive/`. Other sections, such as the `## Review Gate` footer, stay in the archive and are not merged.
+4. A bugfix that alters a living requirement edits `openspec/specs/` directly in the same branch (B3), with no delta.
+
+**Conventions**
+- **Capability path:** the folder name under `specs/` (for example `identity/user-auth`). A modified capability uses the exact existing path.
+- **Requirement header:** `### Requirement: REQ-<DOMAIN>-<N> <Name>` (or `NFR-<DOMAIN>-<N>` for budgets). Keys are never reused; deprecated ones stay, marked `[DEPRECATED by <change>]`.
+- **Wording and scenarios:** requirement text uses MUST or SHALL. Scenarios use exactly four hashtags (`#### Scenario:`) with WHEN and THEN.
+- **New capabilities:** a delta for a new capability starts with `## Purpose`. Never add it to a delta for an existing capability.
+- **Gates:** each artifact ends with an unticked `## Review Gate` box; a human ticks and commits it before the next artifact is created.
+
+**Not specs:** the roadmap and bug reports are project records under `docs/` (see §1.6).
 
 ---
 
@@ -72,7 +120,7 @@ flowchart TD
 
 | Gate | Name | Artifact | Required Content | Next Step |
 | :--- | :--- | :--- | :--- | :--- |
-| **Gate B1** | Defect Triage | `specs/bug-reports/<date>-<slug>.md` | Steps to reproduce, expected vs actual behavior, root cause analysis. | Spawn `.worktrees/fix-<slug>` |
+| **Gate B1** | Defect Triage | `docs/bug-reports/<date>-<slug>.md` | Steps to reproduce, expected vs actual behavior, root cause analysis. | Spawn `.worktrees/fix-<slug>` |
 | **Gate B2** | Red Reproduction | Target test file in worktree | Failing test proving defect on unmodified base code. | Minimal surgical fix |
 | **Gate B3** | Integration Sign-off | Worktree diff + test suite output | Green test, regression suite pass, `--ff-only` merge into base branch, prune worktree. | Hotfix Deployed |
 

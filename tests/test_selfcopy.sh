@@ -18,6 +18,7 @@ check_pair bin/spec-rails-check openspec/spec-rails/spec-rails-check
 check_pair bin/spec-rails-verify openspec/spec-rails/spec-rails-verify
 check_pair templates/rails.conf openspec/spec-rails/rails.conf
 check_pair rules/AGENTS.md openspec/spec-rails/AGENTS.md
+check_pair rules/WORKFLOW.md openspec/spec-rails/WORKFLOW.md
 check_pair templates/bug-report.md openspec/spec-rails/bug-report.md
 check_pair templates/mutation openspec/spec-rails/mutation
 

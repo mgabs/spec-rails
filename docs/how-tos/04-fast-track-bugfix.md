@@ -17,7 +17,7 @@ When a regression, runtime panic, or dogfood defect is discovered, this guide de
 1. Copy the bug report template:
    ```bash
    date_str=$(date +%Y-%m-%d)
-   cp openspec/spec-rails/bug-report.md "specs/bug-reports/${date_str}-token-expiry-panic.md"
+   cp openspec/spec-rails/bug-report.md "docs/bug-reports/${date_str}-token-expiry-panic.md"
    ```
 2. Document:
    - Component affected
@@ -86,5 +86,5 @@ cd .worktrees/fix-token-expiry
    git branch -d fix/token-expiry
    git worktree prune
    ```
-4. Mark the bug report as `Resolved` in `specs/bug-reports/` with the commit hash.
+4. Mark the bug report as `Resolved` in `docs/bug-reports/` with the commit hash.
 5. If active feature streams or worktrees need the fix, rebase them on updated `main`.

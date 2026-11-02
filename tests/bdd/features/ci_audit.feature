@@ -14,9 +14,14 @@ Feature: CI spec-to-code audit understands the openspec/ layout
     Then it exits 0
 
   Scenario: Bug report passes audit (REQ-OSA-21)
-    Given a PR that changes "src/app.sh" and "specs/bug-reports/2026-01-01-x.md"
+    Given a PR that changes "src/app.sh" and "docs/bug-reports/2026-01-01-x.md"
     When the spec-to-code audit runs
     Then it exits 0
+
+  Scenario: Legacy specs bug report no longer counts as spec (REQ-OSA-21)
+    Given a PR that changes "src/app.sh" and "specs/bug-reports/2026-01-01-x.md"
+    When the spec-to-code audit runs
+    Then it exits 1
 
   Scenario: Code without spec fails audit (REQ-OSA-21)
     Given a non-chore PR that changes only "src/app.sh"

@@ -12,7 +12,7 @@ Every change travels through exactly one lane. Pick it before touching anything.
 | **Bugfix** | `fix/<slug>` | Merged behavior contradicts spec, docs, or user intent | B1 → B3 (§3) |
 | **Chore** | `chore/<slug>` | Zero behavior change: docs, formatting, tooling/CI config, refactors that keep every existing test unchanged | None (Rule 5) |
 
-- `<id>` is the work item ID from `specs/ROADMAP.md`, lowercased (e.g., roadmap `W1.2` → `feat/w1.2-data-ingestion`, `openspec/changes/w1.2-data-ingestion/`).
+- `<id>` is the work item ID from `docs/ROADMAP.md`, lowercased (e.g., roadmap `W1.2` → `feat/w1.2-data-ingestion`, `openspec/changes/w1.2-data-ingestion/`).
 - If a chore turns out to change behavior, stop and restart in the Feature or Bugfix lane.
 
 ### Rule 1: Never Commit on `main`
@@ -74,21 +74,22 @@ Never merge a branch whose rails were verified only against a stale base.
 
 ### Canonical Directory Layout
 ```text
-specs/
-├── WORKFLOW.md     <-- Operating procedures and gate rails
-├── ROADMAP.md      <-- Waves, work items, dependency spine, exit criteria
-├── features/       <-- Active features: research, proposal, design, tasks, specs
-├── living/         <-- Canonical specs of shipped capabilities (ground truth)
-├── archive/        <-- Lifecycle artifacts of shipped or dropped features
-├── bug-reports/    <-- Defect triage reports
-└── templates/      <-- Lifecycle markdown templates
+openspec/
+├── specs/<capability>/spec.md   <-- Living specs of shipped capabilities
+├── changes/<id>-<slug>/         <-- Active change: research, proposal, specs/, design, tasks
+├── changes/archive/             <-- Shipped or dropped changes
+├── schemas/spec-rails/          <-- Installed schema and templates
+└── spec-rails/                  <-- WORKFLOW.md (this file), AGENTS.md, rails.conf, checks
+docs/
+├── ROADMAP.md                   <-- Waves, work items, dependency spine, exit criteria
+└── bug-reports/                 <-- Defect triage reports
 ```
 
 ### Gate Approval Evidence
 A gate passes only when the agent, after explicit human approval, ticks the artifact's **Review Gate** checkbox and commits it. An unticked box means the gate has not passed, whatever was said in chat.
 
 ### ROADMAP.md Updates (Main-Only via Chore Lane)
-`specs/ROADMAP.md` is never edited on feature branches; that avoids conflicts between parallel features and keeps status visible on `main`. Status changes land through a tiny `chore/roadmap-<id>` branch merged per Rule 2:
+`docs/ROADMAP.md` is never edited on feature branches; that avoids conflicts between parallel features and keeps status visible on `main`. Status changes land through a tiny `chore/roadmap-<id>` branch merged per Rule 2:
 
 | Moment | Status Change |
 | :--- | :--- |
@@ -195,7 +196,7 @@ flowchart TD
 ```
 
 ### Gate B1: Bug Report & Triage
-- **Artifact**: `specs/bug-reports/<date>-<slug>.md`
+- **Artifact**: `docs/bug-reports/<date>-<slug>.md`
 - **Mandatory Sections**: Status & Metadata, Summary, Steps to Reproduce, Expected vs Actual, Root Cause Analysis, Remediation Plan.
 - **Gate**: Human approval before code changes.
 
@@ -279,17 +280,17 @@ All steps on the feature branch unless stated otherwise:
    git merge --ff-only feat/<id>-<slug>
    git branch -d feat/<id>-<slug>
    ```
-9. Mark `✅ Shipped` in `specs/ROADMAP.md` via `chore/roadmap-<id>` (§2).
+9. Mark `✅ Shipped` in `docs/ROADMAP.md` via `chore/roadmap-<id>` (§2).
 
 ## 7. OpenSpec Layout & Enforcement
 
 Spec-Rails is an addon on an OpenSpec project (`spec-rails [init] [dir]`, requires OpenSpec ≥ 1.15.0 and `jq`). OpenSpec owns the artifact graph, specs and archive; Spec-Rails supplies the `spec-rails` schema (`research → proposal → specs → design → tasks`), gates, lanes and testing rails.
 
-- **Layout**: changes live in `openspec/changes/<id>-<slug>/`, capabilities in `openspec/specs/<capability>/spec.md`, finished changes in `openspec/changes/archive/`. `specs/ROADMAP.md`, `specs/WORKFLOW.md` and `specs/bug-reports/` stay under `specs/`.
+- **Layout**: changes live in `openspec/changes/<id>-<slug>/`, capabilities in `openspec/specs/<capability>/spec.md`, finished changes in `openspec/changes/archive/`. `docs/ROADMAP.md` and `docs/bug-reports/` live under `docs/`; this protocol ships as `openspec/spec-rails/WORKFLOW.md`.
 - **Gates**: each artifact template ends with an unticked `## Review Gate` box. A human ticks it and commits it before the next artifact is created. `spec-rails-check` (pre-commit and CI) fails if an artifact exists whose upstream gate is unticked, and fails commits on `main`/`master`.
 - **Streams**: after rebasing a stream onto the feature branch, run `openspec validate <change>` in addition to the test suite.
 - **Requirement IDs**: `REQ-*`/`NFR-*` live in the change's delta specs and are synced into `openspec/specs/` by `openspec archive`; Gate 6 adds only the rails (tests, mutation, `openspec validate`) around that command.
 - **Parallel streams and deltas**: streams of one change share its delta specs. Apply Rule 3.7 (strictly additive) to delta spec edits, and give each stream distinct `REQ-*` IDs to avoid collisions.
-- **Bugfix lane**: B1–B3 stay outside `openspec/changes/`; the report in `specs/bug-reports/` is the artifact. A fix that alters a living requirement edits `openspec/specs/` directly in the same branch (B3), with no delta change.
-- **Roadmap vs OpenSpec**: `specs/ROADMAP.md` tracks delivery status of initiatives (one row = one or more changes); OpenSpec tracks each change's artifacts. The row's Spec / Feature Dir points at the change or its archive.
+- **Bugfix lane**: B1–B3 stay outside `openspec/changes/`; the report in `docs/bug-reports/` is the artifact. A fix that alters a living requirement edits `openspec/specs/` directly in the same branch (B3), with no delta change.
+- **Roadmap vs OpenSpec**: `docs/ROADMAP.md` tracks delivery status of initiatives (one row = one or more changes); OpenSpec tracks each change's artifacts. The row's Spec / Feature Dir points at the change or its archive.
 - **Update survival**: Spec-Rails rules live in `openspec/spec-rails/`, outside files regenerated by `openspec update`.

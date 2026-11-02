@@ -58,6 +58,8 @@ Spec-Rails pairs natively with [mgabs/lgtm](https://github.com/mgabs/lgtm), a ke
 
 ## Repository Layout
 
+Why this shape: the protocol and rules ship with the addon (`openspec/spec-rails/`); per-project data (delivery status, bug reports) lives in `docs/`. See [Where Things Live](docs/WIKI.md#16-where-things-live-and-why-docs) for the rationale and [Specs Structure](docs/WIKI.md#17-specs-structure) for how changes, delta specs and living specs fit together. There is no `specs/` folder; it was easily confused with `openspec/specs/`.
+
 ```text
 spec-rails/
 ├── bin/
@@ -65,12 +67,11 @@ spec-rails/
 │   └── spec-rails-check      # Gate & lane check (hook + CI)
 ├── schemas/spec-rails/       # OpenSpec schema + artifact templates (copied into target repos)
 ├── templates/                # spec-rails-ci.yml, bug-report.md, roadmap.md, mutation configs, pre-commit config
-├── rules/AGENTS.md           # Always-on agent guardrails
+├── rules/                    # AGENTS.md (always-on guardrails), WORKFLOW.md (canonical protocol, shipped to openspec/spec-rails/)
 ├── skills/spec-rails/SKILL.md# Agent skill runbook
-├── specs/                    # WORKFLOW.md (canonical protocol), ROADMAP.md, bug-reports/
 ├── openspec/                 # This repo's own OpenSpec layout (specs, changes, installed schema and spec-rails/ copies)
 ├── .agents/, .github/        # OpenSpec-generated skills, prompts, agent; CI workflows
-├── docs/                     # WAY_OF_WORKING, WIKI, ROADMAP (design note), how-tos/01–05
+├── docs/                     # ROADMAP (delivery status), DESIGN, WAY_OF_WORKING, WIKI, bug-reports/, how-tos/01–05
 ├── tests/                    # installer, check, schema, lint suites + bdd/
 ├── Makefile                  # `make test`
 └── plugin.json               # Agent plugin manifest
@@ -86,11 +87,11 @@ Prerequisites: an existing `openspec init` project, OpenSpec ≥ 1.15.0 on `PATH
 /path/to/spec-rails/bin/spec-rails [init] [target-repo]
 ```
 
-Copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: spec-rails` in `openspec/config.yaml` (other keys preserved), installs the branch-protection hook, CI workflow, mutation templates, and agent rules (`openspec/spec-rails/`, which `openspec update` does not regenerate), keeps any existing `.pre-commit-config.yaml`, and ignores `.worktrees/`. Re-running is a no-op. Spec requirements use `### Requirement: REQ-<DOMAIN>-<N> <name>` headers in OpenSpec delta specs. Gate and lane check: `bin/spec-rails-check`. See `specs/WORKFLOW.md` §7.
+Copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: spec-rails` in `openspec/config.yaml` (other keys preserved), installs the branch-protection hook, CI workflow, mutation templates, and agent rules (`openspec/spec-rails/`, which `openspec update` does not regenerate), keeps any existing `.pre-commit-config.yaml`, and ignores `.worktrees/`. Re-running is a no-op. Spec requirements use `### Requirement: REQ-<DOMAIN>-<N> <name>` headers in OpenSpec delta specs. Gate and lane check: `bin/spec-rails-check`. See `openspec/spec-rails/WORKFLOW.md` §7.
 
 ### Documentation & Guides
 
-- **Delivery Status**: [specs/ROADMAP.md](specs/ROADMAP.md); **Design Note**: [docs/ROADMAP.md](docs/ROADMAP.md)
+- **Delivery Status**: [docs/ROADMAP.md](docs/ROADMAP.md); **Design Note**: [docs/DESIGN.md](docs/DESIGN.md)
 - **Architecture & Methodology Wiki**: [docs/WIKI.md](docs/WIKI.md)
 - **Review Harness & Agent Steering**: [github.com/mgabs/lgtm](https://github.com/mgabs/lgtm)
 - **How-To 1**: [Bootstrap a New Project](docs/how-tos/01-bootstrap-new-project.md)

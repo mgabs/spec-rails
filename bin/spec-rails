@@ -126,6 +126,7 @@ main() {
     put_file "$m" "$target/openspec/spec-rails/mutation/$(basename -- "$m")"
   done
   put_file "$root/rules/AGENTS.md" "$target/openspec/spec-rails/AGENTS.md"
+  put_file "$root/rules/WORKFLOW.md" "$target/openspec/spec-rails/WORKFLOW.md"
   put_file "$root/bin/spec-rails-check" "$target/openspec/spec-rails/spec-rails-check"
   put_file "$root/bin/spec-rails-verify" "$target/openspec/spec-rails/spec-rails-verify"
   if [ ! -f "$target/openspec/spec-rails/rails.conf" ]; then

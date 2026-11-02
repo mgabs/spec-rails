@@ -16,7 +16,7 @@ flowchart TD
 
 ## 2. Work Items & Backlog
 
-Status Legend (changed only on `main` via `chore/roadmap-<id>` branches; see `specs/WORKFLOW.md` §2):
+Status Legend (changed only on `main` via `chore/roadmap-<id>` branches; see `openspec/spec-rails/WORKFLOW.md` §2):
 - `⬜ Planned`: Scheduled for execution.
 - `🔬 In Research (Gate 0)`: Actively investigating technical feasibility and options.
 - `🚀 In Progress (Gates 1–6)`: Gate 0 Go decision made; feature branch / worktree streams active.
