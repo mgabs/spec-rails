@@ -27,11 +27,11 @@ flowchart LR
 
 ## 5. Slice 3: Remove specs/ and sweep
 
-- [ ] 5.1 Update `openspec/specs/openspec-addon/spec.md` is done by `openspec archive`; verify `grep -r "specs/\(ROADMAP\|WORKFLOW\|bug-reports\)" . --exclude-dir=.git --exclude-dir=archive` returns nothing
+- [x] 5.1 Update `openspec/specs/openspec-addon/spec.md` is done by `openspec archive`; verify `grep -r "specs/\(ROADMAP\|WORKFLOW\|bug-reports\)" . --exclude-dir=.git --exclude-dir=archive` returns nothing
 - [x] 5.2 `specs/` is absent and `make test` passes (on ticking append `Evidence: <command and result>`) Evidence: `ls specs` -> No such file; `make test` -> 0 failed
 
 ## 6. Integration & Rebase Plan
-- [ ] 6.1 Rebase on main, re-verify rails, `openspec archive`
+- [x] 6.1 Rebase on main, re-verify rails, `openspec archive`
 
 ## Review Gate
 - [x] **Gate 4 Approval**: Tasks breakdown approved by human before writing test code.
