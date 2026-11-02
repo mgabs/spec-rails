@@ -74,9 +74,10 @@ trap 'rm -rf "$FIX"' EXIT
 mkdir -p "$FIX/docs" "$FIX/bin" "$FIX/tests"
 printf '[x](missing.md)\n' > "$FIX/docs/a.md"
 printf 'cp openspec/schemas/spec-rails/templates/research.md x\n' > "$FIX/docs/b.md"
+printf 'see specs/ROADMAP.md\n' > "$FIX/docs/c.md"
 printf 'orphan() {\n  :\n}\n' > "$FIX/tests/x.sh"
 fixture_out="$(sh "$REPO_ROOT/tests/check_hygiene.sh" "$FIX" || true)"
-for expected in "docs/a.md -> missing.md" "docs/b.md instructs manual template copy" "tests/x.sh defines unused function orphan"; do
+for expected in "docs/a.md -> missing.md" "docs/b.md instructs manual template copy" "docs/c.md references a legacy specs/ path" "tests/x.sh defines unused function orphan"; do
   case "$fixture_out" in
     *"$expected"*) pass "Hygiene detects: $expected" ;;
     *) fail "Hygiene missed: $expected" "$fixture_out" ;;

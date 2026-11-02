@@ -14,6 +14,10 @@ for doc in README.md $(find docs skills -name '*.md' 2>/dev/null); do
     FAILED=1
   fi
   dir="$(dirname "$doc")"
+  if grep -qE 'specs/(ROADMAP|WORKFLOW|bug-reports)' "$doc"; then
+    echo "FAIL: $doc references a legacy specs/ path (REQ-OSA-30)"
+    FAILED=1
+  fi
   for link in $(grep -oE '\]\([^)#[:space:]]+' "$doc" | sed 's/^](//' | grep -v '^[a-z]*:'); do
     if [ ! -e "$dir/$link" ]; then
       echo "FAIL: $doc -> $link (missing)"
