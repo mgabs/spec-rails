@@ -18,11 +18,11 @@ For the comprehensive operational handbook, see [WAY_OF_WORKING.md](WAY_OF_WORKI
 - Concurrent subagent execution occurs in dedicated Git worktrees (`.worktrees/<id>-<stream>`).
 - Bugfixes occur in dedicated bugfix worktrees (`.worktrees/fix-<slug>`) branching directly off the base branch, preventing feature-branch bleed into hotfixes.
 
-### 1.3 Testing Rails (Red-First & 100% Mutation Kill)
+### 1.3 Testing Rails (Red-First & > 90% Mutation Kill)
 - Code does not exist until a test fails for its absence.
 - Red tests are verified locally, never committed alone; they ship in the same commit as the Green code, so every branch tip stays green.
 - Coverage metrics ($\ge 95\%$ line & branch) are necessary but insufficient.
-- Every logical branch must survive mutation analysis (100% mutation kill score on core business logic, no exemptions). Any surviving mutant is treated as a blocking bug.
+- Every logical branch must undergo mutation analysis (> 90% mutation kill score on core business logic). Any surviving mutant below threshold is treated as a blocking bug.
 
 ### 1.4 Living Specifications
 - Specs are not discarded design documents.
@@ -55,7 +55,7 @@ openspec/
 ├── specs/                               # LIVING specs: shipped ground truth
 │   └── <capability>/spec.md             #   one folder per capability (e.g. openspec-addon)
 ├── changes/
-│   ├── <id>-<slug>/                     # ONE ACTIVE CHANGE (e.g. w1.2-data-ingestion)
+│   ├── <id>-<slug>/                     # ONE ACTIVE CHANGE (e.g. w1-2-data-ingestion)
 │   │   ├── research.md                  #   Gate 0: options, tradeoffs, Go/No-Go
 │   │   ├── proposal.md                  #   Gate 1: intent, scope, YAGNI exclusions
 │   │   ├── specs/<capability>/spec.md   #   Gate 2: DELTA spec for that capability
@@ -73,8 +73,9 @@ openspec/
 4. A bugfix that alters a living requirement edits `openspec/specs/` directly in the same branch (B3), with no delta.
 
 **Conventions**
+- **Change naming:** roadmap IDs normalize dots to hyphens (`W1.2` → `w1-2-<slug>`, branch `feat/w1-2-<slug>`) so `openspec new change` (`[a-z0-9-]+` only) accepts them.
 - **Capability path:** the folder name under `specs/` (for example `identity/user-auth`). A modified capability uses the exact existing path.
-- **Requirement header:** `### Requirement: REQ-<DOMAIN>-<N> <Name>` (or `NFR-<DOMAIN>-<N>` for budgets). Keys are never reused; deprecated ones stay, marked `[DEPRECATED by <change>]`.
+- **Requirement header:** `### Requirement: REQ-<DOMAIN>-<N> <Name>` (or `NFR-<DOMAIN>-<N>` for budgets). Keys are never reused; deprecated ones keep their exact header in `## MODIFIED Requirements` and place `**[DEPRECATED by <change>]**` at the start of the requirement body (or use `## RENAMED Requirements` when changing a header).
 - **Wording and scenarios:** requirement text uses MUST or SHALL. Scenarios use exactly four hashtags (`#### Scenario:`) with WHEN and THEN.
 - **New capabilities:** a delta for a new capability starts with `## Purpose`. Never add it to a delta for an existing capability.
 - **Gates:** each artifact ends with an unticked `## Review Gate` box; a human ticks and commits it before the next artifact is created.
@@ -114,7 +115,7 @@ flowchart TD
 | **Gate 3** | Architecture Review | `openspec/changes/<feat>/design.md` | Overview, Domain Contracts, Boundary Rules, Latency/Allocation Budgets, Test Strategy. | Task Breakdown |
 | **Gate 4** | Tasks Breakdown Review | `openspec/changes/<feat>/tasks.md` | Dependency DAG, Multi-agent worktree stream partitions, Test-first order of execution. | Launch Worktrees / Apply Phase |
 | **Gate 5.x**| Slice Behavior Review | `tests/bdd/features/*.feature` | Gherkin scenarios covering all slice requirements before code is written. | Unit Red $\rightarrow$ Code Green |
-| **Gate 6** | Living Sync & Archive | `openspec/specs/` + `tasks.md` | $\ge 95\%$ coverage, $100\%$ mutation kill, worktrees pruned, delta specs promoted to `openspec/specs/`. | Feature Complete |
+| **Gate 6** | Living Sync & Archive | `openspec/specs/` + `tasks.md` | $\ge 95\%$ coverage, $> 90\%$ mutation kill, worktrees pruned, delta specs promoted to `openspec/specs/`. | Feature Complete |
 
 ### 2.2 Bugfix Gate Matrix (Fast-Track)
 
@@ -157,7 +158,7 @@ When a feature contains orthogonal tasks (decoupled modules, distinct endpoints,
 ### 4.1 The Three-Layer Rail
 1. **Behavioral Acceptance (BDD)**: Gherkin feature files validating end-to-end domain contracts from the user/caller perspective.
 2. **Unit Red-Green-Refactor**: Fine-grained assertions on all code paths, edge cases, and boundary values.
-3. **Mutation Testing**: Code mutating engines (e.g. `cargo-mutants`, `mutmut`, `stryker`) generate mutations (flipping conditionals, replacing arithmetic, deleting statements). Every mutant MUST be caught and killed by tests.
+3. **Mutation Testing**: Code mutating engines (e.g. `cargo-mutants`, `mutmut`, `stryker`) generate mutations (flipping conditionals, replacing arithmetic, deleting statements). Core logic must maintain a > 90% mutation kill score; surviving mutants below threshold must be killed or deleted.
 
 Spec-Rails tests itself with the same rails: `make test` includes a fresh-repo end-to-end test (`tests/test_e2e.sh`) that runs the real OpenSpec CLI plus the installer in a throwaway repo and checks that the `spec-rails` schema resolves and the hook blocks an unticked gate. The lint step also fails on broken doc links, manual template-copy instructions and unused shell helpers.
 

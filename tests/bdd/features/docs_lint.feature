@@ -1,3 +1,4 @@
+@REQ-OSA-23 @REQ-OSA-24 @REQ-OSA-30 @NFR-OSA-7
 Feature: Hygiene lint for docs links and unused shell helpers
   As a Spec-Rails maintainer
   We want make test-lint to catch broken doc links and dead shell functions

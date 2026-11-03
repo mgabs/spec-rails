@@ -88,5 +88,87 @@ else
   FAILED=$((FAILED + 1)); echo "FAIL: own checks exceeded 5s"
 fi
 
+# Ticking unmodified template tasks.md without real Evidence: fails
+new_repo
+printf '%s\n' '@REQ-X-1 @NFR-X-2' > "$TMP/p/tests/a.feature"
+sed 's/^- \[ \] 3\.3/- [x] 3.3/' "$REPO_ROOT/schemas/spec-rails/templates/tasks.md" \
+  > "$TMP/p/openspec/changes/demo/tasks.md"
+run_case "ticking unmodified template tasks.md fails without evidence" 1 'without .Evidence:'
+
+# Legacy placeholder literal Evidence: <command and result> is stripped and rejected
+cat <<'EOF' > "$TMP/p/openspec/changes/demo/tasks.md"
+- [x] 3.3 Red unit tests fail (on ticking append `Evidence: <command and result>`)
+EOF
+run_case "placeholder evidence literal fails" 1 'without .Evidence:'
+
+# Uppercase - [X] and lowercase coverage without evidence fails
+printf '%s\n' '- [X] 3.5 coverage >= 95%' > "$TMP/p/openspec/changes/demo/tasks.md"
+run_case "uppercase [X] without evidence fails" 1 'without .Evidence:'
+
+# Word boundary: Reduce latency / Redirect do NOT require Evidence:
+printf '%s\n' '- [x] 4.2 Reduce latency and Redirect requests' > "$TMP/p/openspec/changes/demo/tasks.md"
+run_case "Reduce latency task does not require evidence" 0 'all checks passed'
+
+# Token boundary: REQ-X-1 does NOT false-pass on @REQ-X-10
+new_repo
+printf '%s\n' '@REQ-X-10 @NFR-X-2' > "$TMP/p/tests/a.feature"
+run_case "REQ-X-1 does not match @REQ-X-10" 1 'FAIL: REQ-X-1'
+
+# Empty RAILS_TEST_DIRS="" fails instead of defaulting grep -r to .
+new_repo
+printf '%s\n' '@REQ-X-1 @NFR-X-2' > "$TMP/p/tests/a.feature"
+printf '%s\n' 'RAILS_TEST_DIRS=""' > "$TMP/p/openspec/spec-rails/rails.conf"
+run_case "empty RAILS_TEST_DIRS fails" 1 'FAIL: RAILS_TEST_DIRS is empty'
+
+# 3-level nested specs/a/b/c/spec.md and multi-hyphen REQ-AUTH-API-1 (with trailing :)
+new_repo
+printf '%s\n' '@REQ-X-1 @NFR-X-2' > "$TMP/p/tests/a.feature"
+mkdir -p "$TMP/p/openspec/changes/demo/specs/a/b/c"
+printf '%s\n' '## ADDED Requirements' '### Requirement: REQ-AUTH-API-1: Multi-hyphen domain' \
+  > "$TMP/p/openspec/changes/demo/specs/a/b/c/spec.md"
+run_case "3-level spec and REQ-AUTH-API-1 uncovered fails" 1 'FAIL: REQ-AUTH-API-1'
+printf '%s\n' '@REQ-X-1 @NFR-X-2 @REQ-AUTH-API-1' > "$TMP/p/tests/a.feature"
+run_case "3-level spec and REQ-AUTH-API-1 covered passes" 0 'ok: REQ-AUTH-API-1 covered'
+
+# openspec/changes/archive/... is ignored
+new_repo
+printf '%s\n' '@REQ-X-1 @NFR-X-2' > "$TMP/p/tests/a.feature"
+mkdir -p "$TMP/p/openspec/changes/archive/2026-01-01-old/specs/cap"
+printf '%s\n' '## ADDED Requirements' '### Requirement: REQ-ARCHIVED-99 Old' \
+  > "$TMP/p/openspec/changes/archive/2026-01-01-old/specs/cap/spec.md"
+printf '%s\n' '- [x] 3.3 Red tests without evidence' \
+  > "$TMP/p/openspec/changes/archive/2026-01-01-old/tasks.md"
+run_case "archive directory is ignored" 0 'all checks passed'
+
+# --store flag resolves external .changeRoot via openspec CLI
+rm -rf "$TMP/p" "$TMP/ext"
+mkdir -p "$TMP/p/openspec/spec-rails" "$TMP/p/tests" "$TMP/ext/c1/specs/cap" "$TMP/stub"
+printf '%s\n' '## ADDED Requirements' '### Requirement: REQ-EXT-1 External' > "$TMP/ext/c1/specs/cap/spec.md"
+printf '%s\n' '- [x] 3.3 Red tests Evidence: pytest -> fail' > "$TMP/ext/c1/tasks.md"
+cat > "$TMP/stub/openspec" <<EOF_STUB
+#!/usr/bin/env sh
+echo "\$*" >> "$TMP/stub/log"
+case "\$1" in
+  list) printf '{"changes":[{"name":"c1"}]}' ;;
+  status) printf '{"changeName":"c1","changeRoot":"%s"}' "$TMP/ext/c1" ;;
+esac
+EOF_STUB
+chmod +x "$TMP/stub/openspec"
+rc=0
+out="$(cd "$TMP/p" && PATH="$TMP/stub:$PATH" sh "$VERIFY" --store ext-store 2>&1)" || rc=$?
+if [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q 'FAIL: REQ-EXT-1' && grep -q -- '--store ext-store' "$TMP/stub/log"; then
+  PASSED=$((PASSED + 1)); echo "PASS: --store external changeRoot checked"
+else
+  FAILED=$((FAILED + 1)); echo "FAIL: --store external changeRoot ($rc): $out"
+fi
+printf '%s\n' '@REQ-EXT-1' > "$TMP/p/tests/ext.feature"
+rc=0
+out="$(cd "$TMP/p" && PATH="$TMP/stub:$PATH" sh "$VERIFY" --store=ext-store 2>&1)" || rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'ok: REQ-EXT-1 covered'; then
+  PASSED=$((PASSED + 1)); echo "PASS: --store=ext-store covered passes"
+else
+  FAILED=$((FAILED + 1)); echo "FAIL: --store=ext-store covered ($rc): $out"
+fi
+
 echo "verify: $PASSED passed, $FAILED failed"
 [ "$FAILED" -eq 0 ]

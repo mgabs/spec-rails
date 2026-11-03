@@ -12,7 +12,7 @@ Spec-Rails transforms AI-assisted software delivery from speculative, prompt-dri
 
 1. **`main` is strictly immutable to direct edits**: Zero code, specs, or docs land directly on `main`. Every commit lands through an isolated lane via `--ff-only`.
 2. **Code is a liability, not an asset**: The smallest diff that satisfies formal requirements and passes all rails wins.
-3. **No untested code exists**: Code does not exist until a test fails for its absence. Coverage ($\ge 95\%$) is insufficient without a **100% mutation kill score**.
+3. **No untested code exists**: Code does not exist until a test fails for its absence. Coverage ($\ge 95\%$) is insufficient without a **> 90% mutation kill score**.
 4. **Specs are evergreen living truth**: Specifications live in `openspec/specs/` and change only through OpenSpec delta specs, which `openspec archive` merges upon shipping. See `openspec/spec-rails/WORKFLOW.md` §7.
 
 ```mermaid
@@ -32,7 +32,7 @@ flowchart TD
     subgraph Rails [3. Verification Rails]
         BDD["BDD Given/When/Then (100% Behavior)"]
         RedGreen["Red-First Unit -> Minimal Green (>=95%)"]
-        Mutation["100% Mutation Kill Score"]
+        Mutation["> 90% Mutation Kill Score"]
     end
 
     subgraph Cockpit [4. LGTM Review Cockpit]
@@ -79,7 +79,7 @@ flowchart LR
 ### 3.1 Feature Lane (`feat/<id>-<slug>`)
 - **Use when**: Adding new functionality, modifying existing user-visible behavior, or refactoring architectural boundaries that impact specifications.
 - **Lifecycle**: Gates 0 through 6 (§4).
-- **Branch naming**: `feat/<id>-<slug>` (e.g., `feat/w1.1-token-contracts`).
+- **Branch naming**: `feat/<id>-<slug>` with roadmap IDs lowercased and dots normalized to hyphens (e.g., `W1.1` → `feat/w1-1-token-contracts`).
 - **Target**: Merged into `main` via `--ff-only` upon completing Gate 6.
 
 ### 3.2 Bugfix Lane (`fix/<slug>`)
@@ -91,7 +91,7 @@ flowchart LR
 ### 3.3 Chore Lane (`chore/<slug>`)
 - **Use when**: Zero behavior change — documentation updates, formatting, dependency updates, CI/workflow adjustments, and refactors that leave every existing test unchanged.
 - **Lifecycle**: No gates required. Must pass pre-commit hooks, linters, and the full test suite.
-- **Branch naming**: `chore/<slug>` (e.g., `chore/way-of-working-doc`, `chore/roadmap-w1.1`).
+- **Branch naming**: `chore/<slug>` (e.g., `chore/way-of-working-doc`, `chore/roadmap-w1-1`).
 - **Rule**: If a chore turns out to alter runtime behavior, stop immediately and restart in the Feature or Bugfix lane.
 
 ---
@@ -108,8 +108,8 @@ sequenceDiagram
     participant Git as Git Repo / Worktrees
 
     Human->>Agent: Assign Roadmap ID (W1.1)
-    Agent->>Git: Checkout chore/roadmap-w1.1, mark In Progress
-    Agent->>Git: Checkout feat/w1.1-slug
+    Agent->>Git: Checkout chore/roadmap-w1-1, mark In Progress
+    Agent->>Git: Checkout feat/w1-1-slug
     Agent->>Agent: Draft research.md (2-3 options)
     Agent->>Human: Present Gate 0 (Research & Tradeoffs)
     Human-->>Agent: Gate 0 Approved (Go: Option A)
@@ -118,7 +118,7 @@ sequenceDiagram
     Agent->>Human: Present Gate 1 (Proposal)
     Human-->>Agent: Gate 1 Approved
 
-    Agent->>Agent: Draft openspec/changes/id/spec.md (Full Capability Spec)
+    Agent->>Agent: Draft openspec/changes/<id>-<slug>/specs/<capability>/spec.md (Delta Spec)
     Agent->>Human: Present Gate 2 (Specs)
     Human-->>Agent: Gate 2 Approved
 
@@ -135,7 +135,7 @@ sequenceDiagram
         Agent->>Human: Gate 5.x Approval
         Human-->>Agent: Approved
         Agent->>Agent: Red Unit Test -> Green Code -> Refactor
-        Agent->>Agent: Verify Coverage >= 95% & Mutation Kill 100%
+        Agent->>Agent: Verify Coverage >= 95% & Mutation Kill > 90%
         Agent->>Git: Commit Tests + Code Together
     end
 
@@ -157,10 +157,10 @@ sequenceDiagram
 - **Goal**: Lock down the problem, user stories, quantifiable success metrics, and strict **Out-of-Scope (YAGNI)** boundaries.
 - **Rule**: Out-of-Scope items in `proposal.md` are binding prohibitions for the remainder of the feature.
 
-### Gate 2: Full Capability Specifications
+### Gate 2: Capability Delta Specifications
 - **Artifact**: `openspec/changes/<id>-<slug>/specs/<capability>/spec.md`
-- **Goal**: Formalize behavioral requirements (`REQ-*`), non-functional requirements (`NFR-*`), and Given/When/Then scenarios.
-- **Rule**: **Delta specs**. Write `## ADDED|MODIFIED|REMOVED Requirements` with `### Requirement: REQ-<DOMAIN>-<N> <name>` headers; MODIFIED/REMOVED repeat the existing header exactly. `openspec archive` merges the deltas into `openspec/specs/` at Gate 6.
+- **Goal**: Formalize behavioral requirements (`REQ-*`), non-functional requirements (`NFR-*`), and Given/When/Then scenarios via `openspec new change` and `openspec instructions specs --change <id>-<slug>`.
+- **Rule**: **Delta specs**. Write `## ADDED|MODIFIED|REMOVED Requirements` with `### Requirement: REQ-<DOMAIN>-<N> <name>` headers; MODIFIED/REMOVED repeat the existing header verbatim (place `**[DEPRECATED by <change>]**` at the start of the requirement body rather than editing the header). `openspec archive` merges the deltas into `openspec/specs/` at Gate 6.
 
 ### Gate 3: Architecture & Design
 - **Artifact**: `openspec/changes/<id>-<slug>/design.md`
@@ -176,7 +176,7 @@ sequenceDiagram
 Each slice `x` runs three non-negotiable steps:
 1. **5.x-A (BDD Scenarios)**: Write Gherkin `.feature` tests covering all `REQ-*` invariants. Stop for human Gate 5.x review.
 2. **5.x-B (Red-Green-Refactor)**: Write failing unit test (`Red`) verified locally, implement minimal code (`Green`), refactor under green protection. **Red tests are never committed alone**; commit tests + code together. Line & branch coverage must be $\ge 95\%$.
-3. **5.x-C (100% Mutation Kill)**: Run mutation analysis on the slice. Every surviving mutant is a blocking defect resolved by targeted assertions, dead code deletion, or equivalent-mutant restructuring.
+3. **5.x-C (> 90% Mutation Kill)**: Run mutation analysis on the slice. Surviving mutants below threshold are blocking defects resolved by targeted assertions, dead code deletion, or equivalent-mutant restructuring.
 
 ### Gate 6: Living Spec Sync, Archive & Merge
 1. Ensure all stream worktrees are merged, removed, and pruned (`git worktree prune`).
@@ -220,10 +220,10 @@ flowchart LR
 When Gate 4 identifies orthogonal streams, execute them in parallel Git worktrees without repository contamination:
 
 ```text
-spec-rails/                           <-- Root worktree (main or feat/<id>)
+spec-rails/                           <-- Root worktree (main or feat/<id>-<slug>)
 ├── .worktrees/
-│   ├── w1.1-stream-a/           <-- Isolated worktree for Stream A (feat/w1.1/a)
-│   └── w1.1-stream-b/           <-- Isolated worktree for Stream B (feat/w1.1/b)
+│   ├── w1-1-stream-a/           <-- Isolated worktree for Stream A (feat/w1-1/a)
+│   └── w1-1-stream-b/           <-- Isolated worktree for Stream B (feat/w1-1/b)
 ```
 
 ### Worktree Invariants
@@ -274,11 +274,11 @@ Every repository initialized with `spec-rails` contains active pre-commit and CI
 - **Zero-Bypass Policy**: `git commit --no-verify` or `-n` is strictly forbidden. If a check fails, resolve the defect.
 
 ### Mutation Testing Rails
-- **100% Mutation Kill Score** on domain logic, zero exemptions.
+- **> 90% Mutation Kill Score** on domain logic, eliminating tautological assertions while preventing equivalent mutant friction.
 - Reference configurations in `templates/mutation/`:
-  - **Rust**: [templates/mutation/cargo-mutants.toml](file:///Users/mmetawea/Workbench/spec-rails/templates/mutation/cargo-mutants.toml)
-  - **JS / TS**: [templates/mutation/stryker.config.json](file:///Users/mmetawea/Workbench/spec-rails/templates/mutation/stryker.config.json)
-  - **Python**: [templates/mutation/mutmut.ini](file:///Users/mmetawea/Workbench/spec-rails/templates/mutation/mutmut.ini)
+  - **Rust**: [templates/mutation/cargo-mutants.toml](../templates/mutation/cargo-mutants.toml)
+  - **JS / TS**: [templates/mutation/stryker.config.json](../templates/mutation/stryker.config.json)
+  - **Python**: [templates/mutation/mutmut.ini](../templates/mutation/mutmut.ini)
 
 ---
 
@@ -298,7 +298,13 @@ When pair-programming or coordinating agents:
 | **Direct commit on `main`** | Contaminates production, bypasses rebase verification | Enforced by pre-commit hook; checkout dedicated lane branch |
 | **Committing Red tests alone** | Leaves broken commits in git history, breaks bisecting | Commit Red test together with Green implementation |
 | **Full-copy spec duplicates** | Duplicates ground truth and drifts from OpenSpec | Delta specs merged by `openspec archive` at Gate 6 |
-| **Surviving mutant excuses** | Surviving mutants prove missing assertions or dead code | Kill mutant with test, delete dead code, or restructure |
+| **Unjustified surviving mutants** | Surviving mutants usually prove missing assertions or dead code; the > 90% threshold is not a free pass | Kill mutant with test, delete dead code, restructure, or justify each survivor in the PR |
 | **Subagent gate self-approval** | Eliminates human-in-the-loop safety | Halt and escalate to orchestrating agent for human sign-off |
 | **Stale worktrees lingering** | Causes `.git/index.lock` collisions and disk bloat | Run `git worktree remove` and `git worktree prune` after every merge |
 | **Unsolicited architecture** | Violates YAGNI, inflates maintenance cost | Build only what is specified; delete speculative code |
+
+---
+
+## 11. Recommended Reading & Watching
+- **Suggested Watch**: [Lead Architect Reveals His Rules for Coding Agents (Beyond Coding #272)](https://www.youtube.com/watch?v=mkN4uRZYPfs) — Carlos Kelkboom on contract scaffolding, understanding generated code, and parallel worktrees.
+- **Review Cockpit**: [mgabs/lgtm](https://github.com/mgabs/lgtm) — Terminal diff reviewer and AI agent steering harness.

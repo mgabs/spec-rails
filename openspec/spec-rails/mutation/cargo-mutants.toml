@@ -1,5 +1,5 @@
 # Spec-Rails Mutation Testing Rail for Rust (cargo-mutants)
-# Target: 100% mutation kill score on domain logic. Surviving mutants are blocking defects.
+# Target: > 90% mutation kill score on domain logic. Every surviving mutant must be justified in the PR.
 
 test_tool = "cargo"
 timeout_multiplier = 3.0

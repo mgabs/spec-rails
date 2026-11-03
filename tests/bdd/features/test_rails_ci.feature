@@ -1,3 +1,4 @@
+@REQ-OSA-26 @REQ-OSA-27 @REQ-OSA-28 @NFR-OSA-9
 Feature: CI verifies the test rails without language-specific tooling
   REQ-OSA-26, REQ-OSA-27, REQ-OSA-28, NFR-OSA-9
 

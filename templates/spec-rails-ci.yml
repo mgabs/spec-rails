@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+
 jobs:
   verify-rails:
     name: Verify Specs & Testing Rails
@@ -17,6 +20,7 @@ jobs:
 
       - name: Audit Spec-to-Code Mapping
         env:
+          BASE_REF: ${{ github.base_ref }}
           HEAD_REF: ${{ github.head_ref }}
         run: |
           # Chore lane (zero behavior change) is exempt from spec mapping; rails below still apply.
@@ -24,9 +28,10 @@ jobs:
             chore/*) echo "Chore lane: spec-to-code audit skipped."; exit 0 ;;
           esac
 
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
-          CODE_CHANGES=$(echo "$CHANGED_FILES" | grep -v -E '^(specs/|openspec/|docs/|\.github/|.*\.md$)' || true)
-          SPEC_CHANGES=$(echo "$CHANGED_FILES" | grep -E '^(openspec/(changes|specs)/|docs/bug-reports/)' || true)
+          BASE_REF="${BASE_REF:-main}"
+          CHANGED_FILES=$(git -c core.quotePath=false diff --no-renames --name-only "origin/${BASE_REF}...HEAD" --)
+          CODE_CHANGES=$(printf '%s\n' "$CHANGED_FILES" | grep -v -E '^($|openspec/(changes|specs|schemas)/|docs/|.*\.md$)' || true)
+          SPEC_CHANGES=$(printf '%s\n' "$CHANGED_FILES" | grep -E '^(openspec/(changes/[^/]+/|specs/)|docs/bug-reports/)' | grep -v -E '^openspec/changes/archive/' || true)
 
           if [ -n "$CODE_CHANGES" ] && [ -z "$SPEC_CHANGES" ]; then
             echo "ERROR: Code modified without an openspec/ change or docs/bug-reports/ entry"
@@ -36,20 +41,29 @@ jobs:
           fi
           echo "Spec-to-code audit passed."
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Gate & Lane Check
         run: |
-          if [ -x openspec/spec-rails/spec-rails-check ]; then
-            npm install -g @fission-ai/openspec
-            sh openspec/spec-rails/spec-rails-check
-          fi
+          npm install -g @fission-ai/openspec
+          sh openspec/spec-rails/spec-rails-check
 
       - name: Verify Test Rails
         run: |
-          if [ -f openspec/spec-rails/spec-rails-verify ]; then
-            sh openspec/spec-rails/spec-rails-verify
-          fi
+          sh openspec/spec-rails/spec-rails-verify
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - name: Set up Pre-Commit
+        env:
+          # The test hook duplicates the "Run Test Suite" step below.
+          SKIP: test
         run: |
           pip install pre-commit
           pre-commit run --all-files

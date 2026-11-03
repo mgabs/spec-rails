@@ -4,6 +4,10 @@ set -eu
 REPO_ROOT="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 BIN="${SPEC_RAILS_CHECK_BIN:-$REPO_ROOT/bin/spec-rails-check}"
 
+# Drop GIT_DIR/GIT_INDEX_FILE etc. leaked by git hooks so scratch repos stay isolated.
+# shellcheck disable=SC2046
+unset $(git rev-parse --local-env-vars)
+
 FAILED=0
 PASSED=0
 
@@ -52,6 +56,9 @@ mkdir -p "$SCR/stub"
 cat >"$SCR/stub/openspec" <<'STUB'
 #!/usr/bin/env sh
 echo "$*" >>"$STUB_DIR/log"
+if [ -n "${STUB_STDERR:-}" ]; then
+  printf '%s\n' "$STUB_STDERR" >&2
+fi
 case "$1" in
   list)
     cat "$STUB_DIR/list.json"
@@ -84,7 +91,7 @@ new_repo() {
   mkdir -p "$STUB_DIR"
   export STUB_DIR
   printf '{"changes":[]}' >"$STUB_DIR/list.json"
-  unset STUB_LIST_RC STUB_STATUS_RC || true
+  unset STUB_LIST_RC STUB_STATUS_RC STUB_STDERR OPENSPEC_STORE || true
 }
 
 requires_of() {
@@ -133,7 +140,7 @@ OUT=""
 ERR=""
 run_check() {
   RC=0
-  (cd "$WORK" && PATH="$SCR/stub:$PATH" sh "$BIN" >"$WORK/out" 2>"$WORK/err") || RC=$?
+  (cd "$WORK" && PATH="$SCR/stub:$PATH" sh "$BIN" "$@" >"$WORK/out" 2>"$WORK/err") || RC=$?
   OUT=$(cat "$WORK/out")
   ERR=$(cat "$WORK/err")
 }
@@ -155,6 +162,22 @@ printf '# T\n- [x] early box\n## Review Gate\n- [ ] **Gate 1**: a\n' >"$U/before
 printf '# T\n## Review Gate\n- [ ] **Gate 1**: a\n## Appendix\n- [x] other\n' >"$U/after.md"
 printf '# T\n## Review Gate  \nprose only\n' >"$U/nobox.md"
 printf '# T\n## Review Gate\n- [ ] **Gate 1**: a\n- [x] **Gate 1b**: b\n' >"$U/mixed.md"
+cat <<'EOF' >"$U/fence_only.md"
+# T
+```md
+## Review Gate
+- [x] **Gate 1**: fake
+```
+EOF
+printf '# T\n~~~\n## Review Gate\n- [x] **Gate 1**: fake\n~~~\n## Review Gate\n- [ ] **Gate 1**: real\n' >"$U/fence_real.md"
+printf '# T\n## Review Gate\n- [x] **Gate 1**: old\n## Review Gate\n- [ ] **Gate 1**: final\n' >"$U/twogates.md"
+printf '# T\n## Review Gate\n- [ ] **Gate 1**: a\n# Top Heading\n- [x] stray\n' >"$U/h1close.md"
+printf '## Review Gate\n- [x] **Gate 0 Decision**: No-Go\n' >"$U/nogo1.md"
+printf '## Review Gate\n- [X] **Gate 0 Decision**: no-go (defer)\n' >"$U/nogo2.md"
+printf '## Review Gate\n- [x] **Gate 0 Decision**: Go (Option A)\n' >"$U/go_opt.md"
+printf '## Review Gate\n- [x] **Gate 0 Decision**: x\n' >"$U/go_x.md"
+printf '## Review Gate\n- [x] **Gate 0 Approval**: ok\n' >"$U/go_ok.md"
+printf '## Review Gate\n- [x] **Gate 0 Decision**: Human decides Go (name the option) or No-Go before the proposal is drafted.\n' >"$U/go_tpl.md"
 
 assert_eq ticked "$(gate_state "$U/ticked.md")" "gate_state ticked"
 assert_eq ticked "$(gate_state "$U/upper.md")" "gate_state accepts [X]"
@@ -165,6 +188,16 @@ assert_eq unticked "$(gate_state "$U/after.md")" "gate_state ignores box after s
 assert_eq missing "$(gate_state "$U/nobox.md")" "gate_state section without box"
 assert_eq ticked "$(gate_state "$U/mixed.md")" "gate_state any ticked box in section"
 assert_eq missing "$(gate_state "$U/absent.md")" "gate_state missing file"
+assert_eq missing "$(gate_state "$U/fence_only.md")" "gate_state ignores fenced section"
+assert_eq unticked "$(gate_state "$U/fence_real.md")" "gate_state ignores tilde-fenced section"
+assert_eq unticked "$(gate_state "$U/twogates.md")" "gate_state final Review Gate governs"
+assert_eq unticked "$(gate_state "$U/h1close.md")" "gate_state closes section on # heading"
+assert_eq unticked "$(gate_state "$U/nogo1.md")" "gate_state treats No-Go as unticked"
+assert_eq unticked "$(gate_state "$U/nogo2.md")" "gate_state treats no-go with reason as unticked"
+assert_eq ticked "$(gate_state "$U/go_opt.md")" "gate_state accepts Go (Option A)"
+assert_eq ticked "$(gate_state "$U/go_x.md")" "gate_state accepts ': x'"
+assert_eq ticked "$(gate_state "$U/go_ok.md")" "gate_state accepts ': ok'"
+assert_eq ticked "$(gate_state "$U/go_tpl.md")" "gate_state accepts template wording"
 
 # --- Unit: violations --------------------------------------------------------
 ST='{"artifacts":[{"id":"research","status":"done","requires":[]},{"id":"proposal","status":"done","requires":["research"]},{"id":"specs","status":"done","requires":["proposal"]},{"id":"design","status":"ready","requires":["specs"]}]}'
@@ -181,8 +214,12 @@ c1: Gate 1 (proposal) Review Gate section missing but 'specs' exists" "$(violati
 proposal missing
 ")" "violations multiple, missing section wording"
 SK='{"artifacts":[{"id":"proposal","status":"done","requires":[]},{"id":"specs","status":"skipped","requires":["proposal"]},{"id":"design","status":"done","requires":["specs"]}]}'
-assert_eq "" "$(violations c1 "$SK" "specs unticked
-")" "violations ignores skipped upstream"
+assert_eq "" "$(violations c1 "$SK" "proposal ticked
+specs unticked
+")" "violations ignores skipped upstream when transitive upstream is ticked"
+assert_eq "c1: Gate 1 (proposal) unticked but 'design' exists" "$(violations c1 "$SK" "proposal unticked
+specs unticked
+")" "violations enforces unticked proposal across skipped specs"
 
 # --- artifact_state ---------------------------------------------------------
 AC="$SCR/ac"
@@ -377,6 +414,147 @@ run_check
 assert_eq 0 "$RC" "only done artifacts trigger gate checks"
 assert_contains "status --change c1 --json" "$(cat "$STUB_DIR/log")" "status --json consulted"
 assert_eq 0 "$(grep -c 'schema\.yaml' "$BIN" || true)" "check never references schema.yaml"
+
+# --- Scenario: uncreated upstream bypass blocked -----------------------------
+new_repo feat/x
+add_change c1 research=ready proposal=done specs=blocked design=blocked tasks=blocked
+artifact c1 proposal.md unticked 1
+run_check
+assert_eq 1 "$RC" "uncreated upstream exits 1"
+assert_contains "c1: Gate 0 (research) Review Gate section missing but 'proposal' exists" "$ERR" "uncreated upstream reports Gate 0"
+
+# --- Scenario: Gate 4 unticked/missing when implementation tasks ticked ------
+new_repo feat/x
+add_change c1 research=done proposal=done specs=done design=done tasks=done
+artifact c1 research.md ticked 0
+artifact c1 proposal.md ticked 1
+artifact c1 specs/a/spec.md ticked 2
+artifact c1 design.md ticked 3
+printf '# Tasks\n- [x] 3.1 BDD scenarios\n## Review Gate\n- [ ] **Gate 4 Approval**: pending\n' \
+  >"$WORK/openspec/changes/c1/tasks.md"
+run_check
+assert_eq 1 "$RC" "Gate 4 unticked with ticked task exits 1"
+assert_contains "c1: Gate 4 (tasks) unticked but implementation tasks are ticked" "$ERR" "Gate 4 unticked message"
+
+printf '# Tasks\n- [x] 3.1 BDD scenarios\n' >"$WORK/openspec/changes/c1/tasks.md"
+run_check
+assert_eq 1 "$RC" "Gate 4 missing with ticked task exits 1"
+assert_contains "c1: Gate 4 (tasks) Review Gate section missing but implementation tasks are ticked" "$ERR" "Gate 4 missing message"
+
+cat <<'EOF' >"$WORK/openspec/changes/c1/tasks.md"
+# Tasks
+```md
+- [x] 3.1 example
+```
+## Review Gate
+- [ ] **Gate 4 Approval**: pending
+EOF
+run_check
+assert_eq 0 "$RC" "fenced task checkbox does not trigger Gate 4"
+
+printf '# Tasks\n- [x] 3.1 BDD scenarios\n## Review Gate\n- [x] **Gate 4 Approval**: ok\n' \
+  >"$WORK/openspec/changes/c1/tasks.md"
+run_check
+assert_eq 0 "$RC" "Gate 4 ticked with ticked task exits 0"
+
+# --- Scenario: Gate 0 No-Go blocks downstream proposal -----------------------
+new_repo feat/x
+add_change c1 research=done proposal=done specs=blocked design=blocked tasks=blocked
+printf '# Research\n## Review Gate\n- [x] **Gate 0 Decision**: No-Go\n' \
+  >"$WORK/openspec/changes/c1/research.md"
+artifact c1 proposal.md unticked 1
+run_check
+assert_eq 1 "$RC" "Gate 0 No-Go exits 1 when proposal exists"
+assert_contains "c1: Gate 0 (research) unticked but 'proposal' exists" "$ERR" "Gate 0 No-Go message"
+
+# --- Scenario: fenced code block ## Review Gate ignored ----------------------
+new_repo feat/x
+add_change c1 research=done proposal=done specs=blocked design=blocked tasks=blocked
+cat <<'EOF' >"$WORK/openspec/changes/c1/research.md"
+# Research
+```markdown
+## Review Gate
+- [x] **Gate 0 Decision**: Go
+```
+## Review Gate
+- [ ] **Gate 0 Decision**: pending
+EOF
+artifact c1 proposal.md unticked 1
+run_check
+assert_eq 1 "$RC" "fenced Review Gate does not satisfy Gate 0"
+assert_contains "c1: Gate 0 (research)" "$ERR" "fenced Review Gate reports Gate 0"
+
+# --- Scenario: stderr warning from openspec does not break jq ----------------
+new_repo feat/x
+add_change c1 research=done proposal=done specs=blocked design=blocked tasks=blocked
+artifact c1 research.md ticked 0
+artifact c1 proposal.md unticked 1
+STUB_STDERR="(node:12345) ExperimentalWarning: CommonJS module loading"
+export STUB_STDERR
+run_check
+assert_eq 0 "$RC" "openspec stderr warning does not corrupt JSON"
+unset STUB_STDERR
+
+# --- Scenario: .changeRoot + .artifactPaths.specs.existingOutputPaths --------
+new_repo feat/x
+EXT="$SCR/ext store/c1"
+mkdir -p "$EXT/specs/deep dir"
+printf '{"changes":[{"name":"c1"}]}' >"$STUB_DIR/list.json"
+printf '{"changeName":"c1","changeRoot":"%s","artifactPaths":{"specs":{"existingOutputPaths":["%s/specs/deep dir/custom.md"]}},"artifacts":[{"id":"research","status":"done","requires":[]},{"id":"proposal","status":"done","requires":["research"]},{"id":"specs","status":"done","requires":["proposal"]},{"id":"design","status":"done","requires":["specs"]}]}' \
+  "$EXT" "$EXT" >"$STUB_DIR/status-c1.json"
+printf '## Review Gate\n- [x] **Gate 0**: ok\n' >"$EXT/research.md"
+printf '## Review Gate\n- [x] **Gate 1**: ok\n' >"$EXT/proposal.md"
+printf '## Review Gate\n- [ ] **Gate 2**: pending\n' >"$EXT/specs/deep dir/custom.md"
+printf '## Review Gate\n- [x] **Gate 3**: ok\n' >"$EXT/design.md"
+run_check
+assert_eq 1 "$RC" "external changeRoot + existingOutputPaths unticked exits 1"
+assert_contains "Gate 2 (specs)" "$ERR" "existingOutputPaths spec checked"
+printf '## Review Gate\n- [x] **Gate 2**: ok\n' >"$EXT/specs/deep dir/custom.md"
+run_check
+assert_eq 0 "$RC" "external changeRoot + existingOutputPaths ticked exits 0"
+
+# --- Scenario: --store / OPENSPEC_STORE forwarding & option validation -------
+new_repo feat/x
+add_change c1 research=done
+artifact c1 research.md unticked 0
+run_check --store my-store
+assert_eq 0 "$RC" "--store my-store exits 0"
+assert_contains "list --json --store my-store" "$(cat "$STUB_DIR/log")" "--store forwarded to list"
+assert_contains "status --change c1 --json --store my-store" "$(cat "$STUB_DIR/log")" "--store forwarded to status"
+
+: >"$STUB_DIR/log"
+run_check --store=eq-store
+assert_eq 0 "$RC" "--store=eq-store exits 0"
+assert_contains "--store eq-store" "$(cat "$STUB_DIR/log")" "--store= forwarded"
+
+: >"$STUB_DIR/log"
+OPENSPEC_STORE=env-store
+export OPENSPEC_STORE
+run_check
+assert_eq 0 "$RC" "OPENSPEC_STORE exits 0"
+assert_contains "--store env-store" "$(cat "$STUB_DIR/log")" "OPENSPEC_STORE forwarded"
+unset OPENSPEC_STORE
+
+run_check --unknown-flag
+assert_eq 2 "$RC" "unknown option exits 2"
+
+printf '{"changes":[{"name":"-bad"}]}' >"$STUB_DIR/list.json"
+run_check
+assert_eq 2 "$RC" "leading-dash change name exits 2"
+
+# --- Scenario: 3-level nested specs/a/b/c/spec.md ----------------------------
+new_repo feat/x
+add_change c1 research=done proposal=done specs=done design=done tasks=ready
+artifact c1 research.md ticked 0
+artifact c1 proposal.md ticked 1
+artifact c1 specs/a/b/c/spec.md unticked 2
+artifact c1 design.md ticked 3
+run_check
+assert_eq 1 "$RC" "3-level nested spec unticked exits 1"
+assert_contains "Gate 2 (specs)" "$ERR" "3-level nested spec reports Gate 2"
+artifact c1 specs/a/b/c/spec.md ticked 2
+run_check
+assert_eq 0 "$RC" "3-level nested spec ticked exits 0"
 
 echo ""
 echo "Check Summary: Passed: $PASSED, Failed: $FAILED"

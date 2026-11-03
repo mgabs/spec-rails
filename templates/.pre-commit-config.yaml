@@ -12,19 +12,26 @@ repos:
     hooks:
       - id: check-lgtm-directives
         name: check unresolved lgtm review directives
-        entry: make check-directives
+        entry: >-
+          sh -c 'if [ -d .lgtm/reviews ]; then d=$(grep -rn "^#ref " .lgtm/reviews 2>/dev/null || true); if [ -n "$d" ]; then printf "ERROR: Unresolved LGTM directives in .lgtm/reviews/:\n%s\n" "$d" >&2; exit 1; fi; fi'
         language: system
         pass_filenames: false
 
-      # Configure project-specific linter and test hooks below
+      - id: spec-rails-check
+        name: spec-rails gate and lane check
+        entry: sh -c 'if [ -f openspec/spec-rails/spec-rails-check ]; then sh openspec/spec-rails/spec-rails-check; fi'
+        language: system
+        pass_filenames: false
+
+      # Project-specific linter and test hooks (auto-run when Makefile targets exist)
       - id: lint
         name: linter
-        entry: make lint
+        entry: sh -c 'if [ -f Makefile ] && grep -qE "^lint:" Makefile; then make lint; fi'
         language: system
         pass_filenames: false
 
       - id: test
         name: test suite
-        entry: make test
+        entry: sh -c 'if [ -f Makefile ] && grep -qE "^test:" Makefile; then make test; fi'
         language: system
         pass_filenames: false

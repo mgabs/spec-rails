@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Run Test Suite
@@ -14,12 +17,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install OpenSpec CLI
+        run: npm install -g @fission-ai/openspec
+
       - name: Lint shell scripts with ShellCheck
         uses: ludeeus/action-shellcheck@2.0.0
         with:
           scandir: './bin ./tests'
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Set up Pre-Commit & Run Hooks
+        env:
+          # test hook duplicates "Run Test Suite"; spec-rails-check rejects pushes on main by design.
+          SKIP: ${{ github.event_name == 'push' && 'test,spec-rails-check' || 'test' }}
         run: |
           pip install pre-commit
           pre-commit run --all-files

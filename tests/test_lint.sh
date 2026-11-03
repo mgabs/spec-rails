@@ -19,11 +19,17 @@ fail() {
 echo "=== Running Shell Syntax & Spec Sanity Checks ==="
 
 # 1. POSIX shell syntax validation
-for script in "$REPO_ROOT/bin/spec-rails" "$REPO_ROOT/tests/test_installer.sh" "$REPO_ROOT/tests/test_schema.sh" "$REPO_ROOT/bin/spec-rails-check" "$REPO_ROOT/tests/test_check.sh" "$REPO_ROOT/tests/bdd/test_bdd.sh" "$REPO_ROOT/tests/check_hygiene.sh" "$REPO_ROOT/tests/test_ci_audit.sh" "$REPO_ROOT/tests/test_selfcopy.sh" "$REPO_ROOT/tests/test_e2e.sh" "$REPO_ROOT/bin/spec-rails-verify" "$REPO_ROOT/tests/test_verify.sh"; do
+for script in \
+  "$REPO_ROOT/bin/spec-rails" \
+  "$REPO_ROOT/bin/spec-rails-check" \
+  "$REPO_ROOT/bin/spec-rails-verify" \
+  "$REPO_ROOT"/tests/*.sh \
+  "$REPO_ROOT/tests/bdd/test_bdd.sh"; do
+  rel="${script#"$REPO_ROOT/"}"
   if sh -n "$script"; then
-    pass "Syntax valid: $(basename "$script")"
+    pass "Syntax valid: $rel"
   else
-    fail "Syntax error: $(basename "$script")" "sh -n failed"
+    fail "Syntax error: $rel" "sh -n failed"
   fi
 done
 
@@ -37,22 +43,43 @@ for template in roadmap.md bug-report.md spec-rails-ci.yml .pre-commit-config.ya
   fi
 done
 
-# 3. YAML syntax validation
+# 3. YAML & JSON syntax validation
 if python3 -c "import yaml" >/dev/null 2>&1; then
-  for yml in "$REPO_ROOT/.pre-commit-config.yaml" "$REPO_ROOT/templates/.pre-commit-config.yaml" "$REPO_ROOT/templates/spec-rails-ci.yml" "$REPO_ROOT/.github/workflows/test.yml"; do
+  for yml in \
+    "$REPO_ROOT/.pre-commit-config.yaml" \
+    "$REPO_ROOT/templates/.pre-commit-config.yaml" \
+    "$REPO_ROOT/templates/spec-rails-ci.yml" \
+    "$REPO_ROOT/.github/workflows/test.yml" \
+    "$REPO_ROOT/.github/workflows/spec-rails-ci.yml" \
+    "$REPO_ROOT/schemas/spec-rails/schema.yaml" \
+    "$REPO_ROOT/openspec/config.yaml"; do
     if [ -f "$yml" ]; then
-      if python3 -c "import yaml; yaml.safe_load(open('$yml'))" >/dev/null 2>&1; then
-        pass "YAML valid: $(basename "$yml")"
+      rel="${yml#"$REPO_ROOT/"}"
+      if python3 -c 'import sys, yaml; yaml.safe_load(open(sys.argv[1]))' "$yml" >/dev/null 2>&1; then
+        pass "YAML valid: $rel"
       else
-        fail "YAML invalid: $(basename "$yml")" "safe_load failed"
+        fail "YAML invalid: $rel" "safe_load failed"
       fi
     fi
   done
 fi
 
+if command -v python3 >/dev/null 2>&1; then
+  if python3 -c 'import json, sys; json.load(open(sys.argv[1]))' "$REPO_ROOT/plugin.json" >/dev/null 2>&1; then
+    pass "JSON valid: plugin.json"
+  else
+    fail "JSON invalid: plugin.json" "json.load failed"
+  fi
+fi
+
 # 4. Shellcheck if installed
 if command -v shellcheck >/dev/null 2>&1; then
-  if shellcheck "$REPO_ROOT/bin/spec-rails" "$REPO_ROOT/tests/test_installer.sh" "$REPO_ROOT/tests/bdd/test_bdd.sh" "$REPO_ROOT/tests/test_lint.sh"; then
+  if shellcheck \
+    "$REPO_ROOT/bin/spec-rails" \
+    "$REPO_ROOT/bin/spec-rails-check" \
+    "$REPO_ROOT/bin/spec-rails-verify" \
+    "$REPO_ROOT"/tests/*.sh \
+    "$REPO_ROOT/tests/bdd/test_bdd.sh"; then
     pass "ShellCheck passed"
   else
     fail "ShellCheck failed" "issues found"
@@ -61,7 +88,7 @@ else
   echo "  - ShellCheck not found in PATH (skipped locally, runs in CI)"
 fi
 
-# 5. Docs-link and unused-helper hygiene (REQ-OSA-23, REQ-OSA-24)
+# 5. Docs-link and unused-helper hygiene (REQ-OSA-23, REQ-OSA-24, REQ-OSA-30)
 if out="$(sh "$REPO_ROOT/tests/check_hygiene.sh" "$REPO_ROOT")"; then
   pass "Hygiene: doc links and shell helpers"
 else
@@ -71,13 +98,21 @@ fi
 # Fixtures prove each hygiene rule can fail
 FIX="$(mktemp -d)"
 trap 'rm -rf "$FIX"' EXIT
-mkdir -p "$FIX/docs" "$FIX/bin" "$FIX/tests"
+mkdir -p "$FIX/docs" "$FIX/rules" "$FIX/bin" "$FIX/tests"
 printf '[x](missing.md)\n' > "$FIX/docs/a.md"
 printf 'cp openspec/schemas/spec-rails/templates/research.md x\n' > "$FIX/docs/b.md"
 printf 'see specs/ROADMAP.md\n' > "$FIX/docs/c.md"
+printf 'see specs/WORKFLOW.md\n' > "$FIX/rules/r.md"
 printf 'orphan() {\n  :\n}\n' > "$FIX/tests/x.sh"
+printf '# dead_fn\ndead_fn() {\n  :\n}\n' > "$FIX/tests/y.sh"
 fixture_out="$(sh "$REPO_ROOT/tests/check_hygiene.sh" "$FIX" || true)"
-for expected in "docs/a.md -> missing.md" "docs/b.md instructs manual template copy" "docs/c.md references a legacy specs/ path" "tests/x.sh defines unused function orphan"; do
+for expected in \
+  "docs/a.md -> missing.md" \
+  "docs/b.md instructs manual template copy" \
+  "docs/c.md references a legacy specs/ path" \
+  "rules/r.md references a legacy specs/ path" \
+  "tests/x.sh defines unused function orphan" \
+  "tests/y.sh defines unused function dead_fn"; do
   case "$fixture_out" in
     *"$expected"*) pass "Hygiene detects: $expected" ;;
     *) fail "Hygiene missed: $expected" "$fixture_out" ;;

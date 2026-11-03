@@ -12,7 +12,7 @@ Every change travels through exactly one lane. Pick it before touching anything.
 | **Bugfix** | `fix/<slug>` | Merged behavior contradicts spec, docs, or user intent | B1 → B3 (§3) |
 | **Chore** | `chore/<slug>` | Zero behavior change: docs, formatting, tooling/CI config, refactors that keep every existing test unchanged | None (Rule 5) |
 
-- `<id>` is the work item ID from `docs/ROADMAP.md`, lowercased (e.g., roadmap `W1.2` → `feat/w1.2-data-ingestion`, `openspec/changes/w1.2-data-ingestion/`).
+- `<id>` is the work item ID from `docs/ROADMAP.md`, lowercased with dots normalized to hyphens so `openspec new change` (`[a-z0-9-]+` only) accepts it (e.g., roadmap `W1.2` → `feat/w1-2-data-ingestion`, `openspec/changes/w1-2-data-ingestion/`).
 - If a chore turns out to change behavior, stop and restart in the Feature or Bugfix lane.
 
 ### Rule 1: Never Commit on `main`
@@ -34,7 +34,7 @@ Never merge a branch whose rails were verified only against a stale base.
   1. **Contract Lock**: Shared domain types, interfaces, or contracts MUST be implemented, tested, and committed to the feature branch *before* spawning parallel worktrees.
   2. **Worktree Hygiene**:
      - `.worktrees/` MUST be in root `.gitignore`.
-     - **Stale lock safety**: If git reports `.git/index.lock` exists, first verify no git process is running (`pgrep -fl git`). Remove the lock only when none is running. Never delete a lock while another agent may be mid-operation; doing so can corrupt the index.
+     - **Lock safety**: NEVER force-delete `.git/index.lock` (risks index corruption under concurrent agents). Isolate concurrent streams in separate Git worktrees (`.worktrees/<id>-<stream>`) so each agent has an independent worktree index (`.git/worktrees/<name>/index`) without lock contention.
      - **Shared config invariant**: Worktree operations MUST NEVER mutate shared repository config. If `core.bare` was flipped to `true`, restore it with `git config core.bare false`.
   3. **Spawn Isolated Worktree**:
      ```bash
@@ -52,6 +52,7 @@ Never merge a branch whose rails were verified only against a stale base.
      git worktree prune
      ```
   7. **Shared File Collision Protocol**: When streams touch shared dispatch, routing, or harness files (key matchers, enum routers, status bars, BDD runners), resolve conflicts **strictly additively**: keep both streams' registrations, handlers, and test cases. NEVER drop another stream's registrations or assertions.
+  8. **Optional Candidate Bake-Off Mode**: For high-uncertainty or algorithmic slices, teams MAY spawn competing candidate worktrees (`.worktrees/<id>-cand-a`, `.worktrees/<id>-cand-b`) to run different prompts/models. Candidates are evaluated on passing tests, mutation kill score (> 90%), and smallest diff complexity. The winning branch merges `--ff-only` into the feature branch, and candidate worktrees are pruned. Bake-offs are strictly optional and not required for standard linear workflows.
 
 ### Rule 4: Pre-Commit Hooks & Red-Commit Policy
 - **Install hooks**: Every project MUST configure `.pre-commit-config.yaml` and run `pre-commit install`.
@@ -64,7 +65,7 @@ Never merge a branch whose rails were verified only against a stale base.
 
 ### Rule 5: Chore Lane
 1. `git checkout -b chore/<slug>` from the target branch.
-2. Make the change. Refactors MUST keep every existing test unchanged and green; touched core modules MUST keep a 100% mutation kill score.
+2. Make the change. Refactors MUST keep every existing test unchanged and green; touched core modules MUST keep a > 90% mutation kill score.
 3. Commit through pre-commit (Rule 4).
 4. Merge per Rule 2, then delete the branch.
 
@@ -122,7 +123,7 @@ flowchart TD
         GA --> A2[Unit Tests Red]
         A2 --> A3[Implement Green + Commit]
         A3 --> A4[Coverage >= 95%]
-        A4 --> A5[Mutation 100% Kill]
+        A4 --> A5["Mutation > 90% Kill"]
     end
 
     S_A --> Slice_Loop
@@ -153,7 +154,7 @@ flowchart TD
 ### Gate 2: Specifications
 - **Artifacts**: `openspec/changes/<id>-<slug>/specs/<capability>/spec.md`
 - **Delta Specs**: Feature specs are OpenSpec delta specs (`## ADDED|MODIFIED|REMOVED Requirements`), never full copies.
-  - **Existing capability**: MODIFIED/REMOVED deltas repeat the existing requirement header exactly. Deprecated keys stay, marked `[DEPRECATED by <id>]`; keys are never reused.
+  - **Existing capability**: MODIFIED/REMOVED deltas repeat the existing `### Requirement: REQ-... <Name>` header verbatim so OpenSpec header matching succeeds. For deprecated requirements, keep the exact header and place `**[DEPRECATED by <change>]**` at the start of the requirement body (or use `## RENAMED Requirements` when changing a header); keys are never reused.
   - **New capability**: ADDED requirements, starting with `## Purpose`.
   - Headers are `### Requirement: REQ-<DOMAIN>-<N> <name>`; bodies contain `MUST`/`SHALL`; every requirement has at least one `#### Scenario:`.
   - `openspec archive` merges the deltas into `openspec/specs/` at Gate 6.
@@ -164,6 +165,7 @@ flowchart TD
 ### Gate 3: Architecture & Design
 - **Artifact**: `openspec/changes/<id>-<slug>/design.md`
 - **Mandatory Sections**: Overview & Invariants; Domain Models, State & Interface Contracts; Architecture Diagrams & Data Flow; Boundary Rules (Pure Core vs I/O Shell); Concurrency, Latency & Resource Budgets (matching `NFR-*`); Testing Strategy.
+- **Contract Scaffolding Rail**: Skeletons, domain interfaces, and empty function signatures are drafted here and committed prior to slice code generation.
 - **Domain-Specific Baselines**:
   - **UI / Interactive**: Frame deadlines (e.g., $< 16\text{ms}$), input latency budgets, background I/O offloading.
   - **ML / Data / Heuristics**: Deterministic Tier 0 baseline before complex models or external APIs.
@@ -171,7 +173,7 @@ flowchart TD
 
 ### Gate 4: Tasks & DAG
 - **Artifact**: `openspec/changes/<id>-<slug>/tasks.md`
-- **Mandatory Sections**: Dependency DAG; Streams with worktrees (`.worktrees/<id>-<stream>`); test-first order per slice (BDD → Gate 5.x → Red → Green → Coverage → Mutation); Integration & Rebase Plan.
+- **Mandatory Sections**: Dependency DAG; Streams with worktrees (`.worktrees/<id>-<stream>`); test-first order per slice (Contract Scaffolding → BDD → Gate 5.x → Red → Green → Coverage → Mutation); Integration & Rebase Plan.
 - **Gate**: Human approval before spawning worktrees or writing tests.
 
 ---
@@ -185,9 +187,9 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    BR[Defect Found] --> GB1[Gate B1: Bug Report & Triage]
-    GB1 --> WT[Spawn .worktrees/fix-slug off main]
-    WT --> T_Red["Regression Test: Red (uncommitted)"]
+    BR[Defect Found] --> WT[Spawn .worktrees/fix-slug off main]
+    WT --> GB1[Gate B1: Bug Report & Triage]
+    GB1 --> T_Red["Regression Test: Red (uncommitted)"]
     T_Red --> GB2[Gate B2: Reproduction Confirmed]
     GB2 --> C_Green[Minimal Fix: Green + Commit]
     C_Green --> GB3[Gate B3: Sign-off]
@@ -196,13 +198,14 @@ flowchart TD
 ```
 
 ### Gate B1: Bug Report & Triage
+- Spawn an isolated worktree first so the bug report belongs to the fix branch/PR:
+  `git worktree add .worktrees/fix-<slug> -b fix/<slug> main && cd .worktrees/fix-<slug>`
 - **Artifact**: `docs/bug-reports/<date>-<slug>.md`
 - **Mandatory Sections**: Status & Metadata, Summary, Steps to Reproduce, Expected vs Actual, Root Cause Analysis, Remediation Plan.
 - **Gate**: Human approval before code changes.
 
 ### Gate B2: Reproduction Confirmed (Red-First)
-- `git worktree add .worktrees/fix-<slug> -b fix/<slug> main`
-- Write the regression test *before touching production code*. It MUST fail on unmodified code.
+- Inside `.worktrees/fix-<slug>`, write the regression test *before touching production code*. It MUST fail on unmodified code.
 - Show the failing output to the human. The Red test stays uncommitted (Rule 4).
 - **Gate**: Human confirms the test reproduces the real defect.
 
@@ -229,14 +232,14 @@ flowchart TD
 - **Coverage**: Line and branch $\ge 95\%$ on the target module.
 - **Performance**: Verify `NFR-*` budgets with deterministic benchmarks/assertions.
 
-### Step 5.x-C: Mutation Testing (100% Kill, No Exemptions)
+### Step 5.x-C: Mutation Testing (> 90% Kill Score)
 - **Scoped run**: Mutate only the slice's modules. Full-project mutation runs at Gate 6.
-- **Every surviving mutant is a blocking defect**. Resolve by exactly one of:
+- **Surviving mutants below threshold are blocking defects**. Resolve by:
   1. **Add a targeted assertion** that kills it.
   2. **Delete dead code**: unreachable defensive branches or assertions get removed (YAGNI).
-  3. **Restructure equivalent mutants away**: when a mutant is behaviorally identical to the original (e.g., `i < n` → `i != n` in an index loop), rewrite the code so the equivalence disappears (iterators instead of index loops, removing redundant conditions), making the mutant killable or impossible.
-- Never mask survivors with skip comments, exclusion lists, or lowered thresholds.
-- **Target**: $100\%$ kill score on slice domain and core logic.
+  3. **Restructure equivalent mutants away**: when a mutant is behaviorally identical to the original (e.g., `i < n` → `i != n` in an index loop), rewrite the code so the equivalence disappears.
+- **Justify every survivor**: each remaining surviving mutant is listed in the PR with a reason (equivalent mutant or accepted risk). The threshold is a floor, not a license to skip killable mutants.
+- **Target**: $> 90\%$ kill score on slice domain and core logic.
 
 ---
 
@@ -253,6 +256,8 @@ Spec-Rails pairs with [mgabs/lgtm](https://github.com/mgabs/lgtm) as the review 
   - NEVER skip/ignore failing tests without explicit human sign-off.
 - **Boundaries & Hygiene (The Ponytail Mindset & Strict YAGNI)**:
   - Strictly apply YAGNI (You Aren't Gonna Need It). Build strictly what is specified without speculative extras or premature abstractions.
+  - **Contract Scaffolding**: Commit types, contracts, and signatures before generating logic.
+  - **Understand or Delete**: If the human reviewer cannot explain every line of the diff, delete and revert it immediately. Zero uncomprehended AI slop.
   - Pure domain core: no direct I/O, network, or framework coupling.
   - Touch only files in the active slice (minimal blast radius).
   - No dead or unreferenced code (Ponytail rule: delete dead code when mutants survive).
@@ -267,14 +272,15 @@ All steps on the feature branch unless stated otherwise:
 1. All stream worktrees merged into the feature branch (Rule 3.6), removed, and pruned (`git worktree prune`). Verify `git worktree list` shows only the repository root.
 2. Rebase the feature branch onto `main` (Rule 2).
 3. Full test suite: $100\%$ pass, $\ge 95\%$ line and branch coverage.
-4. Full-project mutation suite: $100\%$ kill score on core logic.
-5. Run `openspec validate <change>` (also required after every stream rebase).
-6. Tick every item in `tasks.md` and the Gate 6 box.
-7. Sync and archive in one step (no Spec-Rails-owned copy or move):
+4. Full-project mutation suite: $> 90\%$ kill score on core logic.
+5. **Human Comprehension Verification**: Reviewer verifies complete line-by-line understanding of all generated code; delete ununderstood code.
+6. Tick every completed slice item and the final integration task in `tasks.md` (with `Evidence:` on Red/Green/Coverage/Mutation items).
+7. Run `openspec validate <id>-<slug>` (also required after every stream rebase).
+8. Sync and archive in one step (no Spec-Rails-owned copy or move):
    ```bash
    openspec archive <id>-<slug> --yes
    ```
-8. Commit, then merge into `main`:
+9. Commit, then merge into `main`:
    ```bash
    git checkout main
    git merge --ff-only feat/<id>-<slug>
@@ -290,7 +296,7 @@ Spec-Rails is an addon on an OpenSpec project (`spec-rails [init] [dir]`, requir
 - **Gates**: each artifact template ends with an unticked `## Review Gate` box. A human ticks it and commits it before the next artifact is created. `spec-rails-check` (pre-commit and CI) fails if an artifact exists whose upstream gate is unticked, and fails commits on `main`/`master`.
 - **Streams**: after rebasing a stream onto the feature branch, run `openspec validate <change>` in addition to the test suite.
 - **Requirement IDs**: `REQ-*`/`NFR-*` live in the change's delta specs and are synced into `openspec/specs/` by `openspec archive`; Gate 6 adds only the rails (tests, mutation, `openspec validate`) around that command.
-- **Parallel streams and deltas**: streams of one change share its delta specs. Apply Rule 3.7 (strictly additive) to delta spec edits, and give each stream distinct `REQ-*` IDs to avoid collisions.
+- **Parallel streams, delta specs, and `tasks.md`**: shared capability delta specs are locked at Gate 2 on the feature branch before spawning parallel slice worktrees (Rule 3.1); if streams must edit a shared delta spec, apply Rule 3.7 (strictly additive) with distinct `REQ-*` IDs. Update `tasks.md` slice checkboxes on the parent feature branch when integrating streams (or confine edits to each stream's own slice section) to avoid rebase collisions.
 - **Bugfix lane**: B1–B3 stay outside `openspec/changes/`; the report in `docs/bug-reports/` is the artifact. A fix that alters a living requirement edits `openspec/specs/` directly in the same branch (B3), with no delta change.
 - **Roadmap vs OpenSpec**: `docs/ROADMAP.md` tracks delivery status of initiatives (one row = one or more changes); OpenSpec tracks each change's artifacts. The row's Spec / Feature Dir points at the change or its archive.
 - **Update survival**: Spec-Rails rules live in `openspec/spec-rails/`, outside files regenerated by `openspec update`.

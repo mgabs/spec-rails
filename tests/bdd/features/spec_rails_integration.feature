@@ -1,3 +1,4 @@
+@REQ-OSA-12 @REQ-OSA-16 @REQ-OSA-17
 Feature: spec-rails end-to-end in an OpenSpec project
   As a team running OpenSpec
   We want the installed hook and CI to run the gate and lane check

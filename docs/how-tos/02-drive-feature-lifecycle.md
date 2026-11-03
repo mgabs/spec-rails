@@ -1,4 +1,4 @@
-# How-To: Drive a Feature Through Gates 1 to 6
+# How-To: Drive a Feature Through Gates 0–6
 
 This guide demonstrates end-to-end execution of a feature under the Spec-Rails lifecycle.
 
@@ -6,20 +6,20 @@ This guide demonstrates end-to-end execution of a feature under the Spec-Rails l
 
 ## Step 1: Branch Creation
 
-Never work on `main`. Start a dedicated feature branch:
+Never work on `main`. Normalize roadmap IDs to lowercase hyphens (`W1.1` → `w1-1`) and start a dedicated feature branch:
 
 ```bash
 git checkout -b feat/w1-1-user-authentication
 ```
 
-Scaffold the change with OpenSpec (change names allow only lowercase letters, digits and hyphens):
+Scaffold the change with OpenSpec (`openspec new change` accepts `[a-z0-9-]+` only — no dots):
 
 ```bash
 openspec new change w1-1-user-authentication
 openspec status --change w1-1-user-authentication
 ```
 
-Each artifact below is generated from the schema with `openspec instructions <artifact> --change w1-1-user-authentication`, or by running `/opsx-propose` in your agent to draft research through tasks in one pass. Review each draft and tick its `## Review Gate` box yourself; agents never tick gates.
+For gated planning, generate one artifact at a time with `openspec instructions <artifact> --change w1-1-user-authentication`, pausing for a human to review, tick its `## Review Gate` checkbox, and commit before generating the next file. Note that `/opsx-propose` drafts all planning artifacts in one pass, so `spec-rails-check` will block commits until Gates 0–3 are reviewed and ticked. Run `/opsx-apply` and `/opsx-archive` only after Gate 4 is ticked by a human; agents never self-tick Gate 0–4 or Gate 5.x sign-off boxes.
 
 ---
 
@@ -50,7 +50,7 @@ Each artifact below is generated from the schema with `openspec instructions <ar
 ## Step 4: Gate 2 — Specifications
 
 1. For each capability, write a **delta spec** (`## ADDED|MODIFIED|REMOVED Requirements`):
-   - **Existing capability** — MODIFIED/REMOVED deltas repeat the existing `### Requirement: REQ-... <name>` header exactly (mark retired keys `[DEPRECATED by w1.1]`, never reuse keys).
+   - **Existing capability** — MODIFIED/REMOVED deltas repeat the existing `### Requirement: REQ-... <name>` header verbatim so OpenSpec header matching succeeds (for retired requirements, keep the exact header and place `**[DEPRECATED by w1-1-user-authentication]**` at the start of the requirement body; never reuse keys).
    - **New capability** — ADDED requirements in `openspec/changes/w1-1-user-authentication/specs/token-verification/spec.md`, structured per `openspec instructions specs --change w1-1-user-authentication`.
 2. Fill in:
    - **Functional Requirements**: `REQ-AUTH-1`, `REQ-AUTH-2`, etc.
@@ -92,7 +92,7 @@ For each vertical slice:
    - Enforce $\ge 95\%$ line and branch coverage.
 3. **Step 5.x-C (Mutation Testing)**:
    - Run mutation tests scoped to the slice.
-   - Kill 100% of survivors: add an assertion, delete dead code, or restructure equivalent mutants away. No exemptions.
+   - Maintain > 90% mutation kill score: add an assertion, delete dead code, or restructure equivalent mutants away.
 
 ---
 
@@ -100,16 +100,17 @@ For each vertical slice:
 
 1. Merge stream worktrees (rebase + re-verify each, then `--ff-only`) and prune them.
 2. Rebase onto `main`, then run the full test suite and full-project mutation suite.
-3. Validate, then sync and archive in one step:
+3. Tick completed slice items and the final integration task in `tasks.md` (with `Evidence:` on Red/Green/Coverage/Mutation items), then validate:
    ```bash
    openspec validate w1-1-user-authentication
    ```
-4. Tick all tasks and the Gate 6 box in `tasks.md`, archive, commit, and merge:
+4. Sync and archive in one step (via `openspec archive` or `/opsx-archive`), commit, and merge:
    ```bash
    openspec archive w1-1-user-authentication --yes
    git add -A
-   git commit -m "feat(w1.1): ship user authentication"
+   git commit -m "feat(w1-1): ship user authentication"
    git checkout main
    git merge --ff-only feat/w1-1-user-authentication
+   git branch -d feat/w1-1-user-authentication
    ```
-5. Mark `✅ Shipped` in `docs/ROADMAP.md` through a `chore/roadmap-w1.1` branch.
+5. Mark `✅ Shipped` in `docs/ROADMAP.md` through a `chore/roadmap-w1-1` branch.
