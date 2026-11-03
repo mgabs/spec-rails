@@ -11,9 +11,6 @@ export function resolveCanonicalPath(targetPath: string): string {
 }
 
 export function isPathInside(childPath: string, parentPath: string): boolean {
-  if (childPath === parentPath) {
-    return true;
-  }
   const relative = path.relative(parentPath, childPath);
   return !relative.startsWith("..") && !path.isAbsolute(relative);
 }
@@ -21,7 +18,7 @@ export function isPathInside(childPath: string, parentPath: string): boolean {
 export function validatePathSandbox(
   targetPath: string,
   repoRoot: string,
-  allowlistPrefixes: string[] = []
+  allowlistPrefixes?: string[]
 ): string {
   const canonicalTarget = resolveCanonicalPath(targetPath);
   const canonicalRoot = resolveCanonicalPath(repoRoot);
@@ -30,10 +27,12 @@ export function validatePathSandbox(
     return canonicalTarget;
   }
 
-  for (const prefix of allowlistPrefixes) {
-    const canonicalPrefix = resolveCanonicalPath(prefix);
-    if (isPathInside(canonicalTarget, canonicalPrefix)) {
-      return canonicalTarget;
+  if (allowlistPrefixes && allowlistPrefixes.length > 0) {
+    for (const prefix of allowlistPrefixes) {
+      const canonicalPrefix = resolveCanonicalPath(prefix);
+      if (isPathInside(canonicalTarget, canonicalPrefix)) {
+        return canonicalTarget;
+      }
     }
   }
 

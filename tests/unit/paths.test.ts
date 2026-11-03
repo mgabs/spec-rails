@@ -87,6 +87,15 @@ describe("Path Sandboxing & Canonical Resolution", () => {
     expect(() => validatePathSandbox(evilLink, repoRoot)).toThrow(/Path traversal escape detected/);
   });
 
+  it("blocks directory traversal when allowlist is empty array", () => {
+    const secretFile = path.join(tempDir, "secret.txt");
+    fs.writeFileSync(secretFile, "confidential");
+    const evilLink = path.join(repoRoot, "escape-empty-arr");
+    fs.symlinkSync(secretFile, evilLink);
+
+    expect(() => validatePathSandbox(evilLink, repoRoot, [])).toThrow(/Path traversal escape detected/);
+  });
+
   it("blocks traversal even when allowlist prefixes are provided if target does not match", () => {
     const secretFile = path.join(tempDir, "secret.txt");
     fs.writeFileSync(secretFile, "confidential");

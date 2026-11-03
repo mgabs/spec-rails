@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { execFileSync } from "node:child_process";
 import * as path from "node:path";
+import * as fs from "node:fs";
+import * as os from "node:os";
 import { createCli, runCli } from "../../src/cli.js";
 
 describe("CLI Binary Integration & Unit", () => {
@@ -16,10 +18,12 @@ describe("CLI Binary Integration & Unit", () => {
 
   it("invokes init command handler", () => {
     const cli = createCli();
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-init-test-"));
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    cli.parse(["node", "spec-rails", "init", "--stack=python"]);
-    expect(logSpy).toHaveBeenCalledWith("[spec-rails] init called with stack=python");
+    cli.parse(["node", "spec-rails", "init", tempDir, "--stack=python"]);
+    expect(logSpy).toHaveBeenCalledWith("[spec-rails] Initialized repository for stack: python");
     logSpy.mockRestore();
+    fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
   it("invokes verify command handler", () => {
@@ -39,10 +43,12 @@ describe("CLI Binary Integration & Unit", () => {
   });
 
   it("runs runCli with provided argv", () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-runcli-test-"));
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    runCli(["node", "spec-rails", "init"]);
-    expect(logSpy).toHaveBeenCalledWith("[spec-rails] init called with stack=auto");
+    runCli(["node", "spec-rails", "init", tempDir]);
+    expect(logSpy).toHaveBeenCalledWith("[spec-rails] Initialized repository for stack: auto");
     logSpy.mockRestore();
+    fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
   it("prints version on --version in subprocess bundle", () => {

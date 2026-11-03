@@ -1,14 +1,23 @@
 import { cac, type CAC } from "cac";
+import { initProject } from "./commands/init.js";
 
 export function createCli(): CAC {
   const cli = cac("spec-rails");
 
   cli
-    .command("init", "Initialize Spec-Rails in the target repository")
+    .command("init [dir]", "Initialize Spec-Rails in the target repository")
     .option("--stack <stack>", "Target stack: auto | ts | python | go | rust", { default: "auto" })
     .option("--force", "Overwrite existing configuration", { default: false })
-    .action((options) => {
-      console.log(`[spec-rails] init called with stack=${options.stack}`);
+    .action((dir, options) => {
+      const res = initProject({
+        cwd: dir || process.cwd(),
+        stack: options.stack,
+        force: options.force,
+      });
+      console.log(`[spec-rails] Initialized repository for stack: ${res.detectedStack}`);
+      for (const file of res.createdFiles) {
+        console.log(`  + Created: ${file}`);
+      }
     });
 
   cli

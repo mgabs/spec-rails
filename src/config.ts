@@ -49,7 +49,7 @@ export function loadConfigFile(configPath: string): Config {
   if (!fs.existsSync(configPath)) {
     throw new Error(`Configuration file not found: ${configPath}`);
   }
-  const content = fs.readFileSync(configPath, "utf-8");
+  const content = fs.readFileSync(configPath).toString("utf-8");
   const raw = JSON.parse(content);
   return parseConfig(raw);
 }
