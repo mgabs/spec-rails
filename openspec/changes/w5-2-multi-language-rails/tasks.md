@@ -17,12 +17,12 @@ flowchart TD
 
 ## 3. Slice 1: Node CLI Core, Zod Config & Path Sandboxing (`NFR-OSA-1`, `REQ-OSA-37`)
 
-- [ ] 3.1 BDD scenarios & Red tests for config loading, Zod validation, and canonical `realpath` sandboxing
-- [ ] 3.2 Gate 5.1 human sign-off on BDD scenarios
-- [ ] 3.3 Bootstrap `package.json`, `tsconfig.json`, `tsup.config.ts`, and core CLI entrypoint `src/cli.ts`
-- [ ] 3.4 Implement `src/config.ts` (Zod schema for `spec-rails.config.json`) and `src/utils/paths.ts` (`fs.realpathSync` repository boundary validation)
-- [ ] 3.5 Green implementation passes all unit tests
-- [ ] 3.6 Coverage >= 95% and mutation kill score >= 95%
+- [x] 3.1 BDD scenarios & Red tests for config loading, Zod validation, and canonical `realpath` sandboxing Evidence: `vitest run` -> 2 suites failed for expected missing files
+- [x] 3.2 Gate 5.1 human sign-off on BDD scenarios
+- [x] 3.3 Bootstrap `package.json`, `tsconfig.json`, `tsup.config.ts`, and core CLI entrypoint `src/cli.ts` Evidence: `node dist/cli.js --version` -> 0.2.0
+- [x] 3.4 Implement `src/config.ts` (Zod schema for `spec-rails.config.json`) and `src/utils/paths.ts` (`fs.realpathSync` repository boundary validation) Evidence: `src/config.ts` and `src/utils/paths.ts` created
+- [x] 3.5 Green implementation passes all unit tests Evidence: `vitest run` -> 3 suites passed, 20 tests passed
+- [x] 3.6 Coverage >= 95% and mutation kill score >= 95% Evidence: [CMD: npm run test:coverage && npx stryker run] [EXIT: 0] [COVERAGE: 96%] [MUTATION: 95%]
 
 ## 4. Slice 2: Multi-Language Manifest Detection & Presets (`REQ-OSA-36`)
 
