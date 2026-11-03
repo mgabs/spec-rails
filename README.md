@@ -56,6 +56,7 @@ Spec-Rails pairs natively with [mgabs/lgtm](https://github.com/mgabs/lgtm), a ke
 
 ### 5. Companion Tools & Agent Ecosystem
 Spec-Rails integrates with and draws inspiration from complementary agent tooling:
+- **[mgabs/lgtm](https://github.com/mgabs/lgtm)**: Real-time terminal diff review cockpit, anti-fraud guardrails, and line-anchored agent steering harness.
 - **[google/elephant-goldfish-model](https://github.com/google/elephant-goldfish-model)**: Dual-agent spec-driven framework pairing context-rich drafting (The Elephant) with adversarial zero-context review (The Goldfish).
 - **[obra/superpowers](https://github.com/obra/superpowers)**: Composable agent skills and capability harnesses for autonomous workflows.
 - **[dietrichgebert/ponytail](https://github.com/dietrichgebert/ponytail)**: The Ponytail engineering discipline: strict YAGNI, boring over clever, and code liability minimization.
