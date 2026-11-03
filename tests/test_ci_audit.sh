@@ -5,6 +5,11 @@ set -eu
 
 REPO_ROOT="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 CI="${SPEC_RAILS_CI_TEMPLATE:-$REPO_ROOT/templates/spec-rails-ci.yml}"
+
+# Drop GIT_DIR/GIT_INDEX_FILE etc. leaked by git hooks so scratch repos stay isolated.
+# shellcheck disable=SC2046
+unset $(git rev-parse --local-env-vars)
+
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
