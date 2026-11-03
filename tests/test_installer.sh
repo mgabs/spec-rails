@@ -45,6 +45,8 @@ mkdir -p "$STUB"
 printf '#!/bin/sh\n[ "$1" = "--version" ] && echo "${STUB_OPENSPEC_VERSION:-1.15.0}"\nexit 0\n' > "$STUB/openspec"
 chmod +x "$STUB/openspec"
 STUB_PATH="$STUB:$PATH"
+# Hooks run with the stub too, so results do not depend on a locally installed openspec.
+PATH="$STUB_PATH"
 NO_OPENSPEC_PATH="/usr/bin:/bin"
 
 newdir() {
