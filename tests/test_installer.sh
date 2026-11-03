@@ -4,6 +4,10 @@ set -eu
 REPO_ROOT="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 BIN="${SPEC_RAILS_BIN:-$REPO_ROOT/bin/spec-rails}"
 
+# Drop GIT_DIR/GIT_INDEX_FILE etc. leaked by git hooks so scratch repos stay isolated.
+# shellcheck disable=SC2046
+unset $(git rev-parse --local-env-vars)
+
 FAILED=0
 PASSED=0
 
