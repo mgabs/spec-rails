@@ -5,7 +5,7 @@ This design formalizes Carlos Kelkboom's architectural discipline into Spec-Rail
 - **Contract Scaffolding Rail (`REQ-OSA-33`)**: Prevents hallucinated abstractions by requiring interface definitions, types, and empty signatures to be committed before code generation.
 - **Comprehension Verification (`REQ-OSA-34`)**: Guards against technical debt by mandating that ununderstood AI code be deleted rather than merged.
 - **Optional Parallel Bake-Off (`REQ-OSA-35`)**: Provides a documented recipe for running competitive subagents in Git worktrees without imposing worktree overhead on standard slices.
-- **Mutation Threshold Calibration (`REQ-OSA-36`)**: Adjusts mutation kill rail from strict 100% to > 90% on core domain logic, preventing friction on untestable equivalent mutants and defensive logger branches.
+- **Mutation Threshold Calibration (`NFR-OSA-5`)**: Adjusts mutation kill rail from strict 100% to > 90% on core domain logic, preventing friction on untestable equivalent mutants and defensive logger branches.
 
 ## 2. Domain Models, State & Interface Contracts
 

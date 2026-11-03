@@ -32,7 +32,7 @@ Spec-Rails already enforces Git worktree isolation and red-green mutation rails,
 Option A: strict Ponytail mindset / YAGNI. Embed architectural boundaries directly into `rules/` and `templates/` where agents and humans evaluate work, keeping bake-off strictly optional.
 
 ## 5. Breaking Changes & Deprecations
-None. Extends living specs with protocol invariants (`REQ-OSA-33` through `REQ-OSA-36`).
+None. Extends living specs with protocol invariants (`REQ-OSA-33` through `NFR-OSA-5`).
 
 ## Review Gate
 - [x] **Gate 0 Decision**: Go (Option A)

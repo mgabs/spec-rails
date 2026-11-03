@@ -23,7 +23,7 @@ When working in a repository containing `openspec/spec-rails/WORKFLOW.md`:
    - **Bugs**: Spawn `.worktrees/fix-<slug>` off `main` first → Gate B1 (`docs/bug-reports/<date>-<slug>.md` inside worktree) → Gate B2 (Red regression test shown, uncommitted) → Gate B3 (Green fix + docs/spec sync + merge).
 4. **Testing Rails**:
    - Red before Green. Red tests are never committed alone; commit them together with Green.
-   - $\ge 95\%$ line and branch coverage; $> 90\%$ mutation kill score on core business logic (kill or delete dead code).
+   - $\ge 95\%$ line and branch coverage; $> 90\%$ mutation kill score on core business logic (kill or delete dead code; justify every remaining survivor in the PR).
    - Never delete assertions, skip failing tests, or write vacuous tests.
 5. **Commit & Merge Hygiene**:
    - Pre-commit hooks installed; run linters, formatters, and the full suite before every commit. Never `--no-verify`.

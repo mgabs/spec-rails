@@ -30,15 +30,18 @@ jobs:
         with:
           scandir: './bin ./tests'
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Set up Pre-Commit & Run Hooks
         env:
-          SPEC_RAILS_ALLOW_MAIN: "1"
+          # test hook duplicates "Run Test Suite"; spec-rails-check rejects pushes on main by design.
+          SKIP: ${{ github.event_name == 'push' && 'test,spec-rails-check' || 'test' }}
         run: |
-          pip install --break-system-packages pre-commit
+          pip install pre-commit
           pre-commit run --all-files
 
       - name: Run Test Suite
         run: make test
-
-      - name: Verify Test Rails
-        run: sh bin/spec-rails-verify

@@ -1,4 +1,4 @@
-@REQ-OSA-7 @REQ-OSA-8 @REQ-OSA-9 @REQ-OSA-19 @REQ-OSA-20 @REQ-OSA-29 @REQ-OSA-30 @REQ-OSA-31 @REQ-OSA-32 @REQ-OSA-33 @REQ-OSA-34 @REQ-OSA-35 @REQ-OSA-36 @NFR-OSA-1 @NFR-OSA-4 @NFR-OSA-5
+@REQ-OSA-7 @REQ-OSA-8 @REQ-OSA-9 @REQ-OSA-19 @REQ-OSA-20 @REQ-OSA-29 @REQ-OSA-30 @REQ-OSA-31 @REQ-OSA-32 @REQ-OSA-33 @REQ-OSA-34 @REQ-OSA-35 @NFR-OSA-1 @NFR-OSA-4 @NFR-OSA-5
 Feature: Spec-Rails OpenSpec addon architecture, layout, and boundary hardening
   As an engineering team running Spec-Rails on OpenSpec v1.15/v1.16+
   We want OpenSpec-native delta specs, archival, layout, and hardened CLI/gate/rail boundaries
@@ -51,7 +51,7 @@ Feature: Spec-Rails OpenSpec addon architecture, layout, and boundary hardening
     Given the shell scripts in "bin/" and "tests/"
     When validated with POSIX "sh -n" and the test suite on macOS and Linux default shells
     Then they require only POSIX utilities, "git", "jq", and "openspec"
-    And installer and check scripts maintain >= 95% line/branch coverage and 100% mutant kill
+    And installer and check scripts maintain >= 95% line/branch coverage and > 90% mutant kill
 
   @REQ-OSA-33
   Scenario: Contract scaffolding precedes implementation
@@ -71,8 +71,8 @@ Feature: Spec-Rails OpenSpec addon architecture, layout, and boundary hardening
     When a team runs a parallel candidate bake-off in ".worktrees/<id>-cand-a" and "cand-b"
     Then the candidate passing rails with lowest diff complexity merges and losers are pruned
 
-  @REQ-OSA-36
-  Scenario: Calibrated mutation testing rail above 90%
-    Given a module under test
-    When mutation testing runs on core logic
-    Then a mutation kill score exceeding 90% satisfies the rail
+  @NFR-OSA-5
+  Scenario: Surviving mutants are justified above the 90% floor
+    Given a mutation run on core logic scoring above 90%
+    When surviving mutants remain
+    Then each survivor is listed in the PR as an equivalent mutant or accepted risk

@@ -26,13 +26,19 @@ The multi-agent workflow documentation MUST define an optional candidate bake-of
 - **WHEN** a team chooses to run a parallel candidate bake-off
 - **THEN** competing worktrees are evaluated on rails and diff simplicity, the winner is merged with `--ff-only`, and losers are pruned without blocking teams that choose standard single-stream execution
 
-### Requirement: REQ-OSA-36 Mutation Threshold
-The testing rails defined in the workflow protocol, schema instructions, templates, and documentation MUST specify a mutation kill score threshold of greater than 90% (> 90%) on core business logic rather than a strict 100% requirement.
+## MODIFIED Requirements
 
-#### Scenario: Mutation threshold calibration
-- **GIVEN** a module undergoing mutation analysis
-- **WHEN** mutation kill score is evaluated
-- **THEN** a score exceeding 90% (> 90%) satisfies the testing rail
+### Requirement: NFR-OSA-5 Rails
+Installer and check scripts MUST have ≥ 95% line and branch coverage under the existing shell test suite and, where a mutation tool is available for the stack, a mutation kill score greater than 90% (> 90%) on core logic, with every remaining surviving mutant justified in the PR (equivalent mutant or accepted risk). The workflow protocol, schema instructions, templates, and documentation MUST state the same thresholds.
+
+#### Scenario: Rails
+- **WHEN** the shell suites run
+- **THEN** line and branch coverage is at least 95% and the mutation kill score exceeds 90%
+
+#### Scenario: Survivor justification
+- **GIVEN** a mutation run above 90% with surviving mutants
+- **WHEN** the PR is reviewed
+- **THEN** each surviving mutant is listed with a reason, and killable survivors without a reason block merge
 
 ## Review Gate
 - [x] **Gate 2 Approval**: Specifications reviewed and approved by human before technical design.

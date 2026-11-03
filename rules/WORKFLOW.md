@@ -123,7 +123,7 @@ flowchart TD
         GA --> A2[Unit Tests Red]
         A2 --> A3[Implement Green + Commit]
         A3 --> A4[Coverage >= 95%]
-        A4 --> A5[Mutation 100% Kill]
+        A4 --> A5["Mutation > 90% Kill"]
     end
 
     S_A --> Slice_Loop
@@ -238,6 +238,7 @@ flowchart TD
   1. **Add a targeted assertion** that kills it.
   2. **Delete dead code**: unreachable defensive branches or assertions get removed (YAGNI).
   3. **Restructure equivalent mutants away**: when a mutant is behaviorally identical to the original (e.g., `i < n` → `i != n` in an index loop), rewrite the code so the equivalence disappears.
+- **Justify every survivor**: each remaining surviving mutant is listed in the PR with a reason (equivalent mutant or accepted risk). The threshold is a floor, not a license to skip killable mutants.
 - **Target**: $> 90\%$ kill score on slice domain and core logic.
 
 ---

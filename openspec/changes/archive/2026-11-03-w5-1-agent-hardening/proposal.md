@@ -12,7 +12,7 @@ Autonomous AI agents left unchecked produce architectural degradation, invent un
 - None
 
 ### Modified Capabilities
-- `openspec-addon`: Adds agent architectural guardrails (`REQ-OSA-33` Contract Scaffolding Rail, `REQ-OSA-34` Comprehension Verification Gate, `REQ-OSA-35` Optional Parallel Bake-Off Pattern, and `REQ-OSA-36` Mutation Threshold Calibration to > 90%).
+- `openspec-addon`: Adds agent architectural guardrails (`REQ-OSA-33` Contract Scaffolding Rail, `REQ-OSA-34` Comprehension Verification Gate, `REQ-OSA-35` Optional Parallel Bake-Off Pattern, and MODIFIED `NFR-OSA-5` mutation threshold > 90%).
 
 ## Scope
 

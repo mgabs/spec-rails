@@ -55,9 +55,17 @@ jobs:
         run: |
           sh openspec/spec-rails/spec-rails-verify
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Set up Pre-Commit
+        env:
+          # The test hook duplicates the "Run Test Suite" step below.
+          SKIP: test
         run: |
-          pip install --break-system-packages pre-commit
+          pip install pre-commit
           pre-commit run --all-files
 
       - name: Run Test Suite

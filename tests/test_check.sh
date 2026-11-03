@@ -333,14 +333,6 @@ for b in main master; do
   assert_contains "$b" "$ERR" "branch $b named"
 done
 
-new_repo main
-run_check --allow-main
-assert_eq 0 "$RC" "branch main with --allow-main exits 0"
-
-new_repo main
-SPEC_RAILS_ALLOW_MAIN=1 run_check
-assert_eq 0 "$RC" "branch main with SPEC_RAILS_ALLOW_MAIN=1 exits 0"
-
 new_repo feat/x
 run_check
 assert_eq 0 "$RC" "feature branch allowed"

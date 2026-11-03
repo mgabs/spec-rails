@@ -45,7 +45,7 @@ Feature branch & dir naming: ID lowercased, e.g. `W1.2` → `feat/w1.2-data-inge
 
 ### Wave 1 Exit Criteria
 - [ ] All W1 items marked `✅ Shipped`.
-- [ ] Core contracts verified with $\ge 95\%$ test coverage and $100\%$ mutation kill score.
+- [ ] Core contracts verified with $\ge 95\%$ test coverage and $> 90\%$ mutation kill score.
 - [ ] Living specs established in `openspec/specs/`.
 
 ### Wave 2 Exit Criteria

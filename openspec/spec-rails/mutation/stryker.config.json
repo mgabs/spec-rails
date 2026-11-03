@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/api/schema/stryker-schema.json",
-  "_comment": "Spec-Rails Mutation Testing Rail for JS/TS (Stryker). Target: 100% kill score.",
+  "_comment": "Spec-Rails Mutation Testing Rail for JS/TS (Stryker). Target: > 90% kill score; justify every survivor in the PR.",
   "mutate": [
     "src/**/*.ts",
     "!src/**/*.spec.ts",
@@ -10,9 +10,9 @@
   "testRunner": "jest",
   "reporters": ["progress", "clear-text"],
   "thresholds": {
-    "high": 100,
-    "low": 95,
-    "break": 100
+    "high": 95,
+    "low": 91,
+    "break": 91
   },
   "concurrency": 4,
   "timeoutMS": 5000

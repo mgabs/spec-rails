@@ -298,7 +298,7 @@ When pair-programming or coordinating agents:
 | **Direct commit on `main`** | Contaminates production, bypasses rebase verification | Enforced by pre-commit hook; checkout dedicated lane branch |
 | **Committing Red tests alone** | Leaves broken commits in git history, breaks bisecting | Commit Red test together with Green implementation |
 | **Full-copy spec duplicates** | Duplicates ground truth and drifts from OpenSpec | Delta specs merged by `openspec archive` at Gate 6 |
-| **Surviving mutant excuses** | Surviving mutants prove missing assertions or dead code | Kill mutant with test, delete dead code, or restructure |
+| **Unjustified surviving mutants** | Surviving mutants usually prove missing assertions or dead code; the > 90% threshold is not a free pass | Kill mutant with test, delete dead code, restructure, or justify each survivor in the PR |
 | **Subagent gate self-approval** | Eliminates human-in-the-loop safety | Halt and escalate to orchestrating agent for human sign-off |
 | **Stale worktrees lingering** | Causes `.git/index.lock` collisions and disk bloat | Run `git worktree remove` and `git worktree prune` after every merge |
 | **Unsolicited architecture** | Violates YAGNI, inflates maintenance cost | Build only what is specified; delete speculative code |
