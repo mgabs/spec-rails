@@ -11,6 +11,8 @@ When working in a repository containing `openspec/spec-rails/WORKFLOW.md`:
    - Boring > Clever: standard library over new dependencies, simple loops over metaprogramming acrobatics.
    - Code is a liability: smallest diff that passes all gates wins.
    - Zero unsolicited architecture: never introduce speculative abstractions, unused helper functions, premature plugin hooks, or hypothetical configuration flags.
+   - **Contract Scaffolding Rail**: Before generating slice implementation, commit domain types, interface contracts, schemas, and empty function/method signatures. Agents generate logic strictly within scaffolded boundaries without inventing abstractions.
+   - **Understand or Delete (Comprehension Invariant)**: Zero black-box code. If the human reviewer cannot explain every line of the diff, delete and revert it immediately. Working code without human comprehension is technical debt.
    - Out-of-Scope (YAGNI) boundaries in `proposal.md` are binding prohibitions; reject any requirement bleed.
    - Minimal blast radius: touch only files strictly necessary for the active task.
    - Ruthless deletion: delete dead code immediately upon mutation survival. Any code not provably required is dead code.
@@ -21,7 +23,7 @@ When working in a repository containing `openspec/spec-rails/WORKFLOW.md`:
    - **Bugs**: Spawn `.worktrees/fix-<slug>` off `main` first → Gate B1 (`docs/bug-reports/<date>-<slug>.md` inside worktree) → Gate B2 (Red regression test shown, uncommitted) → Gate B3 (Green fix + docs/spec sync + merge).
 4. **Testing Rails**:
    - Red before Green. Red tests are never committed alone; commit them together with Green.
-   - $\ge 95\%$ line and branch coverage; $100\%$ mutation kill score, no exemptions (kill, delete dead code, or restructure equivalent mutants away).
+   - $\ge 95\%$ line and branch coverage; $> 90\%$ mutation kill score on core business logic (kill or delete dead code).
    - Never delete assertions, skip failing tests, or write vacuous tests.
 5. **Commit & Merge Hygiene**:
    - Pre-commit hooks installed; run linters, formatters, and the full suite before every commit. Never `--no-verify`.

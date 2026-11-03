@@ -15,7 +15,7 @@ flowchart LR
     subgraph SPEC_RAILS_Protocol [Spec-Rails Protocol & Rails]
         Specs[1. Specs & Invariants] --> RedTest[2. BDD & Unit Red]
         RedTest --> Green[3. Minimal Green Code]
-        Green --> Mutation[4. Mutation 100% Kill]
+        Green --> Mutation["4. Mutation >90% Kill"]
     end
 
     subgraph LGTM_Harness [mgabs/lgtm Review Cockpit]
@@ -38,10 +38,10 @@ flowchart LR
   - **Apply (Gate 5.x) and Gate 6**: Per vertical slice, BDD sign-off then Red, Green, coverage, mutation; finally `openspec validate` and `openspec archive`.
 - Drive changes with `openspec new change`, `openspec instructions <artifact>` or the `/opsx-*` commands.
 
-### 2. Testing Rails: BDD, Red-Green, 100% Mutation Kill
+### 2. Testing Rails: BDD, Red-Green, > 90% Mutation Kill
 - Tests are not written after the fact as documentation. They are rails that guide the code.
 - **Red-First**: Unit tests must fail before production code is written.
-- **Mutation Verification**: Coverage numbers ($\ge 95\%$) can be gamed with tautological assertions. Spec-Rails requires **100% mutation kill score** on domain logic. Any mutant that survives flips the status to blocking failure: either an assertion is missing, or dead code was written and must be deleted.
+- **Mutation Verification**: Coverage numbers ($\ge 95\%$) can be gamed with tautological assertions. Spec-Rails requires **> 90% mutation kill score** on domain logic. Any surviving mutant below threshold flips the status to blocking failure: either an assertion is missing, or dead code was written and must be deleted.
 
 ### 3. Zero-Contamination Git Worktree Isolation
 - `main` is always shippable and pristine.
@@ -92,6 +92,7 @@ Copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: 
 
 ### Documentation & Guides
 
+- **Suggested Watch**: [Lead Architect Reveals His Rules for Coding Agents (Beyond Coding #272)](https://www.youtube.com/watch?v=mkN4uRZYPfs) — Carlos Kelkboom on contract scaffolding, understanding generated code, and parallel worktrees.
 - **Delivery Status**: [docs/ROADMAP.md](docs/ROADMAP.md); **Design Note**: [docs/DESIGN.md](docs/DESIGN.md)
 - **Architecture & Methodology Wiki**: [docs/WIKI.md](docs/WIKI.md)
 - **Review Harness & Agent Steering**: [github.com/mgabs/lgtm](https://github.com/mgabs/lgtm)

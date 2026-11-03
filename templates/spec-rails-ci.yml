@@ -57,7 +57,7 @@ jobs:
 
       - name: Set up Pre-Commit
         run: |
-          pip install pre-commit
+          pip install --break-system-packages pre-commit
           pre-commit run --all-files
 
       - name: Run Test Suite

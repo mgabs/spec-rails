@@ -45,7 +45,7 @@ Always consult `openspec/spec-rails/WORKFLOW.md` before starting work.
 - Never edit code without human sign-off at Gates 0–4.
 - Always use feature branches (`feat/<id>-<slug>`) or isolated worktrees (`.worktrees/*`).
 - Always write failing tests first (Red) before implementation (Green).
-- Enforce >= 95% coverage and 100% mutation kill score on core modules.
+- Enforce >= 95% coverage and > 90% mutation kill score on core modules.
 ```
 
 ---

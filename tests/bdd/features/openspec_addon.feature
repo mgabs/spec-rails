@@ -1,4 +1,4 @@
-@REQ-OSA-7 @REQ-OSA-8 @REQ-OSA-9 @REQ-OSA-19 @REQ-OSA-20 @REQ-OSA-29 @REQ-OSA-30 @REQ-OSA-31 @REQ-OSA-32 @NFR-OSA-1 @NFR-OSA-4 @NFR-OSA-5
+@REQ-OSA-7 @REQ-OSA-8 @REQ-OSA-9 @REQ-OSA-19 @REQ-OSA-20 @REQ-OSA-29 @REQ-OSA-30 @REQ-OSA-31 @REQ-OSA-32 @REQ-OSA-33 @REQ-OSA-34 @REQ-OSA-35 @REQ-OSA-36 @NFR-OSA-1 @NFR-OSA-4 @NFR-OSA-5
 Feature: Spec-Rails OpenSpec addon architecture, layout, and boundary hardening
   As an engineering team running Spec-Rails on OpenSpec v1.15/v1.16+
   We want OpenSpec-native delta specs, archival, layout, and hardened CLI/gate/rail boundaries
@@ -52,3 +52,27 @@ Feature: Spec-Rails OpenSpec addon architecture, layout, and boundary hardening
     When validated with POSIX "sh -n" and the test suite on macOS and Linux default shells
     Then they require only POSIX utilities, "git", "jq", and "openspec"
     And installer and check scripts maintain >= 95% line/branch coverage and 100% mutant kill
+
+  @REQ-OSA-33
+  Scenario: Contract scaffolding precedes implementation
+    Given a planned vertical slice
+    When tasks are dispatched to an implementation agent
+    Then domain types, interface contracts, and function signatures are already committed
+
+  @REQ-OSA-34
+  Scenario: Human comprehension verification at Gate 6
+    Given an AI-generated implementation diff
+    When the human reviewer inspects the code at Gate 6
+    Then every line must be understood or the diff is deleted and reverted
+
+  @REQ-OSA-35
+  Scenario: Optional candidate bake-off in parallel worktrees
+    Given a high-uncertainty algorithmic task
+    When a team runs a parallel candidate bake-off in ".worktrees/<id>-cand-a" and "cand-b"
+    Then the candidate passing rails with lowest diff complexity merges and losers are pruned
+
+  @REQ-OSA-36
+  Scenario: Calibrated mutation testing rail above 90%
+    Given a module under test
+    When mutation testing runs on core logic
+    Then a mutation kill score exceeding 90% satisfies the rail

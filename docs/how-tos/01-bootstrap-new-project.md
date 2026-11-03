@@ -81,7 +81,7 @@ coverage:
 	pytest --cov=src --cov-fail-under=95 --cov-branch
 
 mutants:
-	@# Verify 100% mutation kill score on core logic
+	@# Verify > 90% mutation kill score on core logic
 	mutmut run
 ```
 

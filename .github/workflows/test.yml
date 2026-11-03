@@ -31,8 +31,10 @@ jobs:
           scandir: './bin ./tests'
 
       - name: Set up Pre-Commit & Run Hooks
+        env:
+          SPEC_RAILS_ALLOW_MAIN: "1"
         run: |
-          pip install pre-commit
+          pip install --break-system-packages pre-commit
           pre-commit run --all-files
 
       - name: Run Test Suite

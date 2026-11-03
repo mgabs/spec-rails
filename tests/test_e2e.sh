@@ -86,7 +86,28 @@ OUT="$(git commit -q -m "tick gate 0" 2>&1)" || RC=$?
 assert_eq "0" "$RC" "ticked gate allows commit"
 
 # ---- Complete Gates 1-3 + tasks.md and validate with real OpenSpec CLI ----
-printf '# Proposal\n\n## Intent\nAdd demo capability for end-to-end verification.\n\n## Capabilities\n\n### New Capabilities\n- `demo-cap`: Demo capability behavior.\n\n## Scope\n\n### In-Scope\n- Demo behavior.\n\n### Out-of-Scope (YAGNI)\n- Extra features.\n\n## Review Gate\n- [x] **Gate 1 Approval**: x\n' > "$D/proposal.md"
+cat <<'EOF' > "$D/proposal.md"
+# Proposal
+
+## Intent
+Add demo capability for end-to-end verification.
+
+## Capabilities
+
+### New Capabilities
+- `demo-cap`: Demo capability behavior.
+
+## Scope
+
+### In-Scope
+- Demo behavior.
+
+### Out-of-Scope (YAGNI)
+- Extra features.
+
+## Review Gate
+- [x] **Gate 1 Approval**: x
+EOF
 mkdir -p "$D/specs/demo-cap"
 cat <<'EOF' > "$D/specs/demo-cap/spec.md"
 # Spec Delta

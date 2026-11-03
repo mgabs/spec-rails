@@ -81,3 +81,43 @@ openspec validate w1-2-data-pipeline
 ```
 
 Resolve any rebasing conflicts additively inside the worktree, re-run the test and mutation suites, and merge `--ff-only`.
+
+---
+
+## 6. Optional: Candidate Bake-Off Mode
+
+For high-uncertainty or complex algorithmic tasks, teams may optionally run a competitive bake-off across parallel worktrees rather than a single implementation stream.
+
+> [!TIP]
+> **Suggested Watch**: [Lead Architect Reveals His Rules for Coding Agents (Beyond Coding #272)](https://www.youtube.com/watch?v=mkN4uRZYPfs) — Carlos Kelkboom on scoping AI coding agents, contract scaffolding, and parallel worktrees.
+
+> [!NOTE]
+> Bake-offs are strictly optional and intended for high-uncertainty slices. Standard features and chores execute in single-branch streams without bake-off overhead.
+
+### 1. Spawn Candidate Worktrees
+```bash
+git worktree add .worktrees/w1-2-cand-a -b feat/w1-2/cand-a
+git worktree add .worktrees/w1-2-cand-b -b feat/w1-2/cand-b
+```
+
+### 2. Dispatch Competing Prompts / Subagents
+- Dispatch independent subagents to each candidate worktree with differing prompts, models, or architectural approaches.
+- Both subagents must adhere strictly to the pre-committed contract scaffolding and testing rails.
+
+### 3. Evaluate Candidates
+Score both candidates against objective metrics:
+1. **Rails Pass**: 100% test pass and $\ge 95\%$ line/branch coverage.
+2. **Mutation Kill Score**: $> 90\%$ mutation kill score on core logic.
+3. **Ponytail Simplicity**: Smallest diff, fewest abstractions, and lowest cyclomatic complexity.
+
+### 4. Merge Winner & Prune Loser
+Fast-forward merge the winning candidate into the feature branch, then prune both worktrees:
+```bash
+git checkout feat/w1-2-data-pipeline
+git merge --ff-only feat/w1-2/cand-a
+git worktree remove .worktrees/w1-2-cand-a
+git worktree remove .worktrees/w1-2-cand-b
+git branch -d feat/w1-2/cand-a
+git branch -D feat/w1-2/cand-b
+git worktree prune
+```

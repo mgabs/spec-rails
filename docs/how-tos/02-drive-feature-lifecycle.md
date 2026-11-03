@@ -92,7 +92,7 @@ For each vertical slice:
    - Enforce $\ge 95\%$ line and branch coverage.
 3. **Step 5.x-C (Mutation Testing)**:
    - Run mutation tests scoped to the slice.
-   - Kill 100% of survivors: add an assertion, delete dead code, or restructure equivalent mutants away. No exemptions.
+   - Maintain > 90% mutation kill score: add an assertion, delete dead code, or restructure equivalent mutants away.
 
 ---
 

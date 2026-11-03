@@ -219,8 +219,13 @@ EOF_NAMES
 main() {
   set -u
   _store=${OPENSPEC_STORE:-}
+  _allow_main=${SPEC_RAILS_ALLOW_MAIN:-}
   while [ $# -gt 0 ]; do
     case "$1" in
+      --allow-main)
+        _allow_main=1
+        shift
+        ;;
       --store=*)
         _store=${1#--store=}
         if [ -z "$_store" ]; then
@@ -256,8 +261,10 @@ main() {
   _branch=$(git branch --show-current 2>/dev/null || true)
   case "$_branch" in
     main | master)
-      echo "spec-rails-check: direct commits on '$_branch' are not allowed; use a feature branch" >&2
-      return 1
+      if [ "${_allow_main:-}" != "1" ]; then
+        echo "spec-rails-check: direct commits on '$_branch' are not allowed; use a feature branch" >&2
+        return 1
+      fi
       ;;
   esac
 

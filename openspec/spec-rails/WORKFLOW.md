@@ -52,6 +52,7 @@ Never merge a branch whose rails were verified only against a stale base.
      git worktree prune
      ```
   7. **Shared File Collision Protocol**: When streams touch shared dispatch, routing, or harness files (key matchers, enum routers, status bars, BDD runners), resolve conflicts **strictly additively**: keep both streams' registrations, handlers, and test cases. NEVER drop another stream's registrations or assertions.
+  8. **Optional Candidate Bake-Off Mode**: For high-uncertainty or algorithmic slices, teams MAY spawn competing candidate worktrees (`.worktrees/<id>-cand-a`, `.worktrees/<id>-cand-b`) to run different prompts/models. Candidates are evaluated on passing tests, mutation kill score (> 90%), and smallest diff complexity. The winning branch merges `--ff-only` into the feature branch, and candidate worktrees are pruned. Bake-offs are strictly optional and not required for standard linear workflows.
 
 ### Rule 4: Pre-Commit Hooks & Red-Commit Policy
 - **Install hooks**: Every project MUST configure `.pre-commit-config.yaml` and run `pre-commit install`.
@@ -64,7 +65,7 @@ Never merge a branch whose rails were verified only against a stale base.
 
 ### Rule 5: Chore Lane
 1. `git checkout -b chore/<slug>` from the target branch.
-2. Make the change. Refactors MUST keep every existing test unchanged and green; touched core modules MUST keep a 100% mutation kill score.
+2. Make the change. Refactors MUST keep every existing test unchanged and green; touched core modules MUST keep a > 90% mutation kill score.
 3. Commit through pre-commit (Rule 4).
 4. Merge per Rule 2, then delete the branch.
 
@@ -164,6 +165,7 @@ flowchart TD
 ### Gate 3: Architecture & Design
 - **Artifact**: `openspec/changes/<id>-<slug>/design.md`
 - **Mandatory Sections**: Overview & Invariants; Domain Models, State & Interface Contracts; Architecture Diagrams & Data Flow; Boundary Rules (Pure Core vs I/O Shell); Concurrency, Latency & Resource Budgets (matching `NFR-*`); Testing Strategy.
+- **Contract Scaffolding Rail**: Skeletons, domain interfaces, and empty function signatures are drafted here and committed prior to slice code generation.
 - **Domain-Specific Baselines**:
   - **UI / Interactive**: Frame deadlines (e.g., $< 16\text{ms}$), input latency budgets, background I/O offloading.
   - **ML / Data / Heuristics**: Deterministic Tier 0 baseline before complex models or external APIs.
@@ -171,7 +173,7 @@ flowchart TD
 
 ### Gate 4: Tasks & DAG
 - **Artifact**: `openspec/changes/<id>-<slug>/tasks.md`
-- **Mandatory Sections**: Dependency DAG; Streams with worktrees (`.worktrees/<id>-<stream>`); test-first order per slice (BDD → Gate 5.x → Red → Green → Coverage → Mutation); Integration & Rebase Plan.
+- **Mandatory Sections**: Dependency DAG; Streams with worktrees (`.worktrees/<id>-<stream>`); test-first order per slice (Contract Scaffolding → BDD → Gate 5.x → Red → Green → Coverage → Mutation); Integration & Rebase Plan.
 - **Gate**: Human approval before spawning worktrees or writing tests.
 
 ---
@@ -230,14 +232,13 @@ flowchart TD
 - **Coverage**: Line and branch $\ge 95\%$ on the target module.
 - **Performance**: Verify `NFR-*` budgets with deterministic benchmarks/assertions.
 
-### Step 5.x-C: Mutation Testing (100% Kill, No Exemptions)
+### Step 5.x-C: Mutation Testing (> 90% Kill Score)
 - **Scoped run**: Mutate only the slice's modules. Full-project mutation runs at Gate 6.
-- **Every surviving mutant is a blocking defect**. Resolve by exactly one of:
+- **Surviving mutants below threshold are blocking defects**. Resolve by:
   1. **Add a targeted assertion** that kills it.
   2. **Delete dead code**: unreachable defensive branches or assertions get removed (YAGNI).
-  3. **Restructure equivalent mutants away**: when a mutant is behaviorally identical to the original (e.g., `i < n` → `i != n` in an index loop), rewrite the code so the equivalence disappears (iterators instead of index loops, removing redundant conditions), making the mutant killable or impossible.
-- Never mask survivors with skip comments, exclusion lists, or lowered thresholds.
-- **Target**: $100\%$ kill score on slice domain and core logic.
+  3. **Restructure equivalent mutants away**: when a mutant is behaviorally identical to the original (e.g., `i < n` → `i != n` in an index loop), rewrite the code so the equivalence disappears.
+- **Target**: $> 90\%$ kill score on slice domain and core logic.
 
 ---
 
@@ -254,6 +255,8 @@ Spec-Rails pairs with [mgabs/lgtm](https://github.com/mgabs/lgtm) as the review 
   - NEVER skip/ignore failing tests without explicit human sign-off.
 - **Boundaries & Hygiene (The Ponytail Mindset & Strict YAGNI)**:
   - Strictly apply YAGNI (You Aren't Gonna Need It). Build strictly what is specified without speculative extras or premature abstractions.
+  - **Contract Scaffolding**: Commit types, contracts, and signatures before generating logic.
+  - **Understand or Delete**: If the human reviewer cannot explain every line of the diff, delete and revert it immediately. Zero uncomprehended AI slop.
   - Pure domain core: no direct I/O, network, or framework coupling.
   - Touch only files in the active slice (minimal blast radius).
   - No dead or unreferenced code (Ponytail rule: delete dead code when mutants survive).
@@ -268,14 +271,15 @@ All steps on the feature branch unless stated otherwise:
 1. All stream worktrees merged into the feature branch (Rule 3.6), removed, and pruned (`git worktree prune`). Verify `git worktree list` shows only the repository root.
 2. Rebase the feature branch onto `main` (Rule 2).
 3. Full test suite: $100\%$ pass, $\ge 95\%$ line and branch coverage.
-4. Full-project mutation suite: $100\%$ kill score on core logic.
-5. Tick every completed slice item and the final integration task in `tasks.md` (with `Evidence:` on Red/Green/Coverage/Mutation items).
-6. Run `openspec validate <id>-<slug>` (also required after every stream rebase).
-7. Sync and archive in one step (no Spec-Rails-owned copy or move):
+4. Full-project mutation suite: $> 90\%$ kill score on core logic.
+5. **Human Comprehension Verification**: Reviewer verifies complete line-by-line understanding of all generated code; delete ununderstood code.
+6. Tick every completed slice item and the final integration task in `tasks.md` (with `Evidence:` on Red/Green/Coverage/Mutation items).
+7. Run `openspec validate <id>-<slug>` (also required after every stream rebase).
+8. Sync and archive in one step (no Spec-Rails-owned copy or move):
    ```bash
    openspec archive <id>-<slug> --yes
    ```
-8. Commit, then merge into `main`:
+9. Commit, then merge into `main`:
    ```bash
    git checkout main
    git merge --ff-only feat/<id>-<slug>

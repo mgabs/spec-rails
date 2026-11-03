@@ -96,8 +96,9 @@ sed 's/^- \[ \] 3\.3/- [x] 3.3/' "$REPO_ROOT/schemas/spec-rails/templates/tasks.
 run_case "ticking unmodified template tasks.md fails without evidence" 1 'without .Evidence:'
 
 # Legacy placeholder literal Evidence: <command and result> is stripped and rejected
-printf '%s\n' '- [x] 3.3 Red unit tests fail (on ticking append `Evidence: <command and result>`)' \
-  > "$TMP/p/openspec/changes/demo/tasks.md"
+cat <<'EOF' > "$TMP/p/openspec/changes/demo/tasks.md"
+- [x] 3.3 Red unit tests fail (on ticking append `Evidence: <command and result>`)
+EOF
 run_case "placeholder evidence literal fails" 1 'without .Evidence:'
 
 # Uppercase - [X] and lowercase coverage without evidence fails

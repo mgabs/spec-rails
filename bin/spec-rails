@@ -284,7 +284,7 @@ main() {
     return 1
   fi
 
-  version="$(openspec --version 2>/dev/null | tr ' \t/' '\n\n\n' | sed -n 's/^[^0-9]*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\(-[A-Za-z0-9.-]*\)\{0,1\}\).*/\1/p' | head -n 1 || true)"
+  version="$(openspec --version 2>/dev/null | tr ' \t/' '\n' | sed -n 's/^[^0-9]*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\(-[A-Za-z0-9.-]*\)\{0,1\}\).*/\1/p' | head -n 1 || true)"
   if [ -z "$version" ] || ! version_ge "$version" "$MIN_OPENSPEC"; then
     echo "ERROR: OpenSpec >= $MIN_OPENSPEC is required on PATH (found: ${version:-none})." >&2
     return 1

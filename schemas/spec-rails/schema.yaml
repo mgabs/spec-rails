@@ -76,7 +76,7 @@ artifacts:
       - Architecture Diagrams & Data Flow.
       - Boundary Rules (Pure Core vs. I/O Shell): the core has no direct I/O, network or framework coupling.
       - Concurrency, Latency & Resource Budgets matching the `NFR-*` requirements.
-      - Testing Strategy (BDD, unit >= 95% line and branch coverage, mutation 100% kill).
+      - Testing Strategy (BDD, unit >= 95% line and branch coverage, mutation > 90% kill).
       UI work adds frame and input-latency budgets; ML/data work starts from a deterministic Tier 0 baseline.
 
       Stop at the Review Gate: only the human ticks the Gate 3 box.

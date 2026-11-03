@@ -162,7 +162,13 @@ printf '# T\n- [x] early box\n## Review Gate\n- [ ] **Gate 1**: a\n' >"$U/before
 printf '# T\n## Review Gate\n- [ ] **Gate 1**: a\n## Appendix\n- [x] other\n' >"$U/after.md"
 printf '# T\n## Review Gate  \nprose only\n' >"$U/nobox.md"
 printf '# T\n## Review Gate\n- [ ] **Gate 1**: a\n- [x] **Gate 1b**: b\n' >"$U/mixed.md"
-printf '# T\n```md\n## Review Gate\n- [x] **Gate 1**: fake\n```\n' >"$U/fence_only.md"
+cat <<'EOF' >"$U/fence_only.md"
+# T
+```md
+## Review Gate
+- [x] **Gate 1**: fake
+```
+EOF
 printf '# T\n~~~\n## Review Gate\n- [x] **Gate 1**: fake\n~~~\n## Review Gate\n- [ ] **Gate 1**: real\n' >"$U/fence_real.md"
 printf '# T\n## Review Gate\n- [x] **Gate 1**: old\n## Review Gate\n- [ ] **Gate 1**: final\n' >"$U/twogates.md"
 printf '# T\n## Review Gate\n- [ ] **Gate 1**: a\n# Top Heading\n- [x] stray\n' >"$U/h1close.md"
@@ -327,6 +333,14 @@ for b in main master; do
   assert_contains "$b" "$ERR" "branch $b named"
 done
 
+new_repo main
+run_check --allow-main
+assert_eq 0 "$RC" "branch main with --allow-main exits 0"
+
+new_repo main
+SPEC_RAILS_ALLOW_MAIN=1 run_check
+assert_eq 0 "$RC" "branch main with SPEC_RAILS_ALLOW_MAIN=1 exits 0"
+
 new_repo feat/x
 run_check
 assert_eq 0 "$RC" "feature branch allowed"
@@ -435,8 +449,14 @@ run_check
 assert_eq 1 "$RC" "Gate 4 missing with ticked task exits 1"
 assert_contains "c1: Gate 4 (tasks) Review Gate section missing but implementation tasks are ticked" "$ERR" "Gate 4 missing message"
 
-printf '# Tasks\n```md\n- [x] 3.1 example\n```\n## Review Gate\n- [ ] **Gate 4 Approval**: pending\n' \
-  >"$WORK/openspec/changes/c1/tasks.md"
+cat <<'EOF' >"$WORK/openspec/changes/c1/tasks.md"
+# Tasks
+```md
+- [x] 3.1 example
+```
+## Review Gate
+- [ ] **Gate 4 Approval**: pending
+EOF
 run_check
 assert_eq 0 "$RC" "fenced task checkbox does not trigger Gate 4"
 
@@ -458,8 +478,15 @@ assert_contains "c1: Gate 0 (research) unticked but 'proposal' exists" "$ERR" "G
 # --- Scenario: fenced code block ## Review Gate ignored ----------------------
 new_repo feat/x
 add_change c1 research=done proposal=done specs=blocked design=blocked tasks=blocked
-printf '# Research\n```markdown\n## Review Gate\n- [x] **Gate 0 Decision**: Go\n```\n## Review Gate\n- [ ] **Gate 0 Decision**: pending\n' \
-  >"$WORK/openspec/changes/c1/research.md"
+cat <<'EOF' >"$WORK/openspec/changes/c1/research.md"
+# Research
+```markdown
+## Review Gate
+- [x] **Gate 0 Decision**: Go
+```
+## Review Gate
+- [ ] **Gate 0 Decision**: pending
+EOF
 artifact c1 proposal.md unticked 1
 run_check
 assert_eq 1 "$RC" "fenced Review Gate does not satisfy Gate 0"
