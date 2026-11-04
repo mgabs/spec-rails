@@ -221,6 +221,23 @@ add_check_to_hook() {
 }
 
 main() {
+  _script_dir="$(resolve_script_dir "$0")"
+  _root="$(CDPATH='' cd -- "$_script_dir/.." && pwd)"
+
+  # Trampoline to bundled Node CLI for verify, lint, or --stack
+  if [ "${1:-}" = "verify" ] || [ "${1:-}" = "lint" ]; then
+    if [ -f "$_root/dist/cli.js" ] && command -v node >/dev/null 2>&1; then
+      exec node "$_root/dist/cli.js" "$@"
+    fi
+  fi
+  case "${*:-}" in
+    *--stack*)
+      if [ -f "$_root/dist/cli.js" ] && command -v node >/dev/null 2>&1; then
+        exec node "$_root/dist/cli.js" "$@"
+      fi
+      ;;
+  esac
+
   force=0
   target=""
   saw_init=0

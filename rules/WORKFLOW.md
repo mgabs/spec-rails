@@ -52,7 +52,7 @@ Never merge a branch whose rails were verified only against a stale base.
      git worktree prune
      ```
   7. **Shared File Collision Protocol**: When streams touch shared dispatch, routing, or harness files (key matchers, enum routers, status bars, BDD runners), resolve conflicts **strictly additively**: keep both streams' registrations, handlers, and test cases. NEVER drop another stream's registrations or assertions.
-  8. **Optional Candidate Bake-Off Mode**: For high-uncertainty or algorithmic slices, teams MAY spawn competing candidate worktrees (`.worktrees/<id>-cand-a`, `.worktrees/<id>-cand-b`) to run different prompts/models. Candidates are evaluated on passing tests, mutation kill score (> 90%), and smallest diff complexity. The winning branch merges `--ff-only` into the feature branch, and candidate worktrees are pruned. Bake-offs are strictly optional and not required for standard linear workflows.
+  8. **Optional Candidate Bake-Off Mode**: For high-uncertainty or algorithmic slices, teams MAY spawn competing candidate worktrees (`.worktrees/<id>-cand-a`, `.worktrees/<id>-cand-b`) to run different prompts/models. Candidates are evaluated on passing tests, mutation kill score (>= 95%), and smallest diff complexity. The winning branch merges `--ff-only` into the feature branch, and candidate worktrees are pruned. Bake-offs are strictly optional and not required for standard linear workflows.
 
 ### Rule 4: Pre-Commit Hooks & Red-Commit Policy
 - **Install hooks**: Every project MUST configure `.pre-commit-config.yaml` and run `pre-commit install`.
@@ -65,7 +65,7 @@ Never merge a branch whose rails were verified only against a stale base.
 
 ### Rule 5: Chore Lane
 1. `git checkout -b chore/<slug>` from the target branch.
-2. Make the change. Refactors MUST keep every existing test unchanged and green; touched core modules MUST keep a > 90% mutation kill score.
+2. Make the change. Refactors MUST keep every existing test unchanged and green; touched core modules MUST keep a >= 95% mutation kill score.
 3. Commit through pre-commit (Rule 4).
 4. Merge per Rule 2, then delete the branch.
 
@@ -123,7 +123,7 @@ flowchart TD
         GA --> A2[Unit Tests Red]
         A2 --> A3[Implement Green + Commit]
         A3 --> A4[Coverage >= 95%]
-        A4 --> A5["Mutation > 90% Kill"]
+        A4 --> A5["Mutation >= 95% Kill"]
     end
 
     S_A --> Slice_Loop
@@ -232,7 +232,7 @@ flowchart TD
 - **Coverage**: Line and branch $\ge 95\%$ on the target module.
 - **Performance**: Verify `NFR-*` budgets with deterministic benchmarks/assertions.
 
-### Step 5.x-C: Mutation Testing (> 90% Kill Score)
+### Step 5.x-C: Mutation Testing (>= 95% Kill Score)
 - **Scoped run**: Mutate only the slice's modules. Full-project mutation runs at Gate 6.
 - **Surviving mutants below threshold are blocking defects**. Resolve by:
   1. **Add a targeted assertion** that kills it.
