@@ -9,9 +9,9 @@
 
 ## High-Altitude Verdict
 
-The proposed design suffers from **severe scope creep, architectural contradiction, and unnecessary complexity**. 
+The proposed design suffers from **severe scope creep, architectural contradiction, and unnecessary complexity**.
 
-Most critically, the pivot to a TypeScript/Node.js CLI directly violates Spec-Rails core principle `NFR-OSA-1` and reverses the explicit decision in [`concepts_brief.md:51-52`](file:///Users/mmetawea/Workbench/spec-rails/concepts_brief.md#L51-L52) ("*Rejected by author: Violates Spec-Rails core principle NFR-OSA-1 (zero new dependencies, pure POSIX sh + jq). Third-party Go and Rust adopters should not require Node.js runtimes*"). Imposing `node`, `npm`, and `npx` on Go, Rust, and Python codebases alienates the very developers Spec-Rails aims to onboard. 
+Most critically, the pivot to a TypeScript/Node.js CLI directly violates Spec-Rails core principle `NFR-OSA-1` and reverses the explicit decision in [`concepts_brief.md:51-52`](file:///Users/mmetawea/Workbench/spec-rails/concepts_brief.md#L51-L52) ("*Rejected by author: Violates Spec-Rails core principle NFR-OSA-1 (zero new dependencies, pure POSIX sh + jq). Third-party Go and Rust adopters should not require Node.js runtimes*"). Imposing `node`, `npm`, and `npx` on Go, Rust, and Python codebases alienates the very developers Spec-Rails aims to onboard.
 
 The underlying issues—symlink canonicalization and flexible test path discovery—can be resolved in ~15 lines of POSIX shell. The document also introduces speculative multi-language AST parsing and "markdown token verification theater."
 
@@ -25,7 +25,7 @@ The underlying issues—symlink canonicalization and flexible test path discover
 * **Simplicity Rationale:**
   1. **Direct Contradiction:** [`concepts_brief.md:51-52`](file:///Users/mmetawea/Workbench/spec-rails/concepts_brief.md#L51-L52) explicitly rejected rewriting the installer/verifier in TypeScript/Node to preserve `NFR-OSA-1` (zero new dependencies, pure POSIX `sh` + `jq`). The design completely ignores this boundary without justification.
   2. **Ecosystem Mismatch:** Forcing Go and Rust developers to install Node 18+, maintain a `package.json`/`node_modules`, or run `npx spec-rails` in their CI pipelines creates a heavy barrier to entry. They chose Go/Rust specifically to avoid Node runtime footprints.
-  3. **Disproportionate Solution:** 
+  3. **Disproportionate Solution:**
      - Symlink handling in [`bin/spec-rails:46-96`](file:///Users/mmetawea/Workbench/spec-rails/bin/spec-rails#L46-L96) requires replacing blanket symlink rejection with standard target canonicalization (`pwd -P` / `realpath`), a tiny POSIX shell change.
      - Flexible test path discovery (`testGlobs`) is a minor string/glob loop in [`bin/spec-rails-verify`](file:///Users/mmetawea/Workbench/spec-rails/bin/spec-rails-verify).
      - Swapping a 2MB `jq` dependency for a 50MB+ Node runtime and build pipeline (`tsup`, `zod`, `vitest`, `fast-glob`) is a massive regression in minimalism.

@@ -14,7 +14,7 @@
 
 ## Executive Summary
 
-The multi-lens swarm completed a comprehensive audit of the proposed **Multi-Language Rails & Anti-Drift Engine** design. 
+The multi-lens swarm completed a comprehensive audit of the proposed **Multi-Language Rails & Anti-Drift Engine** design.
 
 The review identifies three systemic blockers:
 1. **Architectural Contradiction of Core Invariant `NFR-OSA-1`**: The decision to pivot the CLI to TypeScript/Node.js directly contradicts `concepts_brief.md` and living spec `NFR-OSA-1` (zero new dependencies, pure POSIX `sh` + `jq`). Forcing a Node runtime on Go, Rust, and Python repositories defeats the core mission of turnkey onboarding.
