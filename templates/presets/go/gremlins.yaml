@@ -1,0 +1,16 @@
+# Spec-Rails Mutation Testing Rail for Go (gremlins)
+# Target: >= 95% mutation kill score on domain logic. Every surviving mutant must be justified in the PR.
+mutant-types:
+  - arithmetic-base
+  - conditionals-boundary
+  - conditionals-negation
+  - increment-decrement
+  - invert-assignments
+  - invert-bitwise
+  - invert-boolean
+  - invert-loop-direction
+  - invert-negatives
+tags: []
+dry-run: false
+output: reports/gremlins.json
+threshold: 95

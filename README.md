@@ -15,7 +15,7 @@ flowchart LR
     subgraph SPEC_RAILS_Protocol [Spec-Rails Protocol & Rails]
         Specs[1. Specs & Invariants] --> RedTest[2. BDD & Unit Red]
         RedTest --> Green[3. Minimal Green Code]
-        Green --> Mutation["4. Mutation >90% Kill"]
+        Green --> Mutation["4. Mutation >=95% Kill"]
     end
 
     subgraph LGTM_Harness [mgabs/lgtm Review Cockpit]
@@ -38,10 +38,10 @@ flowchart LR
   - **Apply (Gate 5.x) and Gate 6**: Per vertical slice, BDD sign-off then Red, Green, coverage, mutation; finally `openspec validate` and `openspec archive`.
 - Drive changes with `openspec new change`, `openspec instructions <artifact>` or the `/opsx-*` commands.
 
-### 2. Testing Rails: BDD, Red-Green, > 90% Mutation Kill
+### 2. Testing Rails: BDD, Red-Green, >= 95% Mutation Kill
 - Tests are not written after the fact as documentation. They are rails that guide the code.
 - **Red-First**: Unit tests must fail before production code is written.
-- **Mutation Verification**: Coverage numbers ($\ge 95\%$) can be gamed with tautological assertions. Spec-Rails requires **> 90% mutation kill score** on domain logic. Any surviving mutant below threshold flips the status to blocking failure: either an assertion is missing, or dead code was written and must be deleted.
+- **Mutation Verification**: Coverage numbers ($\ge 95\%$) can be gamed with tautological assertions. Spec-Rails requires **$\ge 95\%$ mutation kill score** on domain logic. Any surviving mutant below threshold flips the status to blocking failure: either an assertion is missing, or dead code was written and must be deleted.
 
 ### 3. Zero-Contamination Git Worktree Isolation
 - `main` is always shippable and pristine.
@@ -53,6 +53,14 @@ Spec-Rails pairs natively with [mgabs/lgtm](https://github.com/mgabs/lgtm), a ke
 - **Line-Anchored Directives (`#ref file:line <directive>`)**: Human reviewers navigate streaming diffs using Vim keybindings and inject actionable steering chords (`ca` coverage, `cs` security, `cr` refactor) directly into active agent panes.
 - **Anti-Fraud & Test Neutering Guardrails**: `lgtm`'s static analysis automatically blocks test neutering (deleted assertions, skipped tests, mock inflation, self-assertions) and dead function addition (YAGNI violations).
 - **Native MCP Agent Mode**: Coding agents query diffs, security audits, and review directives programmatically via `lgtm serve --mcp`.
+
+### 5. Companion Tools & Agent Ecosystem
+Spec-Rails integrates with and draws inspiration from complementary agent tooling:
+- **[mgabs/lgtm](https://github.com/mgabs/lgtm)**: Real-time terminal diff review cockpit, anti-fraud guardrails, and line-anchored agent steering harness.
+- **[google/elephant-goldfish-model](https://github.com/google/elephant-goldfish-model)**: Dual-agent spec-driven framework pairing context-rich drafting (The Elephant) with adversarial zero-context review (The Goldfish).
+- **[obra/superpowers](https://github.com/obra/superpowers)**: Composable agent skills and capability harnesses for autonomous workflows.
+- **[dietrichgebert/ponytail](https://github.com/dietrichgebert/ponytail)**: The Ponytail engineering discipline: strict YAGNI, boring over clever, and code liability minimization.
+- **[JordanCoin/codingskills](https://github.com/JordanCoin/codingskills)**: Curated agent coding skills, testing playbooks, and development heuristics.
 
 ---
 

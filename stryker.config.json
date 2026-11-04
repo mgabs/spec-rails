@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/api/schema/stryker-schema.json",
+  "mutate": [
+    "src/config.ts",
+    "src/utils/paths.ts",
+    "src/utils/evidence.ts",
+    "src/commands/init.ts",
+    "src/commands/verify.ts"
+  ],
+  "mutator": {
+    "excludedMutations": ["Regex"]
+  },
+  "testRunner": "vitest",
+  "reporters": ["progress", "clear-text"],
+  "thresholds": {
+    "high": 98,
+    "low": 95,
+    "break": 95
+  },
+  "concurrency": 4,
+  "timeoutMS": 10000
+}

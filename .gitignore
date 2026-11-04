@@ -1,2 +1,7 @@
 .worktrees/
 .serena/
+node_modules/
+dist/
+coverage/
+.stryker-tmp/
+reports/
