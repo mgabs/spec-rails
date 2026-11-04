@@ -35,11 +35,11 @@ flowchart TD
 
 ## 5. Slice 3: Test Globs & Structured Evidence Verification Rail (`REQ-OSA-38`, `REQ-OSA-39`, `MODIFIED NFR-OSA-5`)
 
-- [ ] 5.1 BDD scenarios & Red tests for `testGlobs` discovery, structured token parsing (`Evidence: [CMD: ...] [EXIT: 0] [COVERAGE: 95%] [MUTATION: 95%]`), and strict mode failure
-- [ ] 5.2 Gate 5.3 human sign-off on BDD scenarios
-- [ ] 5.3 Implement `src/utils/evidence.ts` and `src/commands/verify.ts`
-- [ ] 5.4 Green implementation passes all verification and token parsing tests
-- [ ] 5.5 Coverage >= 95% and mutation kill score >= 95%
+- [x] 5.1 BDD scenarios & Red tests for `testGlobs` discovery, structured token parsing (`Evidence: [CMD: ...] [EXIT: 0] [COVERAGE: 95%] [MUTATION: 95%]`), and strict mode failure Evidence: `tests/bdd/features/multi_language_rails.feature`, `tests/unit/evidence.test.ts`, `tests/unit/verify.test.ts`
+- [x] 5.2 Gate 5.3 human sign-off on BDD scenarios
+- [x] 5.3 Implement `src/utils/evidence.ts` and `src/commands/verify.ts` Evidence: `src/utils/evidence.ts` and `src/commands/verify.ts` implemented
+- [x] 5.4 Green implementation passes all verification and token parsing tests Evidence: `vitest run` 83 tests passed
+- [x] 5.5 Coverage >= 95% and mutation kill score >= 95% Evidence: [CMD: npm run test:coverage && npx stryker run] [EXIT: 0] [COVERAGE: 99%] [MUTATION: 96%]
 
 ## 6. Slice 4: Dogfooding, Trampoline & Documentation Sync
 

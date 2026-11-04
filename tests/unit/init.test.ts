@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -104,6 +104,9 @@ describe("Stack Auto-Detection & Init Command", () => {
 
     const rawContent = fs.readFileSync(configPath, "utf-8");
     expect(rawContent.endsWith("\n")).toBe(true);
+    expect(JSON.parse(rawContent).$schema).toBe(
+      "https://raw.githubusercontent.com/openspec/spec-rails/main/schemas/spec-rails.schema.json"
+    );
 
     const cfg = loadConfigFile(configPath);
     expect(cfg.stack).toBe("ts");
@@ -231,5 +234,12 @@ describe("Stack Auto-Detection & Init Command", () => {
         force: true,
       })
     ).not.toThrow();
+  });
+
+  it("finds presets directory using fallback path when dev path does not exist", () => {
+    const fakeDistDir = path.join(tempDir, "dist");
+    fs.mkdirSync(fakeDistDir, { recursive: true });
+    const presetsDir = findPresetsDir(fakeDistDir);
+    expect(presetsDir).toBe(path.resolve(fakeDistDir, "../templates/presets"));
   });
 });

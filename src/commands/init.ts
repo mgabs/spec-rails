@@ -71,7 +71,6 @@ export function getStackMeta(stack: Stack): StackMeta {
         mutationCommand: "cargo mutants",
         presetFile: "cargo-mutants.toml",
       };
-    case "auto":
     default:
       return {
         testCommand: "npm test",
@@ -79,8 +78,7 @@ export function getStackMeta(stack: Stack): StackMeta {
   }
 }
 
-export function findPresetsDir(): string {
-  const currentDir = path.dirname(fileURLToPath(import.meta.url));
+export function findPresetsDir(currentDir: string = path.dirname(fileURLToPath(import.meta.url))): string {
   const devPresets = path.resolve(currentDir, "../../templates/presets");
   if (fs.existsSync(devPresets)) {
     return devPresets;
@@ -110,7 +108,7 @@ export function initProject(options: InitOptions = {}): InitResult {
     ...(meta.mutationCommand ? { mutationCommand: meta.mutationCommand, mutationMinScore: 95 } : {}),
   };
 
-  fs.writeFileSync(configPath, JSON.stringify(configPayload, null, 2) + "\n", "utf-8");
+  fs.writeFileSync(configPath, JSON.stringify(configPayload, null, 2) + "\n");
   const createdFiles: string[] = [configPath];
 
   // Copy preset file if available

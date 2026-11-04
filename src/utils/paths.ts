@@ -27,7 +27,7 @@ export function validatePathSandbox(
     return canonicalTarget;
   }
 
-  if (allowlistPrefixes && allowlistPrefixes.length > 0) {
+  if (allowlistPrefixes) {
     for (const prefix of allowlistPrefixes) {
       const canonicalPrefix = resolveCanonicalPath(prefix);
       if (isPathInside(canonicalTarget, canonicalPrefix)) {

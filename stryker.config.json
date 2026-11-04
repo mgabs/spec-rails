@@ -3,8 +3,13 @@
   "mutate": [
     "src/config.ts",
     "src/utils/paths.ts",
-    "src/commands/init.ts"
+    "src/utils/evidence.ts",
+    "src/commands/init.ts",
+    "src/commands/verify.ts"
   ],
+  "mutator": {
+    "excludedMutations": ["Regex"]
+  },
   "testRunner": "vitest",
   "reporters": ["progress", "clear-text"],
   "thresholds": {

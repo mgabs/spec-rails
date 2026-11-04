@@ -1,5 +1,6 @@
 import { cac, type CAC } from "cac";
 import { initProject } from "./commands/init.js";
+import { runVerify } from "./commands/verify.js";
 
 export function createCli(): CAC {
   const cli = cac("spec-rails");
@@ -21,11 +22,22 @@ export function createCli(): CAC {
     });
 
   cli
-    .command("verify", "Verify tests, coverage, mutation scores, and evidence")
+    .command("verify [dir]", "Verify tests, coverage, mutation scores, and evidence")
     .option("--slice <id>", "Verify a specific vertical slice ID")
     .option("--strict", "Enforce strict zero-bypass verification", { default: true })
-    .action((options) => {
-      console.log(`[spec-rails] verify called (strict=${options.strict})`);
+    .action((dir, options) => {
+      const res = runVerify({
+        cwd: dir || process.cwd(),
+        strict: options.strict,
+      });
+      if (!res.success) {
+        console.error("[spec-rails] Verification failed:");
+        for (const err of res.errors) {
+          console.error(`  - ${err}`);
+        }
+        process.exit(1);
+      }
+      console.log(`[spec-rails] Verification passed! (${res.discoveredTests.length} tests discovered)`);
     });
 
   cli

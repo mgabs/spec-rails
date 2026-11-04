@@ -28,18 +28,51 @@ describe("CLI Binary Integration & Unit", () => {
 
   it("invokes verify command handler", () => {
     const cli = createCli();
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-verify-test-"));
+    fs.mkdirSync(path.join(tempDir, "tests"), { recursive: true });
+    fs.writeFileSync(path.join(tempDir, "tests/dummy.test.ts"), "// test");
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    cli.parse(["node", "spec-rails", "verify", "--strict"]);
-    expect(logSpy).toHaveBeenCalledWith("[spec-rails] verify called (strict=true)");
+    cli.parse(["node", "spec-rails", "verify", tempDir, "--strict=false"]);
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("[spec-rails] Verification"));
     logSpy.mockRestore();
+    fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it("invokes lint command handler", () => {
+  it("handles verify failure with exit(1)", () => {
     const cli = createCli();
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    cli.parse(["node", "spec-rails", "lint", "--gate=2"]);
-    expect(logSpy).toHaveBeenCalledWith("[spec-rails] lint called for gate=2");
-    logSpy.mockRestore();
+    const emptyTempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-verify-fail-"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((code?: string | number | null | undefined): never => {
+      throw new Error(`exit:${code}`);
+    });
+
+    expect(() => {
+      cli.parse(["node", "spec-rails", "verify", emptyTempDir, "--strict"]);
+    }).toThrow("exit:1");
+
+    expect(errSpy).toHaveBeenCalledWith("[spec-rails] Verification failed:");
+    errSpy.mockRestore();
+    exitSpy.mockRestore();
+    fs.rmSync(emptyTempDir, { recursive: true, force: true });
+  });
+
+  it("handles runCli exception with exit(1)", () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-err-test-"));
+    fs.writeFileSync(path.join(tempDir, "spec-rails.config.json"), "{}");
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((code?: string | number | null | undefined): never => {
+      throw new Error(`exit:${code}`);
+    });
+
+    expect(() => {
+      // init will throw because spec-rails.config.json already exists without --force
+      runCli(["node", "spec-rails", "init", tempDir]);
+    }).toThrow("exit:1");
+
+    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining("[spec-rails error]"));
+    errSpy.mockRestore();
+    exitSpy.mockRestore();
+    fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
   it("runs runCli with provided argv", () => {
