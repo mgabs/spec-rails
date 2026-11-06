@@ -3,7 +3,6 @@
 * **Status:** Finalized
 * **Author:** Mohammed M
 * **Date:** 2026-11-03
-* **Predecessor:** [concepts_brief.md](file:///Users/mmetawea/Workbench/spec-rails/concepts_brief.md)
 
 ---
 
