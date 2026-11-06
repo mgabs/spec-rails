@@ -31,6 +31,7 @@ export function createCli(): CAC {
       const res = runVerify({
         cwd: dir || process.cwd(),
         strict: options.strict,
+        runCommands: true,
       });
       if (!res.success) {
         console.error("[spec-rails] Verification failed:");
@@ -47,8 +48,10 @@ export function createCli(): CAC {
     .option("--store <id>", "OpenSpec store identifier")
     .option("--audit", "Run spec-to-code audit alongside gate checks", { default: false })
     .option("--base <ref>", "Base branch for audit comparison (default: main)")
+    .option("--baseline", "Grandfather current gate violators into the baseline file", { default: false })
     .action((dir, options) => {
       const res = runCheck({
+        writeBaseline: options.baseline,
         cwd: dir || process.cwd(),
         store: options.store,
         audit: options.audit,

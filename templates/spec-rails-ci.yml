@@ -28,28 +28,25 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
           HEAD_REF: ${{ github.head_ref }}
         run: |
-          npm install -g @fission-ai/openspec
+          npm install -g @fission-ai/openspec@1.16.0
           npx spec-rails check --audit
-
-      - name: Verify Test Rails
-        run: |
-          npx spec-rails verify
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Set up Pre-Commit
-        env:
-          # The test hook duplicates the "Run Test Suite" step below.
-          SKIP: test
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Verify Test Rails
         run: |
+          npx spec-rails verify
+
+      - name: Pre-Commit
+        run: |
+          # Skip hooks already covered by the check/verify steps above.
+          SKIP=$(grep -oE 'id: (branch-protection|spec-rails-check|test)$' .pre-commit-config.yaml | sed 's/id: //' | paste -sd, -)
+          export SKIP
           pip install pre-commit
           pre-commit run --all-files
-
-      - name: Run Test Suite
-        run: |
-          if [ -f Makefile ]; then
-            make test
-          fi

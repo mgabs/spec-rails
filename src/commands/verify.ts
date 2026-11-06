@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { spawnSync } from "node:child_process";
 import fg from "fast-glob";
 import { loadConfigFile, loadConfig, getDefaultTestGlobs } from "../config";
 import { validateTasksEvidence } from "../utils/evidence";
@@ -10,6 +11,62 @@ export interface VerifyOptions {
   configPath?: string;
   strict?: boolean;
   change?: string;
+  /** Execute configured test/coverage/mutation commands. */
+  runCommands?: boolean;
+  /** Injectable command runner (tests). */
+  exec?: CommandRunner;
+  /** Injectable changed-file list; null/undefined = detect via git. */
+  changedFiles?: string[] | null;
+}
+
+export type CommandRunner = (command: string, cwd: string) => { status: number; output: string };
+
+export const defaultExec: CommandRunner = (command, cwd) => {
+  const r = spawnSync(command, { cwd, shell: true, encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 });
+  return { status: r.status ?? 1, output: `${r.stdout ?? ""}${r.stderr ?? ""}` };
+};
+
+/** Last "NN%" / "NN.N%" in output, or null. */
+export function parseScore(output: string): number | null {
+  const all = [...output.matchAll(/(\d+(?:\.\d+)?)\s*%/g)];
+  return all.length ? parseFloat(all[all.length - 1][1]) : null;
+}
+
+/** True when every changed file is docs/spec-only (no source touched). */
+export function isDocsOnlyChange(changedFiles: string[]): boolean {
+  return changedFiles.every(
+    (f) => /\.(md|mdx|txt)$/i.test(f) || /^(openspec|docs)\//.test(f)
+  );
+}
+
+export function detectChangedFiles(cwd: string, baseRef = "main"): string[] | null {
+  const r = spawnSync("git", ["diff", "--name-only", baseRef], { cwd, encoding: "utf-8" });
+  if (r.status !== 0) return null;
+  return r.stdout.split(/\r?\n/).filter(Boolean);
+}
+
+export interface RailSpec {
+  name: string;
+  command: string | undefined;
+  minScore?: number;
+  required: boolean;
+}
+
+export function runRail(spec: RailSpec, cwd: string, exec: CommandRunner): string[] {
+  if (!spec.command || !spec.command.trim()) {
+    return spec.required ? [`${spec.name} command is empty; configure it in spec-rails.config.json`] : [];
+  }
+  const res = exec(spec.command, cwd);
+  if (res.status !== 0) {
+    return [`${spec.name} command failed (exit ${res.status}): ${spec.command}\n${res.output}`];
+  }
+  if (spec.minScore !== undefined) {
+    const score = parseScore(res.output);
+    if (score !== null && score < spec.minScore) {
+      return [`${spec.name} score ${score}% is below threshold ${spec.minScore}%`];
+    }
+  }
+  return [];
 }
 
 export interface TraceabilityResult {
@@ -103,6 +160,7 @@ export function runVerify(options: VerifyOptions = {}): VerifyResult {
   let strict = options.strict ?? true;
   let minCoverage = 95;
   let minMutation = 95;
+  let rails: RailSpec[] = [];
 
   try {
     const config = options.configPath ? loadConfigFile(options.configPath) : loadConfig(cwd);
@@ -110,12 +168,34 @@ export function runVerify(options: VerifyOptions = {}): VerifyResult {
     strict = options.strict !== undefined ? options.strict : config.strict;
     minCoverage = config.coverageMinScore;
     minMutation = config.mutationMinScore;
+    rails = [
+      { name: "test", command: config.testCommand, required: true },
+      { name: "coverage", command: config.coverageCommand, minScore: config.coverageMinScore, required: false },
+      { name: "mutation", command: config.mutationCommand, minScore: config.mutationMinScore, required: false },
+    ];
   } catch (err: unknown) {
     errors.push(`Failed to load config: ${(err as Error).message}`);
   }
 
   const discoveredTests = discoverTests(cwd, testGlobs);
-  if (discoveredTests.length === 0 && strict) {
+  const changed =
+    options.runCommands || options.changedFiles !== undefined
+      ? options.changedFiles === undefined
+        ? detectChangedFiles(cwd)
+        : options.changedFiles
+      : null;
+  const docsOnly = changed !== null && changed.length > 0 && isDocsOnlyChange(changed);
+  if (options.runCommands) {
+    const exec = options.exec ?? defaultExec;
+    for (const rail of rails) {
+      if (rail.name === "mutation" && docsOnly) {
+        console.log("[spec-rails] mutation rail skipped: docs/spec-only changeset (informational pass)");
+        continue;
+      }
+      errors.push(...runRail(rail, cwd, exec));
+    }
+  }
+  if (discoveredTests.length === 0 && strict && !docsOnly) {
     errors.push(`No test files found matching globs: ${testGlobs.join(", ")}`);
   }
 

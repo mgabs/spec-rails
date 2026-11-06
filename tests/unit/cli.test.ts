@@ -41,6 +41,7 @@ describe("CLI Binary Integration & Unit (REQ-OSA-32, REQ-OSA-45)", () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-verify-test-"));
     fs.mkdirSync(path.join(tempDir, "tests"), { recursive: true });
     fs.writeFileSync(path.join(tempDir, "tests/dummy.test.ts"), "// test");
+    fs.writeFileSync(path.join(tempDir, "spec-rails.config.json"), JSON.stringify({ testCommand: "true" }));
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     cli.parse(["node", "spec-rails", "verify", tempDir, "--strict=false"]);
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("[spec-rails] Verification"));

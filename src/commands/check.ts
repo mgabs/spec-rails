@@ -9,6 +9,24 @@ export interface CheckOptions {
   store?: string;
   audit?: boolean;
   baseRef?: string;
+  writeBaseline?: boolean;
+}
+
+export const BASELINE_FILE = "openspec/spec-rails/baseline.txt";
+
+export function parseBaseline(content: string): Set<string> {
+  return new Set(
+    content
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith("#"))
+  );
+}
+
+export function loadBaseline(cwd: string): Set<string> {
+  const file = path.join(cwd, BASELINE_FILE);
+  if (!fs.existsSync(file)) return new Set();
+  return parseBaseline(fs.readFileSync(file, "utf-8"));
 }
 
 export interface GateStateResult {
@@ -291,6 +309,8 @@ export function runCheck(options: CheckOptions = {}): CheckResult {
   }
 
   const changes = Array.isArray(listData.changes) ? listData.changes : [];
+  const baseline = loadBaseline(cwd);
+  const offenders = new Set<string>();
   for (const chg of changes) {
     const changeName = chg.name || chg;
     if (!changeName || typeof changeName !== "string") continue;
@@ -337,7 +357,20 @@ export function runCheck(options: CheckOptions = {}): CheckResult {
     }
 
     const changeViolations = findGateViolations(changeName, artifacts, states, hasEarlyTasks);
-    violations.push(...changeViolations);
+    if (changeViolations.length > 0) offenders.add(changeName);
+    if (!baseline.has(changeName)) violations.push(...changeViolations);
+  }
+
+  if (options.writeBaseline) {
+    const file = path.join(cwd, BASELINE_FILE);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const names = [...offenders].sort();
+    fs.writeFileSync(
+      file,
+      "# Grandfathered changes lacking Review Gate. New changes still gate.\n" +
+        names.map((n) => `${n}\n`).join("")
+    );
+    return { success: true, violations: [], auditResult };
   }
 
   return {
