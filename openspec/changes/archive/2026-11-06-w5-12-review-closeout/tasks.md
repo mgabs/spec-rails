@@ -33,7 +33,7 @@ Slice 2 deletes only after slice 1 has folded the valid findings into `docs/ROAD
 
 ## 5. Integration & Rebase Plan
 - [x] 5.1 Human Comprehension Verification: reviewer can explain every roadmap line and every deleted file
-- [ ] 5.2 Rebase on main, `make test` green, `openspec validate w5-12-review-closeout`, `openspec archive w5-12-review-closeout --yes`; commit per the cadence (one commit after archive is fine)
+- [x] 5.2 Rebase on main, `make test` green, `openspec validate w5-12-review-closeout`, `openspec archive w5-12-review-closeout --yes`; commit per the cadence (one commit after archive is fine)
 
 ## Review Gate
 - [x] **Gate 4 Approval**: Tasks breakdown approved by human before writing test code.
