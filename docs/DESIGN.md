@@ -41,7 +41,7 @@ A GitHub Actions workflow installed to `.github/workflows/spec-rails-ci.yml`:
    - Runs `pre-commit run --all-files`.
 3. **Testing & Mutation Rails**:
    - Runs project test suite (`make test` or stack runner).
-   - Enforces coverage ($\ge 95\%$) and $> 90\%$ mutation kill score on modified modules.
+   - Enforces coverage ($\ge 95\%$) and $\ge 95\%$ mutation kill score on modified modules.
 
 ---
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # check_hygiene.sh [root]: fails on broken relative doc links, manual template copies,
-# legacy specs/ paths, and shell functions that are defined but never used (REQ-OSA-23, REQ-OSA-24, REQ-OSA-30).
+# legacy specs/ paths, per-gate commit instructions (REQ-OSA-40), and shell functions that are defined but never used (REQ-OSA-23, REQ-OSA-24, REQ-OSA-30).
 set -eu
 
 ROOT="${1:-$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)}"
@@ -38,6 +38,28 @@ done <<EOF_LEGACY
 README.md
 $(find docs skills rules templates -type f 2>/dev/null || true)
 EOF_LEGACY
+
+while IFS= read -r item; do
+  [ -n "$item" ] && [ -f "$item" ] || continue
+  if grep -qiE 'tick[a-z]* [^.]*and (commits? (it|before)|committed)' "$item"; then
+    echo "FAIL: $item tells the reader to commit a gate tick (REQ-OSA-40)"
+    FAILED=1
+  fi
+done <<EOF_CADENCE
+README.md
+$(find docs skills rules templates schemas -type f 2>/dev/null || true)
+EOF_CADENCE
+
+while IFS= read -r item; do
+  [ -n "$item" ] && [ -f "$item" ] || continue
+  if grep -iE 'mutation|kill' "$item" | grep -qE '(>|≥|>=|\\ge|\\gt) ?(8[0-9]|9[0-4]|100) ?(\\)?%|\b(8[0-9]|9[0-4]|100) ?(\\)?% (kill|mutation)|"break": *([0-9]|[1-8][0-9]|9[0-4]|100)\b'; then
+    echo "FAIL: $item states a mutation threshold other than 95 (NFR-OSA-5)"
+    FAILED=1
+  fi
+done <<EOF_MUTATION
+README.md
+$(find docs skills rules templates schemas -type f 2>/dev/null | grep -vE '^docs/designs/' || true)
+EOF_MUTATION
 
 while IFS= read -r script; do
   [ -n "$script" ] && [ -f "$script" ] || continue

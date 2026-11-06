@@ -18,8 +18,8 @@ Feature: Spec-Rails on top of OpenSpec in a fresh repository
     Then the pre-commit hook fails and names the unticked gate
 
   Scenario: Ticked gate allows commit
-    Given the Gate 0 box is ticked and committed
-    When I commit "proposal.md"
+    Given the Gate 0 box is ticked in "research.md"
+    When I commit "research.md" and "proposal.md" together
     Then the commit succeeds
 
   Scenario: Tool missing

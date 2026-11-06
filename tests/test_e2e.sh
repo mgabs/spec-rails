@@ -80,10 +80,10 @@ assert_eq "1" "$RC" "unticked gate blocks commit"
 assert_contains "Gate 0 (research) unticked" "$OUT" "hook names the unticked gate"
 
 printf '# Research\n\n## Review Gate\n- [x] **Gate 0 Decision**: x\n' > "$D/research.md"
-git add "$D/research.md"
+git add "$D/research.md" "$D/proposal.md"
 RC=0
-OUT="$(git commit -q -m "tick gate 0" 2>&1)" || RC=$?
-assert_eq "0" "$RC" "ticked gate allows commit"
+OUT="$(git commit -q -m "tick gate 0 with proposal" 2>&1)" || RC=$?
+assert_eq "0" "$RC" "ticked gate committed with next artifact is allowed"
 
 # ---- Complete Gates 1-3 + tasks.md and validate with real OpenSpec CLI ----
 cat <<'EOF' > "$D/proposal.md"

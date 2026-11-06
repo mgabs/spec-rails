@@ -152,7 +152,7 @@ Spec-Rails's repo MUST contain no `specs/` directory; `WORKFLOW.md`, `README`, `
 - **THEN** it has no `specs/` directory and the docs describe the `openspec/` and `docs/` layout
 
 ### Requirement: NFR-OSA-1 Dependencies
-The Spec-Rails CLI and verification tooling (`@openspec/spec-rails`) MUST run on Node.js (>= 18) packaged as a self-contained single-file executable (`dist/cli.js`) with zero runtime production dependencies. The installer and verification tools MUST NOT require external `jq` binaries or platform-specific shell utilities. Shell scripts in `bin/spec-rails` MUST serve as lightweight trampolines invoking `node dist/cli.js` or `npx spec-rails`.
+The Spec-Rails CLI and verification tooling (`@openspec/spec-rails`) MUST run on Node.js (>= 18) with OpenSpec on `PATH`, packaged as a self-contained single-file executable (`dist/cli.js`) with zero runtime production dependencies: libraries it uses MUST be bundled at build time and listed under `devDependencies`. The installer and verification tools MUST NOT require external `jq` binaries or platform-specific shell utilities.
 
 #### Scenario: Running without external jq
 - **GIVEN** an environment where `jq` is not installed
@@ -162,6 +162,15 @@ The Spec-Rails CLI and verification tooling (`@openspec/spec-rails`) MUST run on
 #### Scenario: Single-file bundle execution
 - **WHEN** the bundled CLI executable (`dist/cli.js`) is invoked
 - **THEN** it runs without requiring `node_modules` to be installed in the target project
+
+#### Scenario: Bundled libraries are build-time only
+- **GIVEN** `tsup` bundles `zod`, `cac` and `fast-glob` into `dist/cli.js`
+- **WHEN** `package.json` is read
+- **THEN** none of them is listed under `dependencies`
+
+#### Scenario: Node prerequisite stated
+- **WHEN** the prerequisites are read in the protocol and installer documentation
+- **THEN** they name Node.js >= 18 and OpenSpec and do not list a shell trampoline as a requirement
 
 ### Requirement: NFR-OSA-2 Installer Latency
 Install on a project with 0 changes MUST complete within 5 s excluding `openspec` startup.
@@ -185,7 +194,7 @@ Scripts MUST run on macOS and Linux default shells.
 - **THEN** they pass
 
 ### Requirement: NFR-OSA-5 Rails
-Installer and check scripts MUST have ≥ 95% line and branch coverage under their test suite and, where a mutation tool is available for the stack, a mutation kill score of at least 95% (≥ 95%) on core logic, with every remaining surviving mutant justified in the PR (equivalent mutant or accepted risk). The workflow protocol, schema instructions, templates, and documentation MUST state the same thresholds.
+Installer and check scripts MUST have ≥ 95% line and branch coverage under their test suite and, where a mutation tool is available for the stack, a mutation kill score of at least 95% (≥ 95%) on core logic, with every remaining surviving mutant justified in the PR (equivalent mutant or accepted risk). The workflow protocol, schema instructions, templates, and documentation MUST state the same thresholds and MUST NOT state any other mutation threshold.
 
 #### Scenario: Rails
 - **WHEN** the test and mutation suites run
@@ -195,6 +204,10 @@ Installer and check scripts MUST have ≥ 95% line and branch coverage under the
 - **GIVEN** a mutation run at or above 95% with surviving mutants
 - **WHEN** the PR is reviewed
 - **THEN** each surviving mutant is listed with a reason, and killable survivors without a reason block merge
+
+#### Scenario: Single threshold in shipped docs
+- **WHEN** the protocol, schema, skills, templates and docs are searched for a mutation kill threshold
+- **THEN** every match states at least 95% and none states 90% or 100%
 
 ### Requirement: REQ-OSA-21 CI Audit Layout
 The CI spec-to-code audit in `templates/spec-rails-ci.yml` MUST treat a PR as spec-backed when it changes any file under an active `openspec/changes/<id>/` (excluding `openspec/changes/archive/`), `openspec/specs/` or `docs/bug-reports/`, MUST treat edits to `openspec/spec-rails/` and `.github/` as audited code changes, MUST bind branch refs via `env:`, and MUST NOT reference `specs/`. Chore-lane branches remain exempt.
@@ -263,7 +276,7 @@ The docs-link and unused-helper checks MUST complete within 2 seconds combined.
 - **THEN** they complete within 2 seconds
 
 ### Requirement: REQ-OSA-25 Fresh-Repo End-to-End
-In a fresh git repo initialized with real `openspec` and wired with `spec-rails`, the system MUST resolve schema `spec-rails`, order artifacts `research → proposal → specs → design → tasks`, block commits behind unticked Review Gates, pass once ticked, and pass `openspec validate`. Missing `openspec` or `jq` MUST report `SKIP`, not a pass.
+In a fresh git repo initialized with real `openspec` and wired with `spec-rails`, the system MUST resolve schema `spec-rails`, order artifacts `research → proposal → specs → design → tasks`, block commits behind unticked Review Gates, pass once ticked, and pass `openspec validate`. A gate counts as passed once its box is ticked in the working tree, without requiring a separate commit of the tick. Missing `openspec` or `jq` MUST report `SKIP`, not a pass.
 
 #### Scenario: Schema resolved and artifact order
 - **WHEN** `openspec new change demo` and `openspec status --change demo --json` run in the wired repo
@@ -274,7 +287,7 @@ In a fresh git repo initialized with real `openspec` and wired with `spec-rails`
 - **THEN** the pre-commit hook exits non-zero and names the unticked gate
 
 #### Scenario: Ticked gate allows commit
-- **WHEN** the Gate 0 box is ticked and committed before `proposal.md`
+- **WHEN** the Gate 0 box is ticked in `research.md` and `proposal.md` is committed together with it in one commit
 - **THEN** the commit on a non-main branch succeeds
 
 #### Scenario: Tool missing
@@ -472,3 +485,30 @@ Verification MUST assert that `EXIT` is 0, `COVERAGE` is $\ge 95\%$, and `MUTATI
 - **GIVEN** `tasks.md` containing `Evidence: [CMD: npm test] [EXIT: 0] [COVERAGE: 92%] [MUTATION: 95%]`
 - **WHEN** `spec-rails verify` runs
 - **THEN** verification fails with an error stating coverage does not meet the 95% threshold
+
+### Requirement: REQ-OSA-40 Commit Cadence
+`rules/WORKFLOW.md`, the `spec-rails` schema instructions and the lifecycle how-to MUST state that commits SHOULD happen once after planning (research through tasks), once after the code (one commit per code slice is fine when there are multiple slices), and once after `openspec archive`, name the exceptions (green slice commits per Rule 4, rebases and stream merges, bugfix and chore lanes), and MUST NOT instruct committing each Review Gate tick before the next artifact. The cadence MUST NOT be enforced by `spec-rails-check`, hooks or CI.
+
+#### Scenario: Cadence documented consistently
+- **WHEN** the protocol, schema instructions and lifecycle how-to are read
+- **THEN** each states the planning, code and archive commits as the default and lists the same exceptions
+
+#### Scenario: No per-gate commit instruction
+- **WHEN** the shipped docs, schema and templates are searched for an instruction to commit a gate before the next artifact
+- **THEN** no such instruction is found
+
+#### Scenario: Multiple code slices
+- **WHEN** a change has several code slices
+- **THEN** the docs state that one commit per slice is acceptable, each green per Rule 4
+
+#### Scenario: Batched planning passes the check
+- **WHEN** all five planning artifacts exist with their gates ticked and are committed in one commit
+- **THEN** `spec-rails-check` exits 0
+
+#### Scenario: Assumption ASM-GEN-3 working-tree check
+- **WHEN** a gate is ticked in the working tree but not yet committed
+- **THEN** `spec-rails-check` evaluates the ticked state and does not inspect git history
+
+#### Scenario: Edge case, mid-stage commit is allowed
+- **WHEN** a developer commits after a single artifact on a feature branch with a ticked upstream gate
+- **THEN** the hook does not reject the commit for cadence

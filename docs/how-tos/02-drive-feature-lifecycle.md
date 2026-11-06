@@ -19,7 +19,7 @@ openspec new change w1-1-user-authentication
 openspec status --change w1-1-user-authentication
 ```
 
-For gated planning, generate one artifact at a time with `openspec instructions <artifact> --change w1-1-user-authentication`, pausing for a human to review, tick its `## Review Gate` checkbox, and commit before generating the next file. Note that `/opsx-propose` drafts all planning artifacts in one pass, so `spec-rails-check` will block commits until Gates 0–3 are reviewed and ticked. Run `/opsx-apply` and `/opsx-archive` only after Gate 4 is ticked by a human; agents never self-tick Gate 0–4 or Gate 5.x sign-off boxes.
+For gated planning, generate one artifact at a time with `openspec instructions <artifact> --change w1-1-user-authentication`, pausing for a human to review, and tick its `## Review Gate` checkbox before generating the next file. Note that `/opsx-propose` drafts all planning artifacts in one pass, so `spec-rails-check` will block commits until Gates 0–3 are reviewed and ticked. Run `/opsx-apply` and `/opsx-archive` only after Gate 4 is ticked by a human; agents never self-tick Gate 0–4 or Gate 5.x sign-off boxes. Commit at stage boundaries rather than per gate tick: once after planning (research through tasks), once after the code (one commit per slice is fine when there are several), and once after `openspec archive`. Exceptions: green slice commits (Rule 4), rebases and stream merges, and the bugfix and chore lanes. This is guidance; `spec-rails-check` reads the working tree and does not enforce it.
 
 ---
 

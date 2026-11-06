@@ -107,7 +107,7 @@ git worktree add .worktrees/w1-2-cand-b -b feat/w1-2/cand-b
 ### 3. Evaluate Candidates
 Score both candidates against objective metrics:
 1. **Rails Pass**: 100% test pass and $\ge 95\%$ line/branch coverage.
-2. **Mutation Kill Score**: $> 90\%$ mutation kill score on core logic.
+2. **Mutation Kill Score**: $\ge 95\%$ mutation kill score on core logic.
 3. **Ponytail Simplicity**: Smallest diff, fewest abstractions, and lowest cyclomatic complexity.
 
 ### 4. Merge Winner & Prune Loser

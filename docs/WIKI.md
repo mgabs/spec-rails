@@ -78,7 +78,7 @@ openspec/
 - **Requirement header:** `### Requirement: REQ-<DOMAIN>-<N> <Name>` (or `NFR-<DOMAIN>-<N>` for budgets). Keys are never reused; deprecated ones keep their exact header in `## MODIFIED Requirements` and place `**[DEPRECATED by <change>]**` at the start of the requirement body (or use `## RENAMED Requirements` when changing a header).
 - **Wording and scenarios:** requirement text uses MUST or SHALL. Scenarios use exactly four hashtags (`#### Scenario:`) with WHEN and THEN.
 - **New capabilities:** a delta for a new capability starts with `## Purpose`. Never add it to a delta for an existing capability.
-- **Gates:** each artifact ends with an unticked `## Review Gate` box; a human ticks and commits it before the next artifact is created.
+- **Gates:** each artifact ends with an unticked `## Review Gate` box; a human ticks it before the next artifact is created. Commits follow stage boundaries: after planning, after the code (per slice is fine), and after archive.
 
 **Not specs:** the roadmap and bug reports are project records under `docs/` (see §1.6).
 
@@ -115,7 +115,7 @@ flowchart TD
 | **Gate 3** | Architecture Review | `openspec/changes/<feat>/design.md` | Overview, Domain Contracts, Boundary Rules, Latency/Allocation Budgets, Test Strategy. | Task Breakdown |
 | **Gate 4** | Tasks Breakdown Review | `openspec/changes/<feat>/tasks.md` | Dependency DAG, Multi-agent worktree stream partitions, Test-first order of execution. | Launch Worktrees / Apply Phase |
 | **Gate 5.x**| Slice Behavior Review | `tests/bdd/features/*.feature` | Gherkin scenarios covering all slice requirements before code is written. | Unit Red $\rightarrow$ Code Green |
-| **Gate 6** | Living Sync & Archive | `openspec/specs/` + `tasks.md` | $\ge 95\%$ coverage, $> 90\%$ mutation kill, worktrees pruned, delta specs promoted to `openspec/specs/`. | Feature Complete |
+| **Gate 6** | Living Sync & Archive | `openspec/specs/` + `tasks.md` | $\ge 95\%$ coverage, $\ge 95\%$ mutation kill, worktrees pruned, delta specs promoted to `openspec/specs/`. | Feature Complete |
 
 ### 2.2 Bugfix Gate Matrix (Fast-Track)
 

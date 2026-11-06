@@ -33,3 +33,21 @@ Feature: Spec-Rails Multi-Language Presets, Canonical Path Sandboxing, and Anti-
     Given a slice with "tasks.md" recording execution evidence
     When "spec-rails verify" inspects the evidence tokens
     Then it verifies exit code is 0, test coverage is at least 95%, and mutation kill score is at least 95%
+
+  @NFR-OSA-1
+  Scenario: Bundled libraries are build-time only
+    Given tsup bundles "zod", "cac" and "fast-glob" into "dist/cli.js"
+    When "package.json" is read
+    Then none of them is listed under "dependencies"
+
+  @NFR-OSA-1
+  Scenario: Node prerequisite stated
+    Given the protocol and installer documentation
+    When the prerequisites are read
+    Then they name Node.js >= 18 and OpenSpec and do not list a shell trampoline as a requirement
+
+  @NFR-OSA-5
+  Scenario: Single threshold in shipped docs
+    Given the protocol, schema, skills, templates and docs
+    When they are searched for a mutation kill threshold
+    Then every match states at least 95% and none states 90% or 100%
