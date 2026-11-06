@@ -27,8 +27,8 @@ flowchart TD
 - [x] 3.7 Verify production CLI build (verify: `npm run build` succeeds and `dist/cli.js` exists) Evidence: CMD `npm run build` EXIT 0 (dist/cli.js built in 33ms)
 
 ## 4. Integration & Rebase Plan
-- [ ] 4.1 Human Comprehension Verification: reviewer checks diff in `package.json` and `package-lock.json`
-- [ ] 4.2 Merge stream branch to main, verify clean git status, ready for `openspec archive`
+- [x] 4.1 Human Comprehension Verification: reviewer checks diff in `package.json` and `package-lock.json`
+- [x] 4.2 Merge stream branch to main, verify clean git status, ready for `openspec archive`
 
 ## Review Gate
-- [ ] **Gate 4 Approval**: Tasks breakdown approved by human before writing test code.
+- [x] **Gate 4 Approval**: Tasks breakdown approved by human before writing test code.

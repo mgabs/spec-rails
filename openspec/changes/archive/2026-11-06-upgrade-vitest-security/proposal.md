@@ -40,4 +40,4 @@ None. No runtime behavioral requirements change.
 - `npm run build` succeeds cleanly without type errors.
 
 ## Review Gate
-- [ ] **Gate 1 Approval**: Proposal reviewed and approved by human before drafting specs.
+- [x] **Gate 1 Approval**: Proposal reviewed and approved by human before drafting specs.

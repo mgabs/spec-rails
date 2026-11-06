@@ -37,4 +37,4 @@ Adopt Option A: Upgrade Vitest and coverage to the clean major line that preserv
 None. No runtime requirements (`REQ-*` or `NFR-*`) in `openspec/specs/` are affected because the change is isolated strictly to development tooling.
 
 ## Review Gate
-- [ ] **Gate 0 Decision**: Human decides Go (Option A) or No-Go before the proposal is drafted.
+- [x] **Gate 0 Decision**: Human decides Go (Option A) or No-Go before the proposal is drafted.
