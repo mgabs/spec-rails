@@ -19,7 +19,7 @@ repos:
 
       - id: spec-rails-check
         name: spec-rails gate and lane check
-        entry: sh -c 'if [ -f openspec/spec-rails/spec-rails-check ]; then sh openspec/spec-rails/spec-rails-check; fi'
+        entry: npx spec-rails check
         language: system
         pass_filenames: false
 

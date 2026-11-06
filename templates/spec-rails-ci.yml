@@ -18,42 +18,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Audit Spec-to-Code Mapping
-        env:
-          BASE_REF: ${{ github.base_ref }}
-          HEAD_REF: ${{ github.head_ref }}
-        run: |
-          # Chore lane (zero behavior change) is exempt from spec mapping; rails below still apply.
-          case "$HEAD_REF" in
-            chore/*) echo "Chore lane: spec-to-code audit skipped."; exit 0 ;;
-          esac
-
-          BASE_REF="${BASE_REF:-main}"
-          CHANGED_FILES=$(git -c core.quotePath=false diff --no-renames --name-only "origin/${BASE_REF}...HEAD" --)
-          CODE_CHANGES=$(printf '%s\n' "$CHANGED_FILES" | grep -v -E '^($|openspec/(changes|specs|schemas)/|docs/|.*\.md$)' || true)
-          SPEC_CHANGES=$(printf '%s\n' "$CHANGED_FILES" | grep -E '^(openspec/(changes/[^/]+/|specs/)|docs/bug-reports/)' | grep -v -E '^openspec/changes/archive/' || true)
-
-          if [ -n "$CODE_CHANGES" ] && [ -z "$SPEC_CHANGES" ]; then
-            echo "ERROR: Code modified without an openspec/ change or docs/bug-reports/ entry"
-            echo "Modified files:"
-            echo "$CODE_CHANGES"
-            exit 1
-          fi
-          echo "Spec-to-code audit passed."
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Gate & Lane Check
+      - name: Gate & Lane Check (with Spec Audit)
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
         run: |
           npm install -g @fission-ai/openspec
-          sh openspec/spec-rails/spec-rails-check
+          npx spec-rails check --audit
 
       - name: Verify Test Rails
         run: |
-          sh openspec/spec-rails/spec-rails-verify
+          npx spec-rails verify
 
       - name: Set up Python
         uses: actions/setup-python@v5

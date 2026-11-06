@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import fg from "fast-glob";
-import { loadConfigFile, getDefaultTestGlobs } from "../config";
+import { loadConfigFile, loadConfig, getDefaultTestGlobs } from "../config";
 import { validateTasksEvidence } from "../utils/evidence";
 import { resolveCanonicalPath } from "../utils/paths";
 
@@ -99,22 +99,19 @@ export function runVerify(options: VerifyOptions = {}): VerifyResult {
   const cwd = resolveCanonicalPath(rawCwd);
   const errors: string[] = [];
 
-  const configFilePath = options.configPath ?? path.join(cwd, "spec-rails.config.json");
   let testGlobs = getDefaultTestGlobs("auto");
   let strict = options.strict ?? true;
   let minCoverage = 95;
   let minMutation = 95;
 
-  if (fs.existsSync(configFilePath)) {
-    try {
-      const config = loadConfigFile(configFilePath);
-      testGlobs = config.testGlobs;
-      strict = options.strict !== undefined ? options.strict : config.strict;
-      minCoverage = config.coverageMinScore;
-      minMutation = config.mutationMinScore;
-    } catch (err: unknown) {
-      errors.push(`Failed to load config: ${(err as Error).message}`);
-    }
+  try {
+    const config = options.configPath ? loadConfigFile(options.configPath) : loadConfig(cwd);
+    testGlobs = config.testGlobs;
+    strict = options.strict !== undefined ? options.strict : config.strict;
+    minCoverage = config.coverageMinScore;
+    minMutation = config.mutationMinScore;
+  } catch (err: unknown) {
+    errors.push(`Failed to load config: ${(err as Error).message}`);
   }
 
   const discoveredTests = discoverTests(cwd, testGlobs);

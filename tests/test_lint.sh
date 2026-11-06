@@ -20,9 +20,6 @@ echo "=== Running Shell Syntax & Spec Sanity Checks ==="
 
 # 1. POSIX shell syntax validation
 for script in \
-  "$REPO_ROOT/bin/spec-rails" \
-  "$REPO_ROOT/bin/spec-rails-check" \
-  "$REPO_ROOT/bin/spec-rails-verify" \
   "$REPO_ROOT"/tests/*.sh \
   "$REPO_ROOT/tests/bdd/test_bdd.sh"; do
   rel="${script#"$REPO_ROOT/"}"
@@ -75,9 +72,6 @@ fi
 # 4. Shellcheck if installed
 if command -v shellcheck >/dev/null 2>&1; then
   if shellcheck \
-    "$REPO_ROOT/bin/spec-rails" \
-    "$REPO_ROOT/bin/spec-rails-check" \
-    "$REPO_ROOT/bin/spec-rails-verify" \
     "$REPO_ROOT"/tests/*.sh \
     "$REPO_ROOT/tests/bdd/test_bdd.sh"; then
     pass "ShellCheck passed"

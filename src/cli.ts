@@ -1,6 +1,8 @@
 import { cac, type CAC } from "cac";
 import { initProject } from "./commands/init.js";
 import { runVerify } from "./commands/verify.js";
+import { runCheck } from "./commands/check.js";
+import { runAudit } from "./commands/audit.js";
 
 export function createCli(): CAC {
   const cli = cac("spec-rails");
@@ -38,6 +40,50 @@ export function createCli(): CAC {
         process.exit(1);
       }
       console.log(`[spec-rails] Verification passed! (${res.discoveredTests.length} tests discovered)`);
+    });
+
+  cli
+    .command("check [dir]", "Check gate status, lane rules, and DAG dependencies")
+    .option("--store <id>", "OpenSpec store identifier")
+    .option("--audit", "Run spec-to-code audit alongside gate checks", { default: false })
+    .option("--base <ref>", "Base branch for audit comparison (default: main)")
+    .action((dir, options) => {
+      const res = runCheck({
+        cwd: dir || process.cwd(),
+        store: options.store,
+        audit: options.audit,
+        baseRef: options.base,
+      });
+      if (!res.success) {
+        console.error("spec-rails-check: gate violations:");
+        for (const v of res.violations) {
+          console.error(`  - ${v}`);
+        }
+        process.exit(1);
+      }
+      console.log("[spec-rails] All gates and lane checks passed.");
+    });
+
+  cli
+    .command("audit [dir]", "Audit spec-to-code mapping against base branch")
+    .option("--base <ref>", "Base branch to compare against (default: main)", { default: "main" })
+    .action((dir, options) => {
+      const res = runAudit({
+        cwd: dir || process.cwd(),
+        baseRef: options.base,
+      });
+      if (res.isChoreExempt) {
+        console.log("[spec-rails] Chore lane: spec-to-code audit skipped.");
+        return;
+      }
+      if (!res.success) {
+        console.error("[spec-rails] Spec-to-code audit failed:");
+        for (const err of res.errors) {
+          console.error(err);
+        }
+        process.exit(1);
+      }
+      console.log("[spec-rails] Spec-to-code audit passed.");
     });
 
   cli

@@ -1,4 +1,4 @@
-@REQ-OSA-7 @REQ-OSA-8 @REQ-OSA-9 @REQ-OSA-19 @REQ-OSA-20 @REQ-OSA-29 @REQ-OSA-30 @REQ-OSA-31 @REQ-OSA-32 @REQ-OSA-33 @REQ-OSA-34 @REQ-OSA-35 @REQ-OSA-41 @NFR-OSA-1 @NFR-OSA-4 @NFR-OSA-5
+@REQ-OSA-7 @REQ-OSA-8 @REQ-OSA-9 @REQ-OSA-19 @REQ-OSA-20 @REQ-OSA-29 @REQ-OSA-30 @REQ-OSA-31 @REQ-OSA-32 @REQ-OSA-33 @REQ-OSA-34 @REQ-OSA-35 @REQ-OSA-41 @REQ-OSA-42 @REQ-OSA-43 @REQ-OSA-45 @NFR-OSA-1 @NFR-OSA-4 @NFR-OSA-5
 Feature: Spec-Rails OpenSpec addon architecture, layout, and boundary hardening
   As an engineering team running Spec-Rails on OpenSpec v1.15/v1.16+
   We want OpenSpec-native delta specs, archival, layout, and hardened CLI/gate/rail boundaries
@@ -83,3 +83,22 @@ Feature: Spec-Rails OpenSpec addon architecture, layout, and boundary hardening
     Then its scenario templates include "GIVEN", "WHEN", and "THEN" steps
     And "schemas/spec-rails/schema.yaml" instructs that requirement keys are assigned at Gate 2
     And "schemas/spec-rails/schema.yaml" instructs repeating legacy unprefixed headers verbatim for modified or removed requirements
+
+  @REQ-OSA-42
+  Scenario: Native TypeScript gate and DAG checking
+    Given an active OpenSpec change
+    When "spec-rails check" evaluates gate checkboxes, DAG relationships, and early tasks
+    Then it flags unticked ancestor gates and direct commits on main without requiring "jq"
+
+  @REQ-OSA-43
+  Scenario: Integrated spec-to-code audit
+    Given a git branch with modified source files
+    When "spec-rails audit" or "spec-rails check --audit" executes
+    Then it verifies an active change or bug report exists unless the branch is a chore lane
+
+  @REQ-OSA-45
+  Scenario: Elimination of shell binaries and jq dependency
+    Given the Spec-Rails repository
+    When inspected for shell executables and external JSON parsers
+    Then there is no "bin/" directory containing shell scripts
+    And "jq" is not required on PATH

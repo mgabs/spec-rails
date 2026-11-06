@@ -1,0 +1,348 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { execSync } from "node:child_process";
+import fg from "fast-glob";
+import { runAudit, type AuditResult } from "./audit.js";
+
+export interface CheckOptions {
+  cwd?: string;
+  store?: string;
+  audit?: boolean;
+  baseRef?: string;
+}
+
+export interface GateStateResult {
+  ticked: boolean;
+  isNoGo: boolean;
+  state: "ticked" | "unticked" | "missing";
+}
+
+export interface CheckResult {
+  success: boolean;
+  violations: string[];
+  auditResult?: AuditResult;
+}
+
+export interface ArtifactInfo {
+  id: string;
+  requires?: string[];
+  status?: string;
+}
+
+export function parseGateState(content: string): GateStateResult {
+  const lines = content.split(/\r?\n/);
+  let inFence = false;
+  let inReviewGate = false;
+  let hasBox = false;
+  let isTicked = false;
+  let isNoGo = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+
+    if (/^##\s+Review Gate\s*$/i.test(line)) {
+      inReviewGate = true;
+      hasBox = false;
+      isTicked = false;
+      isNoGo = false;
+      continue;
+    }
+
+    if (/^##?\s+/.test(line)) {
+      inReviewGate = false;
+    }
+
+    if (inReviewGate && /^-\s+\[[ xX]\]/.test(line)) {
+      hasBox = true;
+      if (/^-\s+\[[xX]\]/.test(line)) {
+        if (/:[[:space:]]*no-go([[:space:].!]|$)/i.test(line) || /:\s*no-go([.\s!]|$)/i.test(line)) {
+          isNoGo = true;
+        } else {
+          isTicked = true;
+        }
+      }
+    }
+  }
+
+  let state: "ticked" | "unticked" | "missing" = "missing";
+  if (isTicked && !isNoGo) {
+    state = "ticked";
+  } else if (hasBox || isNoGo) {
+    state = "unticked";
+  }
+
+  return {
+    ticked: isTicked && !isNoGo,
+    isNoGo,
+    state,
+  };
+}
+
+export function getGateNumber(id: string): number | string {
+  switch (id) {
+    case "research":
+      return 0;
+    case "proposal":
+      return 1;
+    case "specs":
+      return 2;
+    case "design":
+      return 3;
+    case "tasks":
+      return 4;
+    default:
+      return id;
+  }
+}
+
+export function checkBranchAllowed(branchName: string): boolean {
+  const trimmed = branchName.trim();
+  if (trimmed === "main" || trimmed === "master") {
+    return false;
+  }
+  return true;
+}
+
+export function hasTickedImplementationTasks(tasksContent: string): boolean {
+  const lines = tasksContent.split(/\r?\n/);
+  let inFence = false;
+  let inReviewGate = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+
+    if (/^##\s+Review Gate\s*$/i.test(line)) {
+      inReviewGate = true;
+      continue;
+    }
+    if (/^##?\s+/.test(line)) {
+      inReviewGate = false;
+    }
+
+    if (!inReviewGate && /^\s*-\s+\[[xX]\]/.test(line)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function parseArtifactState(
+  changeDir: string,
+  artifactId: string,
+  existingOutputPaths?: string[]
+): "ticked" | "unticked" | "missing" {
+  if (artifactId === "specs") {
+    let specFiles = existingOutputPaths || [];
+    if (specFiles.length === 0) {
+      specFiles = fg.sync(["specs/**/*.md"], {
+        cwd: changeDir,
+        absolute: true,
+      });
+    } else {
+      specFiles = specFiles.map((f) => (path.isAbsolute(f) ? f : path.join(changeDir, f)));
+    }
+
+    if (specFiles.length === 0) return "missing";
+
+    let agg: "ticked" | "unticked" | "missing" = "ticked";
+    for (const file of specFiles) {
+      if (!fs.existsSync(file)) return "missing";
+      const content = fs.readFileSync(file, "utf-8");
+      const res = parseGateState(content);
+      if (res.state === "missing") return "missing";
+      if (res.state === "unticked") agg = "unticked";
+    }
+    return agg;
+  }
+
+  const filePath = path.join(changeDir, `${artifactId}.md`);
+  if (!fs.existsSync(filePath)) return "missing";
+  const content = fs.readFileSync(filePath, "utf-8");
+  return parseGateState(content).state;
+}
+
+export function findGateViolations(
+  changeName: string,
+  artifacts: ArtifactInfo[],
+  states: Record<string, "ticked" | "unticked" | "missing">,
+  hasEarlyTasks: boolean
+): string[] {
+  const violations: string[] = [];
+
+  // Compute transitive downstream map
+  // downstream[u] = set of all artifacts that transitively depend on u
+  const downstream = new Map<string, Set<string>>();
+  for (const art of artifacts) {
+    downstream.set(art.id, new Set<string>());
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const art of artifacts) {
+      const artDownstream = downstream.get(art.id)!;
+      for (const other of artifacts) {
+        if (other.id === art.id) continue;
+        const requires = other.requires || [];
+        if (requires.includes(art.id) || requires.some((r) => artDownstream.has(r))) {
+          if (!artDownstream.has(other.id)) {
+            artDownstream.add(other.id);
+            changed = true;
+          }
+        }
+      }
+    }
+  }
+
+  // Check transitive violations
+  for (const art of artifacts) {
+    const u = art.id;
+    if (states[u] === "ticked") continue;
+
+    const uDownstream = downstream.get(u) || new Set();
+    const doneDownstream = artifacts.find(
+      (d) => uDownstream.has(d.id) && d.status === "done"
+    );
+
+    if (doneDownstream) {
+      const num = getGateNumber(u);
+      if (states[u] === "unticked") {
+        violations.push(`${changeName}: Gate ${num} (${u}) unticked but '${doneDownstream.id}' exists`);
+      } else {
+        violations.push(
+          `${changeName}: Gate ${num} (${u}) Review Gate section missing but '${doneDownstream.id}' exists`
+        );
+      }
+    }
+  }
+
+  // Check early tasks
+  if (hasEarlyTasks) {
+    const tasksState = states["tasks"];
+    if (tasksState === "unticked") {
+      violations.push(`${changeName}: Gate 4 (tasks) unticked but implementation tasks are ticked`);
+    } else if (tasksState !== "ticked") {
+      violations.push(`${changeName}: Gate 4 (tasks) Review Gate section missing but implementation tasks are ticked`);
+    }
+  }
+
+  return violations;
+}
+
+export function runCheck(options: CheckOptions = {}): CheckResult {
+  const cwd = options.cwd || process.cwd();
+  const violations: string[] = [];
+
+  // 1. Branch protection check
+  let branchName = "";
+  try {
+    branchName = execSync("git branch --show-current", { cwd, stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim();
+  } catch {
+    branchName = "";
+  }
+
+  if (branchName && !checkBranchAllowed(branchName)) {
+    violations.push(
+      `spec-rails-check: direct commits on '${branchName}' are not allowed; use a feature branch`
+    );
+  }
+
+  // 2. Optional audit check
+  let auditResult: AuditResult | undefined;
+  if (options.audit) {
+    auditResult = runAudit({ cwd, baseRef: options.baseRef });
+    if (!auditResult.success) {
+      violations.push(...auditResult.errors);
+    }
+  }
+
+  // 3. OpenSpec list and status checking
+  const storeFlag = options.store ? `--store ${options.store}` : "";
+  let listOutput = "";
+  try {
+    listOutput = execSync(`openspec list --json ${storeFlag}`, {
+      cwd,
+      stdio: ["ignore", "pipe", "ignore"],
+    }).toString();
+  } catch (err: any) {
+    violations.push(`spec-rails-check: 'openspec list --json' failed: ${err.message}`);
+    return { success: false, violations, auditResult };
+  }
+
+  let listData: any;
+  try {
+    listData = JSON.parse(listOutput);
+  } catch {
+    violations.push("spec-rails-check: cannot parse 'openspec list --json' output");
+    return { success: false, violations, auditResult };
+  }
+
+  const changes = Array.isArray(listData.changes) ? listData.changes : [];
+  for (const chg of changes) {
+    const changeName = chg.name || chg;
+    if (!changeName || typeof changeName !== "string") continue;
+
+    let statusOutput = "";
+    try {
+      statusOutput = execSync(
+        `openspec status --change ${changeName} --json ${storeFlag}`,
+        { cwd, stdio: ["ignore", "pipe", "ignore"] }
+      ).toString();
+    } catch (err: any) {
+      violations.push(`spec-rails-check: 'openspec status --change ${changeName} --json' failed`);
+      continue;
+    }
+
+    let statusData: any;
+    try {
+      statusData = JSON.parse(statusOutput);
+    } catch {
+      violations.push(`spec-rails-check: cannot parse status JSON for '${changeName}'`);
+      continue;
+    }
+
+    const changeRoot = statusData.changeRoot
+      ? path.resolve(cwd, statusData.changeRoot)
+      : path.join(cwd, "openspec/changes", changeName);
+
+    const artifacts: ArtifactInfo[] = Array.isArray(statusData.artifacts)
+      ? statusData.artifacts
+      : [];
+
+    const states: Record<string, "ticked" | "unticked" | "missing"> = {};
+    for (const art of artifacts) {
+      const outputPaths =
+        statusData.artifactPaths?.[art.id]?.existingOutputPaths;
+      states[art.id] = parseArtifactState(changeRoot, art.id, outputPaths);
+    }
+
+    let hasEarlyTasks = false;
+    const tasksFile = path.join(changeRoot, "tasks.md");
+    if (fs.existsSync(tasksFile)) {
+      const tasksContent = fs.readFileSync(tasksFile, "utf-8");
+      hasEarlyTasks = hasTickedImplementationTasks(tasksContent);
+    }
+
+    const changeViolations = findGateViolations(changeName, artifacts, states, hasEarlyTasks);
+    violations.push(...changeViolations);
+  }
+
+  return {
+    success: violations.length === 0,
+    violations,
+    auditResult,
+  };
+}

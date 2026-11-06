@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { parseConfig, loadConfigFile, getDefaultTestGlobs } from "../../src/config.js";
+import { parseConfig, loadConfigFile, getDefaultTestGlobs, loadLegacyRailsConf, loadConfig } from "../../src/config.js";
 
 describe("ConfigSchema & parseConfig", () => {
   let tempDir: string;
@@ -125,5 +125,46 @@ describe("ConfigSchema & parseConfig", () => {
       coverageMinScore: 105,
     };
     expect(() => parseConfig(raw)).toThrow();
+  });
+});
+
+describe("Legacy rails.conf fallback (REQ-OSA-44)", () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "spec-rails-legacy-"));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it("parses key-values from rails.conf", () => {
+    const railsConf = path.join(tempDir, "rails.conf");
+    fs.writeFileSync(
+      railsConf,
+      `RAILS_TEST_DIRS="tests src"
+RAILS_TEST="pytest"
+RAILS_COVERAGE="pytest --cov"
+RAILS_MUTATION="mutmut run"
+`
+    );
+
+    const parsed = loadLegacyRailsConf(railsConf);
+    expect(parsed?.testCommand).toBe("pytest");
+    expect(parsed?.coverageCommand).toBe("pytest --cov");
+    expect(parsed?.mutationCommand).toBe("mutmut run");
+  });
+
+  it("falls back to openspec/spec-rails/rails.conf when spec-rails.config.json is absent", () => {
+    const specRailsDir = path.join(tempDir, "openspec/spec-rails");
+    fs.mkdirSync(specRailsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(specRailsDir, "rails.conf"),
+      `RAILS_TEST="cargo test"`
+    );
+
+    const config = loadConfig(tempDir);
+    expect(config.testCommand).toBe("cargo test");
   });
 });
