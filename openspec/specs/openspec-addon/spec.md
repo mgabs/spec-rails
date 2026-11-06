@@ -209,6 +209,8 @@ Installer and check scripts MUST have ≥ 95% line and branch coverage under the
 - **WHEN** the protocol, schema, skills, templates and docs are searched for a mutation kill threshold
 - **THEN** every match states at least 95% and none states 90% or 100%
 
+---
+
 ### Requirement: REQ-OSA-21 CI Audit Layout
 The CI spec-to-code audit in `templates/spec-rails-ci.yml` MUST treat a PR as spec-backed when it changes any file under an active `openspec/changes/<id>/` (excluding `openspec/changes/archive/`), `openspec/specs/` or `docs/bug-reports/`, MUST treat edits to `openspec/spec-rails/` and `.github/` as audited code changes, MUST bind branch refs via `env:`, and MUST NOT reference `specs/`. Chore-lane branches remain exempt.
 
