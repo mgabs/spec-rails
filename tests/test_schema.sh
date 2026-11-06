@@ -88,7 +88,10 @@ done
 assert_eq "0" "$(grep -c 'Evidence:' "$SCHEMA_DIR/templates/tasks.md" || true)" \
   "tasks.md template has no self-matching Evidence: literal"
 
-for term in "**[DEPRECATED by <change>]**:specs" "MODIFIED Requirements:specs" "GIVEN/WHEN/THEN:specs" "MUST NOT be ticked by \`/opsx-apply\`:tasks"; do
+assert_eq "2" "$(grep -c '^- \*\*GIVEN\*\*' "$SCHEMA_DIR/templates/spec.md" || true)" \
+  "REQ-OSA-41 spec.md template has GIVEN steps"
+
+for term in "**[DEPRECATED by <change>]**:specs" "MODIFIED Requirements:specs" "GIVEN/WHEN/THEN:specs" "unprefixed:specs" "assigned at Gate 2:proposal" "MUST NOT be ticked by \`/opsx-apply\`:tasks"; do
   text="${term%%:*}"
   id="${term##*:}"
   body="$(awk -v id="$id" '$0 == "  - id: " id { on = 1; next } /^  - id: / { on = 0 } /^apply:/ { on = 0 } on' "$SCHEMA")"

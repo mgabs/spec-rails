@@ -30,6 +30,7 @@ artifacts:
       Assumptions (`ASM-GEN-*`), Success Metrics.
 
       Out-of-Scope (YAGNI) items are binding prohibitions for every later artifact.
+      Requirement keys (REQ-* / NFR-*) are assigned at Gate 2, not in proposal.md.
       Also fill the Capabilities section: each new capability becomes `specs/<capability-path>/spec.md`;
       each modified capability must use the exact existing path under `openspec/specs/`.
       A change with no spec-level behavior change must set `skip_specs: true` in its `.openspec.yaml`.
@@ -56,6 +57,7 @@ artifacts:
         `### Requirement: REQ-... <Name>` header in `## MODIFIED Requirements` (preserving OpenSpec exact header matching)
         and place `**[DEPRECATED by <change>]**` at the start of the requirement body (or use `## RENAMED Requirements` if renaming).
         MODIFIED and REMOVED headers must repeat the full `REQ-... <Name>` text exactly, because OpenSpec matches on the whole header.
+        When modifying or removing legacy living spec requirements that lack the `Requirement:` prefix (e.g. `### REQ-...`), repeat the legacy unprefixed header verbatim.
       - Requirement text uses MUST/SHALL. Scenarios use exactly four hashtags (`#### Scenario:`) with GIVEN/WHEN/THEN steps (for OpenSpec 1.16 `--strict`).
       - Cover Non-Functional Requirements and budgets (`NFR-*`), Assumptions (`ASM-*`), and Edge Cases & Errors.
 

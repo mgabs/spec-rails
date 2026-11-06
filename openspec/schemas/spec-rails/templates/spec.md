@@ -9,6 +9,7 @@
 The system MUST <!-- exact verifiable behavior -->.
 
 #### Scenario: <!-- primary happy path -->
+- **GIVEN** <!-- precondition -->
 - **WHEN** <!-- action -->
 - **THEN** <!-- outcome -->
 
@@ -16,6 +17,7 @@ The system MUST <!-- exact verifiable behavior -->.
 <!-- Budget: operation MUST complete within <budget>. -->
 
 #### Scenario: <!-- budget check -->
+- **GIVEN** <!-- precondition -->
 - **WHEN** <!-- measured operation -->
 - **THEN** <!-- within budget -->
 

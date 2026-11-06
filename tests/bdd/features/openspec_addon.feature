@@ -1,4 +1,4 @@
-@REQ-OSA-7 @REQ-OSA-8 @REQ-OSA-9 @REQ-OSA-19 @REQ-OSA-20 @REQ-OSA-29 @REQ-OSA-30 @REQ-OSA-31 @REQ-OSA-32 @REQ-OSA-33 @REQ-OSA-34 @REQ-OSA-35 @NFR-OSA-1 @NFR-OSA-4 @NFR-OSA-5
+@REQ-OSA-7 @REQ-OSA-8 @REQ-OSA-9 @REQ-OSA-19 @REQ-OSA-20 @REQ-OSA-29 @REQ-OSA-30 @REQ-OSA-31 @REQ-OSA-32 @REQ-OSA-33 @REQ-OSA-34 @REQ-OSA-35 @REQ-OSA-41 @NFR-OSA-1 @NFR-OSA-4 @NFR-OSA-5
 Feature: Spec-Rails OpenSpec addon architecture, layout, and boundary hardening
   As an engineering team running Spec-Rails on OpenSpec v1.15/v1.16+
   We want OpenSpec-native delta specs, archival, layout, and hardened CLI/gate/rail boundaries
@@ -76,3 +76,10 @@ Feature: Spec-Rails OpenSpec addon architecture, layout, and boundary hardening
     Given a mutation run on core logic scoring above 90%
     When surviving mutants remain
     Then each survivor is listed in the PR as an equivalent mutant or accepted risk
+
+  @REQ-OSA-41
+  Scenario: Spec delta templates and schema instructions are aligned
+    Given the spec delta template in "schemas/spec-rails/templates/spec.md"
+    Then its scenario templates include "GIVEN", "WHEN", and "THEN" steps
+    And "schemas/spec-rails/schema.yaml" instructs that requirement keys are assigned at Gate 2
+    And "schemas/spec-rails/schema.yaml" instructs repeating legacy unprefixed headers verbatim for modified or removed requirements
