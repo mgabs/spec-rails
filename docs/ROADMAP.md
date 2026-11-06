@@ -110,13 +110,13 @@ Dropped, do not re-propose: `spec-rails scaffold-check` (AST inspection of contr
 - [x] OpenSpec v1.15/v1.16 compatibility, transitive gate enforcement, skill sync, and 100% requirement traceability verified.
 
 ### Wave 5 Exit Criteria
-- [ ] All W5 items (W5.1–W5.13) marked `✅ Shipped`.
-- [ ] `verify` skips the mutation rail with an informational pass for docs-only or spec-only changesets (no source files matching `testGlobs`).
-- [ ] `npm audit --omit=dev` is clean and every dev-only advisory is fixed or has a recorded reason.
+- [x] All W5 items (W5.1–W5.13) marked `✅ Shipped`.
+- [x] `verify` skips the mutation rail with an informational pass for docs-only or spec-only changesets (no source files matching `testGlobs`).
+- [x] `npm audit --omit=dev` is clean and every dev-only advisory is fixed or has a recorded reason.
 - [x] TypeScript CLI (`init/check/verify`) at parity with `bin/spec-rails*`; shell scripts removed; `jq` no longer required.
 - [x] `pre-commit` is a hard prerequisite: `init` installs spec-rails gate and LGTM checks as hooks; the installer writes no `.git/hooks/pre-commit`.
 - [ ] `verify` executes the test, coverage and mutation commands; an empty, failing or below-threshold rail fails it; `init` fills commands from the detected stack (ts, python, go, rust).
-- [ ] Existing changes without a `## Review Gate` no longer block commits (baseline mode); new changes are still gated.
-- [ ] CI template pins the OpenSpec CLI version and installs stack tooling before verify.
-- [ ] Docs and installed agent skills agree on command names and on which agent folders to commit.
+- [x] Existing changes without a `## Review Gate` no longer block commits (baseline mode); new changes are still gated.
+- [x] CI template pins the OpenSpec CLI version and installs stack tooling before verify.
+- [x] Docs and installed agent skills agree on command names and on which agent folders to commit.
 - [ ] `make test` green and 100% requirement traceability.

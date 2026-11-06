@@ -110,3 +110,17 @@ describe("Transitive DAG violations (check.ts)", () => {
     expect(violations).toContain("test-change: Gate 4 (tasks) unticked but implementation tasks are ticked");
   });
 });
+
+describe("Baseline loading (check.ts - REQ-OSA-47)", () => {
+  it("returns empty set without file and parses names with file", async () => {
+    const fs = await import("node:fs");
+    const os = await import("node:os");
+    const path = await import("node:path");
+    const { loadBaseline, BASELINE_FILE } = await import("../../src/commands/check");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bl-"));
+    expect(loadBaseline(dir).size).toBe(0);
+    fs.mkdirSync(path.dirname(path.join(dir, BASELINE_FILE)), { recursive: true });
+    fs.writeFileSync(path.join(dir, BASELINE_FILE), "# c\nold-change\n\n");
+    expect([...loadBaseline(dir)]).toEqual(["old-change"]);
+  });
+});
