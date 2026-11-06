@@ -8,7 +8,7 @@ Baseline: `main` · Status: Active
 
 ```mermaid
 flowchart LR
-    W1[Wave 1: Protocol & Rails] --> W2[Wave 2: CI & Review Harness Pairing] --> W3[Wave 3: OpenSpec Addon] --> W4[Wave 4: OpenSpec Addon Hardening]
+    W1[Wave 1: Protocol & Rails] --> W2[Wave 2: CI & Review Harness Pairing] --> W3[Wave 3: OpenSpec Addon] --> W4[Wave 4: OpenSpec Addon Hardening] --> W5[Wave 5: TS CLI & Adopter Hardening]
 ```
 
 ---
@@ -64,6 +64,23 @@ Status Legend (changed only on `main` via `chore/roadmap-<id>` branches; see `op
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **W4.1** | OpenSpec v1.15/v1.16 Boundary, Gate & Rail Hardening | M | W3.13 | ✅ | `openspec/changes/archive/2026-11-02-w4-1-openspec-hardening/` | Transitive gate DAG check, OpenSpec store/JSON boundary, auto-installed skill, rail & hygiene hardening (REQ-OSA-31, 32) |
 
+### Wave 5: TS CLI & Adopter Hardening
+
+Driven by the first third-party adoption (a uv/pytest/mutmut repo): empty rails passed silently, the hand-written git hook collided with the pre-commit framework, and existing changes without a Review Gate blocked every commit.
+
+| ID | Item | Effort | Depends on | Status | Spec / Feature Dir | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **W5.1** | Agent Hardening | M | W4.1 | ✅ | `openspec/changes/archive/2026-11-03-w5-1-agent-hardening/` | Anti-drift rails for agent planning and slice execution (REQ-OSA-33, 34, 35; NFR-OSA-5) |
+| **W5.2** | Multi-Language Rails | L | W5.1 | 🚀 | `openspec/changes/w5-2-multi-language-rails/` | Stack detection and presets (ts, python, go, rust); tasks complete, pending Gate 6 archive (REQ-OSA-36, 37, 38, 39; NFR-OSA-1, 5) |
+| **W5.3** | TypeScript CLI Replaces Shell Scripts | L | W5.2 | ⬜ | `src/`, `bin/` | `spec-rails init/check/verify` in TS reaches parity with `bin/spec-rails*` (the `check` command does not exist yet); shell scripts removed; no `jq`; `NFR-OSA-1` modified; the inline "Audit Spec-to-Code Mapping" CI shell moves into the CLI (`audit` or part of `check`) so one implementation owns the spec-to-code rules; `rails.conf` is deprecated in favor of `spec-rails.config.json`, with a migration path and the stale "installer never overwrites" comment corrected; REQ IDs assigned at Gate 2 |
+| **W5.4** | Pre-Commit Framework Required | M | W5.3 | ⬜ | `templates/.pre-commit-config.yaml` | `pre-commit` is a hard prerequisite: `init` ships spec-rails gate and LGTM checks as local hooks and runs `pre-commit install`; installer no longer writes `.git/hooks/pre-commit`; branch protection is an optional hook; lint/test hooks use the detected stack instead of Makefile targets; BDD scenario: installing alongside the pre-commit framework leaves no `.legacy` hook and no duplicated checks; REQ IDs assigned at Gate 2 |
+| **W5.5** | Strict Rails by Default | M | W5.3 | ⬜ | `src/commands/verify.ts`, `templates/rails.conf` | `verify` executes the configured test/coverage/mutation commands (today it only checks evidence tokens and traceability) and fails on a non-zero exit, an empty command or a missed threshold; command output is captured and summarized, with full output only on failure; `init` fills commands from the stack (`uv run` when `uv.lock`, `[tool.mutmut]` for mutmut 3); survivor-count mutation wrapper with documented timeout policy; REQ IDs assigned at Gate 2 |
+| **W5.6** | Gate Check Baseline Mode | S | W5.3 | ⬜ | `src/commands/check.ts` | Grandfather list for pre-existing changes lacking `## Review Gate`, or a one-shot migration command; new changes still gate; REQ IDs assigned at Gate 2 |
+| **W5.7** | CI Template Fixes | S | W5.3, W5.4, W5.5 | ⬜ | `templates/spec-rails-ci.yml` | Pin OpenSpec CLI version (also in Copilot setup workflow); install stack tooling (`uv`, Python) before verify; derive pre-commit `SKIP` from hook ids; drop Makefile-only test step; REQ IDs assigned at Gate 2 |
+| **W5.8** | Schema & Template Fixes | S | W5.2 | ⬜ | `schemas/spec-rails/` | `GIVEN` in `spec.md` scenarios; grandfather legacy unprefixed `REQ-*` headings for MODIFIED/REMOVED; REQ IDs assigned at Gate 2 |
+| **W5.9** | Agent Skill Footprint & Docs | S | W5.3 | ⬜ | `docs/how-tos/`, `README.md`, `bin/spec-rails` | Found adopting project_aiq: docs use `/opsx-*` commands that adopters may remove as duplicate alias skills (document both names or use `openspec-*`); guidance to commit `.claude/`, `.agents/`, `.github/skills` rather than ignore them and to keep skills only for tools in use (`openspec update` can regenerate `opsx-*` aliases); optionally install the `spec-rails` skill into `.claude/skills` too; REQ IDs assigned at Gate 2 |
+| **W5.10** | Commit Timing Convention | S | W5.1 | ✅ | `openspec/changes/archive/2026-11-06-w5-10-commit-timing/` | Commit after the specs stage, the code and the archive are done, not per micro-step; document in the workflow and lifecycle how-to, and align agent skills and hooks with it |
+
 ---
 
 ## 3. Wave Exit Criteria
@@ -86,3 +103,13 @@ Status Legend (changed only on `main` via `chore/roadmap-<id>` branches; see `op
 ### Wave 4 Exit Criteria
 - [x] All W4 items marked `✅ Shipped`.
 - [x] OpenSpec v1.15/v1.16 compatibility, transitive gate enforcement, skill sync, and 100% requirement traceability verified.
+
+### Wave 5 Exit Criteria
+- [ ] All W5 items (W5.1–W5.10) marked `✅ Shipped`.
+- [ ] TypeScript CLI (`init/check/verify`) at parity with `bin/spec-rails*`; shell scripts removed; `jq` no longer required.
+- [ ] `pre-commit` is a hard prerequisite: `init` installs spec-rails gate and LGTM checks as hooks; the installer writes no `.git/hooks/pre-commit`.
+- [ ] `verify` executes the test, coverage and mutation commands; an empty, failing or below-threshold rail fails it; `init` fills commands from the detected stack (ts, python, go, rust).
+- [ ] Existing changes without a `## Review Gate` no longer block commits (baseline mode); new changes are still gated.
+- [ ] CI template pins the OpenSpec CLI version and installs stack tooling before verify.
+- [ ] Docs and installed agent skills agree on command names and on which agent folders to commit.
+- [ ] `make test` green and 100% requirement traceability.

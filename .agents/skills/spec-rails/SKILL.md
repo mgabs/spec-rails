@@ -9,7 +9,7 @@ description: >-
 
 # Spec-Rails Skill
 
-Follow `openspec/spec-rails/WORKFLOW.md`. Normalize roadmap IDs to lowercase hyphens (`W1.2` → `w1-2-<slug>`) and create a change with `openspec new change <id>-<slug>`. For gated planning, generate one artifact at a time with `openspec instructions <artifact> --change <id>-<slug>`, pausing for a human to tick and commit its `## Review Gate` checkbox before generating the next file (note: `/opsx-propose` drafts all artifacts at once and will block commits until Gates 0–3 are reviewed and ticked). Run `/opsx-apply` and `/opsx-archive` only after Gate 4 is ticked by a human.
+Follow `openspec/spec-rails/WORKFLOW.md`. Normalize roadmap IDs to lowercase hyphens (`W1.2` → `w1-2-<slug>`) and create a change with `openspec new change <id>-<slug>`. For gated planning, generate one artifact at a time with `openspec instructions <artifact> --change <id>-<slug>`, pausing for a human to tick its `## Review Gate` checkbox before generating the next file (note: `/opsx-propose` drafts all artifacts at once and will block commits until Gates 0–3 are reviewed and ticked). Run `/opsx-apply` and `/opsx-archive` only after Gate 4 is ticked by a human. Commit at stage boundaries rather than per gate tick: once after planning (research through tasks), once after the code (one commit per slice is fine when there are several), and once after `openspec archive`. Exceptions: green slice commits (Rule 4), rebases and stream merges, and the bugfix and chore lanes. This is guidance; `spec-rails-check` reads the working tree and does not enforce it.
 
 ## 0. The Ponytail Mindset & Strict YAGNI
 

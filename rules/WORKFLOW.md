@@ -69,6 +69,9 @@ Never merge a branch whose rails were verified only against a stale base.
 3. Commit through pre-commit (Rule 4).
 4. Merge per Rule 2, then delete the branch.
 
+### Rule 6: Commit Cadence
+- Commit at stage boundaries rather than per gate tick: once after planning (research through tasks), once after the code (one commit per slice is fine when there are several), and once after `openspec archive`. Exceptions: green slice commits (Rule 4), rebases and stream merges, and the bugfix and chore lanes. This is guidance; `spec-rails-check` reads the working tree and does not enforce it.
+
 ---
 
 ## 2. Feature Lifecycle & Human Gates
@@ -87,7 +90,7 @@ docs/
 ```
 
 ### Gate Approval Evidence
-A gate passes only when the agent, after explicit human approval, ticks the artifact's **Review Gate** checkbox and commits it. An unticked box means the gate has not passed, whatever was said in chat.
+A gate passes only when the agent, after explicit human approval, ticks the artifact's **Review Gate** checkbox in the working tree. An unticked box means the gate has not passed, whatever was said in chat.
 
 ### ROADMAP.md Updates (Main-Only via Chore Lane)
 `docs/ROADMAP.md` is never edited on feature branches; that avoids conflicts between parallel features and keeps status visible on `main`. Status changes land through a tiny `chore/roadmap-<id>` branch merged per Rule 2:
@@ -293,7 +296,7 @@ All steps on the feature branch unless stated otherwise:
 Spec-Rails is an addon on an OpenSpec project (`spec-rails [init] [dir]`, requires OpenSpec ≥ 1.15.0 and `jq`). OpenSpec owns the artifact graph, specs and archive; Spec-Rails supplies the `spec-rails` schema (`research → proposal → specs → design → tasks`), gates, lanes and testing rails.
 
 - **Layout**: changes live in `openspec/changes/<id>-<slug>/`, capabilities in `openspec/specs/<capability>/spec.md`, finished changes in `openspec/changes/archive/`. `docs/ROADMAP.md` and `docs/bug-reports/` live under `docs/`; this protocol ships as `openspec/spec-rails/WORKFLOW.md`.
-- **Gates**: each artifact template ends with an unticked `## Review Gate` box. A human ticks it and commits it before the next artifact is created. `spec-rails-check` (pre-commit and CI) fails if an artifact exists whose upstream gate is unticked, and fails commits on `main`/`master`.
+- **Gates**: each artifact template ends with an unticked `## Review Gate` box. A human ticks it before the next artifact is created. `spec-rails-check` (pre-commit and CI) fails if an artifact exists whose upstream gate is unticked, and fails commits on `main`/`master`.
 - **Streams**: after rebasing a stream onto the feature branch, run `openspec validate <change>` in addition to the test suite.
 - **Requirement IDs**: `REQ-*`/`NFR-*` live in the change's delta specs and are synced into `openspec/specs/` by `openspec archive`; Gate 6 adds only the rails (tests, mutation, `openspec validate`) around that command.
 - **Parallel streams, delta specs, and `tasks.md`**: shared capability delta specs are locked at Gate 2 on the feature branch before spawning parallel slice worktrees (Rule 3.1); if streams must edit a shared delta spec, apply Rule 3.7 (strictly additive) with distinct `REQ-*` IDs. Update `tasks.md` slice checkboxes on the parent feature branch when integrating streams (or confine edits to each stream's own slice section) to avoid rebase collisions.

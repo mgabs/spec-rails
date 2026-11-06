@@ -103,6 +103,7 @@ printf '[x](missing.md)\n' > "$FIX/docs/a.md"
 printf 'cp openspec/schemas/spec-rails/templates/research.md x\n' > "$FIX/docs/b.md"
 printf 'see specs/ROADMAP.md\n' > "$FIX/docs/c.md"
 printf 'see specs/WORKFLOW.md\n' > "$FIX/rules/r.md"
+printf 'A human ticks it and commits it before the next artifact.\n' > "$FIX/docs/d.md"
 printf 'orphan() {\n  :\n}\n' > "$FIX/tests/x.sh"
 printf '# dead_fn\ndead_fn() {\n  :\n}\n' > "$FIX/tests/y.sh"
 fixture_out="$(sh "$REPO_ROOT/tests/check_hygiene.sh" "$FIX" || true)"
@@ -111,6 +112,7 @@ for expected in \
   "docs/b.md instructs manual template copy" \
   "docs/c.md references a legacy specs/ path" \
   "rules/r.md references a legacy specs/ path" \
+  "docs/d.md tells the reader to commit a gate tick" \
   "tests/x.sh defines unused function orphan" \
   "tests/y.sh defines unused function dead_fn"; do
   case "$fixture_out" in
