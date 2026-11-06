@@ -12,7 +12,7 @@ Spec-Rails transforms AI-assisted software delivery from speculative, prompt-dri
 
 1. **`main` is strictly immutable to direct edits**: Zero code, specs, or docs land directly on `main`. Every commit lands through an isolated lane via `--ff-only`.
 2. **Code is a liability, not an asset**: The smallest diff that satisfies formal requirements and passes all rails wins.
-3. **No untested code exists**: Code does not exist until a test fails for its absence. Coverage ($\ge 95\%$) is insufficient without a **> 90% mutation kill score**.
+3. **No untested code exists**: Code does not exist until a test fails for its absence. Coverage ($\ge 95\%$) is insufficient without a **>= 95% mutation kill score**.
 4. **Specs are evergreen living truth**: Specifications live in `openspec/specs/` and change only through OpenSpec delta specs, which `openspec archive` merges upon shipping. See `openspec/spec-rails/WORKFLOW.md` §7.
 
 ```mermaid
@@ -32,7 +32,7 @@ flowchart TD
     subgraph Rails [3. Verification Rails]
         BDD["BDD Given/When/Then (100% Behavior)"]
         RedGreen["Red-First Unit -> Minimal Green (>=95%)"]
-        Mutation["> 90% Mutation Kill Score"]
+        Mutation[">= 95% Mutation Kill Score"]
     end
 
     subgraph Cockpit [4. LGTM Review Cockpit]
@@ -135,7 +135,7 @@ sequenceDiagram
         Agent->>Human: Gate 5.x Approval
         Human-->>Agent: Approved
         Agent->>Agent: Red Unit Test -> Green Code -> Refactor
-        Agent->>Agent: Verify Coverage >= 95% & Mutation Kill > 90%
+        Agent->>Agent: Verify Coverage >= 95% & Mutation Kill >= 95%
         Agent->>Git: Commit Tests + Code Together
     end
 
@@ -176,7 +176,7 @@ sequenceDiagram
 Each slice `x` runs three non-negotiable steps:
 1. **5.x-A (BDD Scenarios)**: Write Gherkin `.feature` tests covering all `REQ-*` invariants. Stop for human Gate 5.x review.
 2. **5.x-B (Red-Green-Refactor)**: Write failing unit test (`Red`) verified locally, implement minimal code (`Green`), refactor under green protection. **Red tests are never committed alone**; commit tests + code together. Line & branch coverage must be $\ge 95\%$.
-3. **5.x-C (> 90% Mutation Kill)**: Run mutation analysis on the slice. Surviving mutants below threshold are blocking defects resolved by targeted assertions, dead code deletion, or equivalent-mutant restructuring.
+3. **5.x-C (>= 95% Mutation Kill)**: Run mutation analysis on the slice. Surviving mutants below threshold are blocking defects resolved by targeted assertions, dead code deletion, or equivalent-mutant restructuring.
 
 ### Gate 6: Living Spec Sync, Archive & Merge
 1. Ensure all stream worktrees are merged, removed, and pruned (`git worktree prune`).
@@ -274,7 +274,7 @@ Every repository initialized with `spec-rails` contains active pre-commit and CI
 - **Zero-Bypass Policy**: `git commit --no-verify` or `-n` is strictly forbidden. If a check fails, resolve the defect.
 
 ### Mutation Testing Rails
-- **> 90% Mutation Kill Score** on domain logic, eliminating tautological assertions while preventing equivalent mutant friction.
+- **>= 95% Mutation Kill Score** on domain logic, eliminating tautological assertions while preventing equivalent mutant friction.
 - Reference configurations in `templates/mutation/`:
   - **Rust**: [templates/mutation/cargo-mutants.toml](../templates/mutation/cargo-mutants.toml)
   - **JS / TS**: [templates/mutation/stryker.config.json](../templates/mutation/stryker.config.json)
@@ -298,7 +298,7 @@ When pair-programming or coordinating agents:
 | **Direct commit on `main`** | Contaminates production, bypasses rebase verification | Enforced by pre-commit hook; checkout dedicated lane branch |
 | **Committing Red tests alone** | Leaves broken commits in git history, breaks bisecting | Commit Red test together with Green implementation |
 | **Full-copy spec duplicates** | Duplicates ground truth and drifts from OpenSpec | Delta specs merged by `openspec archive` at Gate 6 |
-| **Unjustified surviving mutants** | Surviving mutants usually prove missing assertions or dead code; the > 90% threshold is not a free pass | Kill mutant with test, delete dead code, restructure, or justify each survivor in the PR |
+| **Unjustified surviving mutants** | Surviving mutants usually prove missing assertions or dead code; the >= 95% threshold is not a free pass | Kill mutant with test, delete dead code, restructure, or justify each survivor in the PR |
 | **Subagent gate self-approval** | Eliminates human-in-the-loop safety | Halt and escalate to orchestrating agent for human sign-off |
 | **Stale worktrees lingering** | Causes `.git/index.lock` collisions and disk bloat | Run `git worktree remove` and `git worktree prune` after every merge |
 | **Unsolicited architecture** | Violates YAGNI, inflates maintenance cost | Build only what is specified; delete speculative code |

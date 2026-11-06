@@ -76,7 +76,7 @@ artifacts:
       - Architecture Diagrams & Data Flow.
       - Boundary Rules (Pure Core vs. I/O Shell): the core has no direct I/O, network or framework coupling.
       - Concurrency, Latency & Resource Budgets matching the `NFR-*` requirements.
-      - Testing Strategy (BDD, unit >= 95% line and branch coverage, mutation > 90% kill).
+      - Testing Strategy (BDD, unit >= 95% line and branch coverage, mutation >= 95% kill).
       UI work adds frame and input-latency budgets; ML/data work starts from a deterministic Tier 0 baseline.
 
       Stop at the Review Gate: only the human ticks the Gate 3 box.
@@ -109,7 +109,7 @@ apply:
     2. Red: write failing unit tests and confirm they fail for the expected reason. Do not commit them alone.
     3. Green: write the minimal production code, then commit tests and code together.
     4. Coverage: at least 95% line and branch on the slice's modules.
-    5. Mutation: 100% kill score on the slice's modules; fix survivors with an assertion, dead-code deletion, or a restructure.
+    5. Mutation: >= 95% kill score on the slice's modules; fix survivors with an assertion, dead-code deletion, or a restructure.
     Never delete or weaken assertions, skip failing tests, or touch files outside the slice.
     When ticking a Red, Green, Coverage or Mutation task, end its line with `Evidence: <command and result>`; CI (`spec-rails-verify`) rejects ticked tasks without it.
     Commit at stage boundaries, not per gate tick: after planning, after the code (one commit per slice is fine when there are several), and after `openspec archive`; Rule 4 green commits and rebases are exceptions.

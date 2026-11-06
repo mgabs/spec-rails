@@ -152,7 +152,7 @@ Spec-Rails's repo MUST contain no `specs/` directory; `WORKFLOW.md`, `README`, `
 - **THEN** it has no `specs/` directory and the docs describe the `openspec/` and `docs/` layout
 
 ### Requirement: NFR-OSA-1 Dependencies
-The Spec-Rails CLI and verification tooling (`@openspec/spec-rails`) MUST run on Node.js (>= 18) packaged as a self-contained single-file executable (`dist/cli.js`) with zero runtime production dependencies. The installer and verification tools MUST NOT require external `jq` binaries or platform-specific shell utilities. Shell scripts in `bin/spec-rails` MUST serve as lightweight trampolines invoking `node dist/cli.js` or `npx spec-rails`.
+The Spec-Rails CLI and verification tooling (`@openspec/spec-rails`) MUST run on Node.js (>= 18) with OpenSpec on `PATH`, packaged as a self-contained single-file executable (`dist/cli.js`) with zero runtime production dependencies: libraries it uses MUST be bundled at build time and listed under `devDependencies`. The installer and verification tools MUST NOT require external `jq` binaries or platform-specific shell utilities.
 
 #### Scenario: Running without external jq
 - **GIVEN** an environment where `jq` is not installed
@@ -162,6 +162,15 @@ The Spec-Rails CLI and verification tooling (`@openspec/spec-rails`) MUST run on
 #### Scenario: Single-file bundle execution
 - **WHEN** the bundled CLI executable (`dist/cli.js`) is invoked
 - **THEN** it runs without requiring `node_modules` to be installed in the target project
+
+#### Scenario: Bundled libraries are build-time only
+- **GIVEN** `tsup` bundles `zod`, `cac` and `fast-glob` into `dist/cli.js`
+- **WHEN** `package.json` is read
+- **THEN** none of them is listed under `dependencies`
+
+#### Scenario: Node prerequisite stated
+- **WHEN** the prerequisites are read in the protocol and installer documentation
+- **THEN** they name Node.js >= 18 and OpenSpec and do not list a shell trampoline as a requirement
 
 ### Requirement: NFR-OSA-2 Installer Latency
 Install on a project with 0 changes MUST complete within 5 s excluding `openspec` startup.
@@ -185,7 +194,7 @@ Scripts MUST run on macOS and Linux default shells.
 - **THEN** they pass
 
 ### Requirement: NFR-OSA-5 Rails
-Installer and check scripts MUST have ≥ 95% line and branch coverage under their test suite and, where a mutation tool is available for the stack, a mutation kill score of at least 95% (≥ 95%) on core logic, with every remaining surviving mutant justified in the PR (equivalent mutant or accepted risk). The workflow protocol, schema instructions, templates, and documentation MUST state the same thresholds.
+Installer and check scripts MUST have ≥ 95% line and branch coverage under their test suite and, where a mutation tool is available for the stack, a mutation kill score of at least 95% (≥ 95%) on core logic, with every remaining surviving mutant justified in the PR (equivalent mutant or accepted risk). The workflow protocol, schema instructions, templates, and documentation MUST state the same thresholds and MUST NOT state any other mutation threshold.
 
 #### Scenario: Rails
 - **WHEN** the test and mutation suites run
@@ -195,6 +204,10 @@ Installer and check scripts MUST have ≥ 95% line and branch coverage under the
 - **GIVEN** a mutation run at or above 95% with surviving mutants
 - **WHEN** the PR is reviewed
 - **THEN** each surviving mutant is listed with a reason, and killable survivors without a reason block merge
+
+#### Scenario: Single threshold in shipped docs
+- **WHEN** the protocol, schema, skills, templates and docs are searched for a mutation kill threshold
+- **THEN** every match states at least 95% and none states 90% or 100%
 
 ### Requirement: REQ-OSA-21 CI Audit Layout
 The CI spec-to-code audit in `templates/spec-rails-ci.yml` MUST treat a PR as spec-backed when it changes any file under an active `openspec/changes/<id>/` (excluding `openspec/changes/archive/`), `openspec/specs/` or `docs/bug-reports/`, MUST treat edits to `openspec/spec-rails/` and `.github/` as audited code changes, MUST bind branch refs via `env:`, and MUST NOT reference `specs/`. Chore-lane branches remain exempt.

@@ -50,6 +50,17 @@ README.md
 $(find docs skills rules templates schemas -type f 2>/dev/null || true)
 EOF_CADENCE
 
+while IFS= read -r item; do
+  [ -n "$item" ] && [ -f "$item" ] || continue
+  if grep -iE 'mutation|kill' "$item" | grep -qE '(>|≥|>=|\\ge|\\gt) ?(8[0-9]|9[0-4]|100) ?(\\)?%|\b(8[0-9]|9[0-4]|100) ?(\\)?% (kill|mutation)|"break": *([0-9]|[1-8][0-9]|9[0-4]|100)\b'; then
+    echo "FAIL: $item states a mutation threshold other than 95 (NFR-OSA-5)"
+    FAILED=1
+  fi
+done <<EOF_MUTATION
+README.md
+$(find docs skills rules templates schemas -type f 2>/dev/null | grep -vE '^docs/designs/' || true)
+EOF_MUTATION
+
 while IFS= read -r script; do
   [ -n "$script" ] && [ -f "$script" ] || continue
   stripped="$(sed 's/#.*//' "$script")"

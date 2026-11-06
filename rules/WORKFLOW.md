@@ -242,7 +242,7 @@ flowchart TD
   2. **Delete dead code**: unreachable defensive branches or assertions get removed (YAGNI).
   3. **Restructure equivalent mutants away**: when a mutant is behaviorally identical to the original (e.g., `i < n` → `i != n` in an index loop), rewrite the code so the equivalence disappears.
 - **Justify every survivor**: each remaining surviving mutant is listed in the PR with a reason (equivalent mutant or accepted risk). The threshold is a floor, not a license to skip killable mutants.
-- **Target**: $> 90\%$ kill score on slice domain and core logic.
+- **Target**: $\ge 95\%$ kill score on slice domain and core logic.
 
 ---
 
@@ -275,7 +275,7 @@ All steps on the feature branch unless stated otherwise:
 1. All stream worktrees merged into the feature branch (Rule 3.6), removed, and pruned (`git worktree prune`). Verify `git worktree list` shows only the repository root.
 2. Rebase the feature branch onto `main` (Rule 2).
 3. Full test suite: $100\%$ pass, $\ge 95\%$ line and branch coverage.
-4. Full-project mutation suite: $> 90\%$ kill score on core logic.
+4. Full-project mutation suite: $\ge 95\%$ kill score on core logic.
 5. **Human Comprehension Verification**: Reviewer verifies complete line-by-line understanding of all generated code; delete ununderstood code.
 6. Tick every completed slice item and the final integration task in `tasks.md` (with `Evidence:` on Red/Green/Coverage/Mutation items).
 7. Run `openspec validate <id>-<slug>` (also required after every stream rebase).

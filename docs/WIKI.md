@@ -115,7 +115,7 @@ flowchart TD
 | **Gate 3** | Architecture Review | `openspec/changes/<feat>/design.md` | Overview, Domain Contracts, Boundary Rules, Latency/Allocation Budgets, Test Strategy. | Task Breakdown |
 | **Gate 4** | Tasks Breakdown Review | `openspec/changes/<feat>/tasks.md` | Dependency DAG, Multi-agent worktree stream partitions, Test-first order of execution. | Launch Worktrees / Apply Phase |
 | **Gate 5.x**| Slice Behavior Review | `tests/bdd/features/*.feature` | Gherkin scenarios covering all slice requirements before code is written. | Unit Red $\rightarrow$ Code Green |
-| **Gate 6** | Living Sync & Archive | `openspec/specs/` + `tasks.md` | $\ge 95\%$ coverage, $> 90\%$ mutation kill, worktrees pruned, delta specs promoted to `openspec/specs/`. | Feature Complete |
+| **Gate 6** | Living Sync & Archive | `openspec/specs/` + `tasks.md` | $\ge 95\%$ coverage, $\ge 95\%$ mutation kill, worktrees pruned, delta specs promoted to `openspec/specs/`. | Feature Complete |
 
 ### 2.2 Bugfix Gate Matrix (Fast-Track)
 

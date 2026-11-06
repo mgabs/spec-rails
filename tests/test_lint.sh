@@ -95,6 +95,13 @@ else
   fail "Hygiene check failed" "$out"
 fi
 
+# Bundled libraries are build-time only (NFR-OSA-1)
+if node -e 'const d=require(process.argv[1]).dependencies||{};process.exit(["zod","cac","fast-glob"].some(k=>k in d)?1:0)' "$REPO_ROOT/package.json"; then
+  pass "Bundled libraries are not runtime dependencies"
+else
+  fail "Bundled libraries listed under dependencies" "move zod, cac, fast-glob to devDependencies"
+fi
+
 # Fixtures prove each hygiene rule can fail
 FIX="$(mktemp -d)"
 trap 'rm -rf "$FIX"' EXIT
@@ -105,6 +112,8 @@ printf 'see specs/ROADMAP.md\n' > "$FIX/docs/c.md"
 printf 'see specs/WORKFLOW.md\n' > "$FIX/rules/r.md"
 printf 'A human ticks it and commits it before the next artifact.\n' > "$FIX/docs/d.md"
 printf 'orphan() {\n  :\n}\n' > "$FIX/tests/x.sh"
+printf 'Require a > 90%% mutation kill score.\n' > "$FIX/docs/e.md"
+printf 'Mutation testing needs 100%% kill.\n' > "$FIX/docs/f.md"
 printf '# dead_fn\ndead_fn() {\n  :\n}\n' > "$FIX/tests/y.sh"
 fixture_out="$(sh "$REPO_ROOT/tests/check_hygiene.sh" "$FIX" || true)"
 for expected in \
@@ -113,6 +122,8 @@ for expected in \
   "docs/c.md references a legacy specs/ path" \
   "rules/r.md references a legacy specs/ path" \
   "docs/d.md tells the reader to commit a gate tick" \
+  "docs/e.md states a mutation threshold other than 95" \
+  "docs/f.md states a mutation threshold other than 95" \
   "tests/x.sh defines unused function orphan" \
   "tests/y.sh defines unused function dead_fn"; do
   case "$fixture_out" in

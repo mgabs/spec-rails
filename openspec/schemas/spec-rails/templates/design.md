@@ -16,7 +16,7 @@
 ## 5. Testing Strategy
 1. **BDD Scenarios**: <!-- plan -->
 2. **Unit Tests (>= 95% coverage)**: <!-- targets -->
-3. **Mutation Testing (100% kill)**: <!-- core modules -->
+3. **Mutation Testing (>= 95% kill)**: <!-- core modules -->
 
 ## Review Gate
 - [ ] **Gate 3 Approval**: Architecture & design reviewed and approved by human before task breakdown.
