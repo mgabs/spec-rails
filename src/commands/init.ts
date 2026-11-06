@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { execSync } from "node:child_process";
 import { type Stack } from "../config.js";
 import { fileURLToPath } from "node:url";
 
@@ -96,6 +97,48 @@ export function findPresetsDir(currentDir: string = path.dirname(fileURLToPath(i
     return devPresets;
   }
   return path.resolve(currentDir, "../templates/presets");
+}
+
+export function generatePreCommitConfig(stack: Stack, testCommand: string): string {
+  return `repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  - repo: local
+    hooks:
+      - id: check-lgtm-directives
+        name: check unresolved lgtm review directives
+        entry: >-
+          sh -c 'if [ -d .lgtm/reviews ]; then d=$(grep -rn "^#ref " .lgtm/reviews 2>/dev/null || true); if [ -n "$d" ]; then printf "ERROR: Unresolved LGTM directives in .lgtm/reviews/:\\n%s\\n" "$d" >&2; exit 1; fi; fi'
+        language: system
+        pass_filenames: false
+
+      - id: branch-protection
+        name: spec-rails branch protection
+        entry: >-
+          sh -c 'branch=$(git branch --show-current 2>/dev/null || echo ""); if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then echo "ERROR: Direct commits to $branch are forbidden by Spec-Rails workflow." >&2; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+      - id: spec-rails-check
+        name: spec-rails gate and lane check
+        entry: npx spec-rails check
+        language: system
+        pass_filenames: false
+
+      # Project-specific test hook tailored to detected stack (${stack})
+      - id: test
+        name: test suite
+        entry: ${testCommand}
+        language: system
+        pass_filenames: false
+`;
 }
 
 function copyFileSafe(src: string, dest: string, force: boolean = false): boolean {
@@ -195,8 +238,11 @@ export function initProject(options: InitOptions = {}): InitResult {
     // 5. Copy skill
     copyFileSafe(path.join(root, "skills/spec-rails/SKILL.md"), path.join(cwd, ".agents/skills/spec-rails/SKILL.md"), true);
 
-    // 6. Copy customizable templates
-    copyFileSafe(path.join(root, "templates/.pre-commit-config.yaml"), path.join(cwd, ".pre-commit-config.yaml"), force);
+    // 6. Write customizable templates
+    const preCommitPath = path.join(cwd, ".pre-commit-config.yaml");
+    if (!fs.existsSync(preCommitPath) || force) {
+      fs.writeFileSync(preCommitPath, generatePreCommitConfig(detectedStack, meta.testCommand));
+    }
     copyFileSafe(path.join(root, "templates/spec-rails-ci.yml"), path.join(cwd, ".github/workflows/spec-rails-ci.yml"), force);
 
     // 7. Configure .gitignore for .worktrees/
@@ -207,19 +253,19 @@ export function initProject(options: InitOptions = {}): InitResult {
       fs.writeFileSync(gitignorePath, giContent);
     }
 
-    // 8. Install branch protection hook if .git exists
+    // 8. Configure pre-commit framework (clean up .legacy hook and install)
     const gitDir = path.join(cwd, ".git");
     if (fs.existsSync(gitDir) && fs.statSync(gitDir).isDirectory()) {
-      const hookPath = path.join(gitDir, "hooks/pre-commit");
-      fs.mkdirSync(path.dirname(hookPath), { recursive: true });
-      const hookScript = `#!/bin/sh
-branch="$(git branch --show-current 2>/dev/null || echo '')"
-if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
-    echo "ERROR: Direct commits to '$branch' are forbidden by Spec-Rails workflow." >&2
-    exit 1
-fi
-`;
-      fs.writeFileSync(hookPath, hookScript, { mode: 0o755 });
+      const legacyHook = path.join(gitDir, "hooks/pre-commit.legacy");
+      if (fs.existsSync(legacyHook)) {
+        fs.rmSync(legacyHook, { force: true });
+      }
+
+      try {
+        execSync("pre-commit install", { cwd, stdio: ["ignore", "ignore", "ignore"] });
+      } catch {
+        // pre-commit CLI may not be on PATH in minimal or test environments
+      }
     }
   }
 

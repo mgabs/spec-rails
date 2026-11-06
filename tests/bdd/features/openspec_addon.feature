@@ -1,4 +1,4 @@
-@REQ-OSA-7 @REQ-OSA-8 @REQ-OSA-9 @REQ-OSA-19 @REQ-OSA-20 @REQ-OSA-29 @REQ-OSA-30 @REQ-OSA-31 @REQ-OSA-32 @REQ-OSA-33 @REQ-OSA-34 @REQ-OSA-35 @REQ-OSA-41 @REQ-OSA-42 @REQ-OSA-43 @REQ-OSA-45 @NFR-OSA-1 @NFR-OSA-4 @NFR-OSA-5
+@REQ-OSA-7 @REQ-OSA-8 @REQ-OSA-9 @REQ-OSA-19 @REQ-OSA-20 @REQ-OSA-29 @REQ-OSA-30 @REQ-OSA-31 @REQ-OSA-32 @REQ-OSA-33 @REQ-OSA-34 @REQ-OSA-35 @REQ-OSA-41 @REQ-OSA-42 @REQ-OSA-43 @REQ-OSA-45 @REQ-OSA-46 @NFR-OSA-1 @NFR-OSA-4 @NFR-OSA-5
 Feature: Spec-Rails OpenSpec addon architecture, layout, and boundary hardening
   As an engineering team running Spec-Rails on OpenSpec v1.15/v1.16+
   We want OpenSpec-native delta specs, archival, layout, and hardened CLI/gate/rail boundaries
@@ -102,3 +102,10 @@ Feature: Spec-Rails OpenSpec addon architecture, layout, and boundary hardening
     When inspected for shell executables and external JSON parsers
     Then there is no "bin/" directory containing shell scripts
     And "jq" is not required on PATH
+
+  @REQ-OSA-46
+  Scenario: Pre-commit framework standard
+    Given an OpenSpec repository initialized with Spec-Rails
+    When inspected for git hooks
+    Then ".pre-commit-config.yaml" configures "branch-protection" and stack-aware test hooks
+    And no standalone script is written to ".git/hooks/pre-commit"
