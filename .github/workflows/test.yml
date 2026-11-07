@@ -22,6 +22,9 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Install Node dependencies
+        run: npm ci
+
       - name: Install OpenSpec CLI
         run: npm install -g @fission-ai/openspec@1.16.0
 
@@ -37,8 +40,8 @@ jobs:
 
       - name: Set up Pre-Commit & Run Hooks
         env:
-          # test hook duplicates "Run Test Suite"; spec-rails-check rejects pushes on main by design.
-          SKIP: ${{ github.event_name == 'push' && 'test,spec-rails-check' || 'test' }}
+          # The dedicated rails workflow covers CLI checks; the later test step covers lint and tests.
+          SKIP: ${{ github.event_name == 'push' && 'branch-protection,spec-rails-check,spec-rails-verify,lint,test' || 'spec-rails-check,spec-rails-verify,lint,test' }}
         run: |
           pip install pre-commit
           pre-commit run --all-files

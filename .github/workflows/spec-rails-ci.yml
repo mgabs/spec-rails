@@ -23,13 +23,24 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Prepare local Spec-Rails CLI
+        run: |
+          if [ -f package.json ] && grep -q '"name": "@openspec/spec-rails"' package.json; then
+            npm ci
+            npm run build
+          fi
+
       - name: Gate & Lane Check (with Spec Audit)
         env:
           BASE_REF: ${{ github.base_ref }}
           HEAD_REF: ${{ github.head_ref }}
         run: |
           npm install -g @fission-ai/openspec@1.16.0
-          npx spec-rails check --audit
+          if [ -f package.json ] && grep -q '"name": "@openspec/spec-rails"' package.json; then
+            node dist/cli.js check --audit
+          else
+            npx spec-rails check --audit
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -41,12 +52,16 @@ jobs:
 
       - name: Verify Test Rails
         run: |
-          npx spec-rails verify
+          if [ -f package.json ] && grep -q '"name": "@openspec/spec-rails"' package.json; then
+            node dist/cli.js verify
+          else
+            npx spec-rails verify
+          fi
 
       - name: Pre-Commit
         run: |
           # Skip hooks already covered by the check/verify steps above.
-          SKIP=$(grep -oE 'id: (branch-protection|spec-rails-check|test)$' .pre-commit-config.yaml | sed 's/id: //' | paste -sd, -)
+          SKIP=$(grep -oE 'id: (branch-protection|build-cli|spec-rails-check|spec-rails-verify|test)$' .pre-commit-config.yaml | sed 's/id: //' | paste -sd, -)
           export SKIP
           pip install pre-commit
           pre-commit run --all-files

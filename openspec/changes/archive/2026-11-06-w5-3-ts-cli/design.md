@@ -60,7 +60,7 @@ export function loadLegacyRailsConf(cwd: string): Partial<SpecRailsConfig> | nul
 ```mermaid
 flowchart TD
     CLI["src/cli.ts (npx spec-rails)"]
-    
+
     subgraph Commands
         INIT["init (src/commands/init.ts)"]
         CHECK["check (src/commands/check.ts)"]

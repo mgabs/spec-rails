@@ -1,5 +1,14 @@
-import { describe, it, expect } from "vitest";
-import { parseGateState, parseArtifactState, findGateViolations, checkBranchAllowed } from "../../src/commands/check";
+import { describe, it, expect, vi } from "vitest";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { execSync } from "node:child_process";
+import { parseGateState, parseArtifactState, findGateViolations, checkBranchAllowed, runCheck, BASELINE_FILE } from "../../src/commands/check.js";
+
+vi.mock("node:child_process", async (importOriginal) => ({
+  ...await importOriginal<typeof import("node:child_process")>(),
+  execSync: vi.fn(),
+}));
 
 describe("Gate parsing (check.ts - REQ-OSA-16, REQ-OSA-42)", () => {
   it("detects ticked gate box", () => {
@@ -116,11 +125,57 @@ describe("Baseline loading (check.ts - REQ-OSA-47)", () => {
     const fs = await import("node:fs");
     const os = await import("node:os");
     const path = await import("node:path");
-    const { loadBaseline, BASELINE_FILE } = await import("../../src/commands/check");
+    const { loadBaseline, BASELINE_FILE } = await import("../../src/commands/check.js");
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bl-"));
     expect(loadBaseline(dir).size).toBe(0);
     fs.mkdirSync(path.dirname(path.join(dir, BASELINE_FILE)), { recursive: true });
     fs.writeFileSync(path.join(dir, BASELINE_FILE), "# c\nold-change\n\n");
     expect([...loadBaseline(dir)]).toEqual(["old-change"]);
+  });
+
+  it("filters only baselined changes and still writes all offenders", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "spec-rails-baseline-test-"));
+    try {
+      for (const name of ["old-change", "new-change"]) {
+        const changeDir = path.join(dir, "openspec/changes", name);
+        fs.mkdirSync(changeDir, { recursive: true });
+        fs.writeFileSync(path.join(changeDir, "research.md"), "## Review Gate\n- [ ] Pending\n");
+      }
+      const baselinePath = path.join(dir, BASELINE_FILE);
+      fs.mkdirSync(path.dirname(baselinePath), { recursive: true });
+      fs.writeFileSync(baselinePath, "old-change\n");
+
+      const mockCommands = () => {
+        vi.mocked(execSync)
+          .mockReturnValueOnce(Buffer.from("feat/test\n"))
+          .mockReturnValueOnce(Buffer.from(JSON.stringify({ changes: ["old-change", "new-change"] })))
+          .mockReturnValueOnce(Buffer.from(JSON.stringify({
+            artifacts: [
+              { id: "research", status: "done" },
+              { id: "proposal", requires: ["research"], status: "done" },
+            ],
+          })))
+          .mockReturnValueOnce(Buffer.from(JSON.stringify({
+            artifacts: [
+              { id: "research", status: "done" },
+              { id: "proposal", requires: ["research"], status: "done" },
+            ],
+          })));
+      };
+
+      mockCommands();
+      const result = runCheck({ cwd: dir });
+      expect(result.success).toBe(false);
+      expect(result.violations).toEqual([
+        "new-change: Gate 0 (research) unticked but 'proposal' exists",
+      ]);
+
+      mockCommands();
+      expect(runCheck({ cwd: dir, writeBaseline: true }).success).toBe(true);
+      expect(fs.readFileSync(baselinePath, "utf-8")).toContain("new-change\nold-change\n");
+    } finally {
+      vi.mocked(execSync).mockReset();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

@@ -20,10 +20,26 @@ describe("CLI Binary Integration & Unit (REQ-OSA-32, REQ-OSA-45)", () => {
 
   it("invokes audit command handler", () => {
     const cli = createCli();
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    cli.parse(["node", "spec-rails", "audit", "--base=main"]);
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("[spec-rails]"));
-    logSpy.mockRestore();
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-audit-test-"));
+
+    try {
+      execFileSync("git", ["init", "-b", "main"], { cwd: tempDir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.name", "Spec-Rails Test"], { cwd: tempDir });
+      execFileSync("git", ["config", "user.email", "spec-rails-test@example.com"], { cwd: tempDir });
+      fs.writeFileSync(path.join(tempDir, "README.md"), "test\n");
+      execFileSync("git", ["add", "README.md"], { cwd: tempDir });
+      execFileSync("git", ["commit", "--quiet", "-m", "test"], { cwd: tempDir });
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      try {
+        cli.parse(["node", "spec-rails", "audit", tempDir, "--base=main"]);
+        expect(logSpy).toHaveBeenCalledWith("[spec-rails] Spec-to-code audit passed.");
+      } finally {
+        logSpy.mockRestore();
+      }
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   it("invokes init command handler", () => {

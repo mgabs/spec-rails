@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyChanges, evaluateAudit } from "../../src/commands/audit";
+import { classifyChanges, evaluateAudit } from "../../src/commands/audit.js";
 
 describe("Spec-to-code audit (audit.ts - REQ-OSA-43)", () => {
   it("exempts chore branches", () => {

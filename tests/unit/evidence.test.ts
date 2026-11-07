@@ -4,7 +4,7 @@ import {
   parseTasksEvidence,
   validateEvidenceToken,
   validateTasksEvidence,
-} from "../../src/utils/evidence";
+} from "../../src/utils/evidence.js";
 
 describe("parseEvidenceToken", () => {
   it("parses full structured evidence token with percentages", () => {
