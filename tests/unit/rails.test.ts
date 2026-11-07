@@ -8,8 +8,8 @@ import {
   runRail,
   runVerify,
   type CommandRunner,
-} from "../../src/commands/verify";
-import { parseBaseline, findGateViolations } from "../../src/commands/check";
+} from "../../src/commands/verify.js";
+import { parseBaseline, findGateViolations } from "../../src/commands/check.js";
 
 // REQ-OSA-47: strict rails execution
 describe("REQ-OSA-47 strict rails", () => {

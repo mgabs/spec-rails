@@ -1,13 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
+import { spawnSync } from "node:child_process";
 import {
+  defaultExec,
+  detectChangedFiles,
   discoverTests,
   verifyTraceability,
   runVerify,
   extractDeltaSpecKeys,
-} from "../../src/commands/verify";
+} from "../../src/commands/verify.js";
+
+vi.mock("node:child_process", async (importOriginal) => ({
+  ...await importOriginal<typeof import("node:child_process")>(),
+  spawnSync: vi.fn(),
+}));
 
 describe("verify", () => {
   let tmpDir: string;
@@ -17,7 +25,62 @@ describe("verify", () => {
   });
 
   afterEach(() => {
+    vi.mocked(spawnSync).mockReset();
     fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  describe("process helpers", () => {
+    it("uses safe defaults when command spawning fails", () => {
+      vi.mocked(spawnSync).mockReturnValue({
+        pid: 0,
+        output: [],
+        stdout: "",
+        stderr: "",
+        status: null,
+        signal: null,
+      });
+
+      expect(defaultExec("missing-command", tmpDir)).toEqual({ status: 1, output: "" });
+    });
+
+    it("preserves command output from stdout and stderr", () => {
+      vi.mocked(spawnSync).mockReturnValue({
+        pid: 0,
+        output: [],
+        stdout: "stdout",
+        stderr: "stderr",
+        status: 0,
+        signal: null,
+      });
+
+      expect(defaultExec("command", tmpDir)).toEqual({ status: 0, output: "stdoutstderr" });
+    });
+
+    it("returns null when git cannot detect changed files", () => {
+      vi.mocked(spawnSync).mockReturnValue({
+        pid: 0,
+        output: [],
+        stdout: "",
+        stderr: "",
+        status: 1,
+        signal: null,
+      });
+
+      expect(detectChangedFiles(tmpDir)).toBeNull();
+    });
+
+    it("returns changed paths when git diff succeeds", () => {
+      vi.mocked(spawnSync).mockReturnValue({
+        pid: 0,
+        output: [],
+        stdout: "src/app.ts\nREADME.md\n",
+        stderr: "",
+        status: 0,
+        signal: null,
+      });
+
+      expect(detectChangedFiles(tmpDir)).toEqual(["src/app.ts", "README.md"]);
+    });
   });
 
   describe("extractDeltaSpecKeys", () => {
@@ -132,6 +195,67 @@ Performance notes.
   });
 
   describe("runVerify", () => {
+    // REQ-OSA-47: mutation commands own their threshold
+    describe("mutation command exit status", () => {
+      beforeEach(() => {
+        fs.writeFileSync(
+          path.join(tmpDir, "spec-rails.config.json"),
+          JSON.stringify({
+            testCommand: "test",
+            coverageCommand: "coverage",
+            coverageMinScore: 95,
+            mutationCommand: "mutation",
+            mutationMinScore: 98,
+            strict: false,
+          })
+        );
+      });
+
+      it.each(["progress 20%", "no score was reported"])(
+        "accepts a successful mutation command with output %s",
+        (output) => {
+          const result = runVerify({
+            cwd: tmpDir,
+            runCommands: true,
+            changedFiles: ["src/app.ts"],
+            exec: (command: string) => ({
+              status: 0,
+              output: command === "mutation" ? output : "coverage 100%",
+            }),
+          });
+          expect(result.errors).toEqual([]);
+        }
+      );
+
+      it("reports a failed mutation command and its output", () => {
+        const result = runVerify({
+          cwd: tmpDir,
+          runCommands: true,
+          changedFiles: ["src/app.ts"],
+          exec: (command: string) =>
+            command === "mutation"
+              ? { status: 1, output: "mutation threshold missed" }
+              : { status: 0, output: "coverage 100%" },
+        });
+        expect(result.errors).toContain(
+          "mutation command failed (exit 1): mutation\nmutation threshold missed"
+        );
+      });
+
+      it("still rejects coverage below its threshold", () => {
+        const result = runVerify({
+          cwd: tmpDir,
+          runCommands: true,
+          changedFiles: ["src/app.ts"],
+          exec: (command: string) => ({
+            status: 0,
+            output: command === "coverage" ? "coverage 90%" : "",
+          }),
+        });
+        expect(result.errors).toContain("coverage score 90% is below threshold 95%");
+      });
+    });
+
     it("successfully validates compliant repository", () => {
       // Setup spec-rails.config.json
       fs.writeFileSync(
@@ -176,6 +300,25 @@ Performance notes.
       const result = runVerify({ cwd: tmpDir });
       expect(result.success).toBe(true);
       expect(result.discoveredTests).toHaveLength(1);
+    });
+
+    it("loads an explicit config using the process working directory when cwd is omitted", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "spec-rails.config.json"),
+        JSON.stringify({
+          testGlobs: ["tests/**/*.test.ts"],
+          testCommand: "npm test",
+          strict: false,
+        })
+      );
+      const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(tmpDir);
+
+      try {
+        const result = runVerify({ configPath: path.join(tmpDir, "spec-rails.config.json") });
+        expect(result.success).toBe(true);
+      } finally {
+        cwdSpy.mockRestore();
+      }
     });
 
     it("fails when test files are missing in strict mode", () => {

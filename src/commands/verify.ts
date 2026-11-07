@@ -2,9 +2,9 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import fg from "fast-glob";
-import { loadConfigFile, loadConfig, getDefaultTestGlobs } from "../config";
-import { validateTasksEvidence } from "../utils/evidence";
-import { resolveCanonicalPath } from "../utils/paths";
+import { loadConfigFile, loadConfig, getDefaultTestGlobs } from "../config.js";
+import { validateTasksEvidence } from "../utils/evidence.js";
+import { resolveCanonicalPath } from "../utils/paths.js";
 
 export interface VerifyOptions {
   cwd?: string;
@@ -23,7 +23,7 @@ export type CommandRunner = (command: string, cwd: string) => { status: number; 
 
 export const defaultExec: CommandRunner = (command, cwd) => {
   const r = spawnSync(command, { cwd, shell: true, encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 });
-  return { status: r.status ?? 1, output: `${r.stdout ?? ""}${r.stderr ?? ""}` };
+  return { status: r.status ?? 1, output: `${r.stdout}${r.stderr}` };
 };
 
 /** Last "NN%" / "NN.N%" in output, or null. */
@@ -164,14 +164,14 @@ export function runVerify(options: VerifyOptions = {}): VerifyResult {
 
   try {
     const config = options.configPath ? loadConfigFile(options.configPath) : loadConfig(cwd);
-    testGlobs = config.testGlobs;
+    testGlobs = config.testGlobs ?? getDefaultTestGlobs(config.stack);
     strict = options.strict !== undefined ? options.strict : config.strict;
     minCoverage = config.coverageMinScore;
     minMutation = config.mutationMinScore;
     rails = [
       { name: "test", command: config.testCommand, required: true },
       { name: "coverage", command: config.coverageCommand, minScore: config.coverageMinScore, required: false },
-      { name: "mutation", command: config.mutationCommand, minScore: config.mutationMinScore, required: false },
+      { name: "mutation", command: config.mutationCommand, required: false },
     ];
   } catch (err: unknown) {
     errors.push(`Failed to load config: ${(err as Error).message}`);

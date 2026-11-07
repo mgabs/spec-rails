@@ -119,3 +119,5 @@ make test-e2e    # real OpenSpec CLI in a throwaway repo; skips if openspec or j
 
 ### Verifying the Test Rails in CI
 The installer adds `openspec/spec-rails/spec-rails-verify` and a "Verify Test Rails" CI step (never a commit hook). It fails the PR when a `REQ-*`/`NFR-*` key in an active change appears in no file under `RAILS_TEST_DIRS`, when a ticked Red/Green/Coverage/Mutation task lacks `Evidence: <command and result>`, or when a command in `openspec/spec-rails/rails.conf` (`RAILS_TEST`, `RAILS_COVERAGE`, `RAILS_MUTATION`) exits non-zero. The commands are yours, so any language works; `rails.conf` is never overwritten. Tag requirements in tests, for example `@REQ-X-1` in a `.feature` file.
+
+Configure your mutation command to exit non-zero when its required threshold is missed. `verify` uses that exit status, not its output; `mutationMinScore` applies to task evidence, not the command.
