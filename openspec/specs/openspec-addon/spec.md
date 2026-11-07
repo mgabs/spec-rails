@@ -601,7 +601,7 @@ The system MUST NOT distribute executable shell scripts in `bin/` and MUST NOT r
 - **THEN** it defines a local branch protection hook that fails on direct commits to `main` and `master`
 
 ### Requirement: REQ-OSA-47 Strict Rails Execution
-`spec-rails verify` MUST execute configured test, coverage, and mutation commands and fail on a non-zero exit, an empty required command, or a coverage score below its configured threshold. Mutation command output MUST NOT be interpreted as a score; the command MUST enforce its own threshold through its exit status. Documentation MUST explain that `mutationMinScore` does not enforce the mutation command's threshold and remains applicable to task evidence. Command output MUST be shown only on failure. For docs-only or spec-only changesets, the mutation rail MUST be skipped with an informational pass and the empty-test-files error MUST NOT apply.
+`spec-rails verify` MUST execute configured test, coverage, and mutation commands and fail on a non-zero exit, an empty required command, a coverage score below `coverageMinScore`, or a mutation run where output lacks a numeric percentage score or reports a score below `mutationMinScore`. Command output MUST be shown on failure. Rail command executions MUST be bounded by an enforced execution timeout, failing verification if a command hangs or exceeds the timeout limit. For docs-only or spec-only changesets, the mutation rail MUST be skipped with an informational pass and the empty-test-files error MUST NOT apply.
 
 #### Scenario: Failing command fails verify
 - **GIVEN** a configured test command that exits non-zero
@@ -619,9 +619,24 @@ The system MUST NOT distribute executable shell scripts in `bin/` and MUST NOT r
 - **THEN** verification fails and includes the command output
 
 #### Scenario: Successful mutation command output is not scored
-- **GIVEN** a configured mutation command that exits zero and prints no percentage or an unrelated percentage
+- **GIVEN** a configured mutation command that exits zero and reports a valid score at or above `mutationMinScore`
 - **WHEN** `spec-rails verify` runs
-- **THEN** mutation verification passes without interpreting its output as a score
+- **THEN** mutation verification passes
+
+#### Scenario: Mutation output missing score fails
+- **GIVEN** a configured mutation command that exits zero but reports no numeric percentage score
+- **WHEN** `spec-rails verify` runs
+- **THEN** verification fails reporting that the mutation score is missing
+
+#### Scenario: Mutation score below threshold fails
+- **GIVEN** a configured mutation command that exits zero but reports a score below `mutationMinScore`
+- **WHEN** `spec-rails verify` runs
+- **THEN** verification fails reporting that the mutation score is below the configured threshold
+
+#### Scenario: Command execution timeout
+- **GIVEN** a rail command that exceeds the maximum execution timeout
+- **WHEN** `spec-rails verify` runs
+- **THEN** verification fails reporting a command timeout
 
 #### Scenario: Docs-only changeset skips mutation
 - **GIVEN** a changeset touching only markdown or `openspec/` files

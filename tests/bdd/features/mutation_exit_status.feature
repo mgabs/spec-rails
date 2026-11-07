@@ -1,22 +1,36 @@
 @REQ-OSA-47
-Feature: Mutation verification uses the command's exit status
+Feature: Strict mutation rail and timeout execution
 
-  Scenario Outline: Successful mutation output is not interpreted as a score
-    Given a configured mutation command exits 0 and prints "<output>"
+  Scenario: Mutation output missing score fails
+    Given a configured mutation command exits 0 and prints "no score was reported"
     And the changeset includes source files
     When I run spec-rails verify
-    Then the mutation rail passes without interpreting the output
+    Then verification fails reporting that the mutation score is missing
 
-    Examples:
-      | output                 |
-      | progress 20%           |
-      | no score was reported  |
-
-  Scenario: Mutation command reports a missed threshold
-    Given a configured mutation command exits 1 and prints "mutation threshold missed"
+  Scenario: Mutation score below threshold fails
+    Given a configured mutation command exits 0 and prints "Mutation score: 90%"
+    And the configured mutation threshold is 95%
     And the changeset includes source files
     When I run spec-rails verify
-    Then verification fails and includes "mutation threshold missed"
+    Then verification fails reporting that the mutation score is below the configured threshold
+
+  Scenario: Successful mutation score passes
+    Given a configured mutation command exits 0 and prints "Mutation score: 96%"
+    And the configured mutation threshold is 95%
+    And the changeset includes source files
+    When I run spec-rails verify
+    Then the mutation rail passes
+
+  Scenario: Mutation command reports non-zero failure
+    Given a configured mutation command exits 1 and prints "mutation error"
+    And the changeset includes source files
+    When I run spec-rails verify
+    Then verification fails and includes "mutation error"
+
+  Scenario: Command execution timeout
+    Given a configured command exceeds the execution timeout
+    When I run spec-rails verify
+    Then verification fails reporting a command timeout
 
   Scenario: Coverage below its configured threshold still fails
     Given a coverage command exits 0 and prints "coverage 90%"

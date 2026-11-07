@@ -25,7 +25,6 @@ export function createCli(): CAC {
 
   cli
     .command("verify [dir]", "Verify tests, coverage, mutation scores, and evidence")
-    .option("--slice <id>", "Verify a specific vertical slice ID")
     .option("--strict", "Enforce strict zero-bypass verification", { default: true })
     .action((dir, options) => {
       const res = runVerify({
@@ -87,13 +86,6 @@ export function createCli(): CAC {
         process.exit(1);
       }
       console.log("[spec-rails] Spec-to-code audit passed.");
-    });
-
-  cli
-    .command("lint", "Lint OpenSpec markdown artifacts against YAGNI boundaries and Gherkin formatting")
-    .option("--gate <gate>", "Gate number to validate (1 or 2)")
-    .action((options) => {
-      console.log(`[spec-rails] lint called for gate=${options.gate}`);
     });
 
   cli.help();

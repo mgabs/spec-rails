@@ -11,11 +11,10 @@ describe("CLI Binary Integration & Unit (REQ-OSA-32, REQ-OSA-45)", () => {
   it("registers expected commands in createCli", () => {
     const cli = createCli();
     const commandNames = cli.commands.map((c) => c.name);
-    expect(commandNames).toContain("init");
-    expect(commandNames).toContain("verify");
-    expect(commandNames).toContain("check");
-    expect(commandNames).toContain("audit");
-    expect(commandNames).toContain("lint");
+    expect(commandNames).toEqual(["init", "verify", "check", "audit"]);
+    expect(commandNames).not.toContain("lint");
+    const verifyCmd = cli.commands.find((c) => c.name === "verify");
+    expect(verifyCmd?.options.some((o) => o.name === "slice")).toBe(false);
   });
 
   it("invokes audit command handler", () => {
