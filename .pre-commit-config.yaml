@@ -24,13 +24,25 @@ repos:
         language: system
         pass_filenames: false
 
-      - id: spec-rails-check
-        name: spec-rails gate and lane check
-        entry: npx spec-rails check
+      # Project-specific linter and test hooks (auto-run when Makefile targets exist)
+      - id: build-cli
+        name: build Spec-Rails CLI
+        entry: npm run build
         language: system
         pass_filenames: false
 
-      # Project-specific linter and test hooks (auto-run when Makefile targets exist)
+      - id: spec-rails-check
+        name: spec-rails gate and lane check
+        entry: node dist/cli.js check
+        language: system
+        pass_filenames: false
+
+      - id: spec-rails-verify
+        name: spec-rails test rails
+        entry: node dist/cli.js verify
+        language: system
+        pass_filenames: false
+
       - id: lint
         name: linter
         entry: sh -c 'if [ -f Makefile ] && grep -qE "^lint:" Makefile; then make lint; fi'

@@ -118,4 +118,3 @@ export function loadConfig(cwd: string = process.cwd()): Config {
     testCommand: "npm test",
   });
 }
-
