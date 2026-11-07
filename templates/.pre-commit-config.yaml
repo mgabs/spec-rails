@@ -17,9 +17,16 @@ repos:
         language: system
         pass_filenames: false
 
+      - id: branch-protection
+        name: spec-rails branch protection
+        entry: >-
+          sh -c 'branch=$(git branch --show-current 2>/dev/null || echo ""); if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then echo "ERROR: Direct commits to $branch are forbidden by Spec-Rails workflow." >&2; exit 1; fi'
+        language: system
+        pass_filenames: false
+
       - id: spec-rails-check
         name: spec-rails gate and lane check
-        entry: sh -c 'if [ -f openspec/spec-rails/spec-rails-check ]; then sh openspec/spec-rails/spec-rails-check; fi'
+        entry: npx spec-rails check
         language: system
         pass_filenames: false
 

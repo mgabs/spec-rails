@@ -5,7 +5,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import { createCli, runCli } from "../../src/cli.js";
 
-describe("CLI Binary Integration & Unit", () => {
+describe("CLI Binary Integration & Unit (REQ-OSA-32, REQ-OSA-45)", () => {
   const cliPath = path.resolve("dist/cli.js");
 
   it("registers expected commands in createCli", () => {
@@ -13,7 +13,17 @@ describe("CLI Binary Integration & Unit", () => {
     const commandNames = cli.commands.map((c) => c.name);
     expect(commandNames).toContain("init");
     expect(commandNames).toContain("verify");
+    expect(commandNames).toContain("check");
+    expect(commandNames).toContain("audit");
     expect(commandNames).toContain("lint");
+  });
+
+  it("invokes audit command handler", () => {
+    const cli = createCli();
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    cli.parse(["node", "spec-rails", "audit", "--base=main"]);
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("[spec-rails]"));
+    logSpy.mockRestore();
   });
 
   it("invokes init command handler", () => {
@@ -31,6 +41,7 @@ describe("CLI Binary Integration & Unit", () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-verify-test-"));
     fs.mkdirSync(path.join(tempDir, "tests"), { recursive: true });
     fs.writeFileSync(path.join(tempDir, "tests/dummy.test.ts"), "// test");
+    fs.writeFileSync(path.join(tempDir, "spec-rails.config.json"), JSON.stringify({ testCommand: "true" }));
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     cli.parse(["node", "spec-rails", "verify", tempDir, "--strict=false"]);
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("[spec-rails] Verification"));

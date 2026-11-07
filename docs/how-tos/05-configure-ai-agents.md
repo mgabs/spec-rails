@@ -34,6 +34,13 @@ Commit `.agents/` and `openspec/spec-rails/` so the entire team's agents follow 
 
 ---
 
+### Command Names & Skill Footprint
+
+- Every `/opsx-<name>` command has an equivalent `openspec-<name>` skill (for example `/opsx-apply` = `openspec-apply-change`). Adopters may remove the duplicate `opsx-*` alias skills, so either name is valid; use the `openspec-*` skills when `/opsx-*` is absent.
+- Commit `.claude/`, `.agents/` and `.github/skills` instead of ignoring them, so every contributor and CI sees the same agent skills.
+- Keep skills only for the tools in use. `openspec update` regenerates the `opsx-*` aliases; delete them again if unwanted.
+- Optionally copy the `spec-rails` skill into `.claude/skills/` for Claude Code.
+
 ## 2. Claude Code Integration
 
 Add the Spec-Rails rules to `CLAUDE.md` in your project root:

@@ -36,7 +36,7 @@ flowchart LR
   - **Gate 3 (Design)**: Enforces domain boundaries (Pure Core vs. I/O Shell) and latency/allocation budgets.
   - **Gate 4 (Tasks DAG)**: Maps dependencies and partitions orthogonal tasks into parallel worktree streams.
   - **Apply (Gate 5.x) and Gate 6**: Per vertical slice, BDD sign-off then Red, Green, coverage, mutation; finally `openspec validate` and `openspec archive`.
-- Drive changes with `openspec new change`, `openspec instructions <artifact>` or the `/opsx-*` commands.
+- Drive changes with `openspec new change`, `openspec instructions <artifact>` or the `/opsx-*` commands (equivalently the `openspec-*` skills; see `docs/how-tos/05-configure-ai-agents.md`).
 
 ### 2. Testing Rails: BDD, Red-Green, >= 95% Mutation Kill
 - Tests are not written after the fact as documentation. They are rails that guide the code.

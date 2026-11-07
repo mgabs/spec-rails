@@ -8,7 +8,10 @@
   },
   "files": [
     "dist",
-    "templates"
+    "templates",
+    "schemas",
+    "rules",
+    "skills"
   ],
   "scripts": {
     "build": "tsup",

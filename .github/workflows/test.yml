@@ -23,7 +23,7 @@ jobs:
           node-version: '22'
 
       - name: Install OpenSpec CLI
-        run: npm install -g @fission-ai/openspec
+        run: npm install -g @fission-ai/openspec@1.16.0
 
       - name: Lint shell scripts with ShellCheck
         uses: ludeeus/action-shellcheck@2.0.0

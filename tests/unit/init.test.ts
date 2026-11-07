@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { detectStack, initProject, getStackMeta, findPresetsDir } from "../../src/commands/init.js";
+import { detectStack, initProject, getStackMeta, findPresetsDir, generatePreCommitConfig } from "../../src/commands/init.js";
 import { loadConfigFile } from "../../src/config.js";
 
 describe("Stack Auto-Detection & Init Command", () => {
@@ -241,5 +241,40 @@ describe("Stack Auto-Detection & Init Command", () => {
     fs.mkdirSync(fakeDistDir, { recursive: true });
     const presetsDir = findPresetsDir(fakeDistDir);
     expect(presetsDir).toBe(path.resolve(fakeDistDir, "../templates/presets"));
+  });
+
+  it("generates stack-aware pre-commit configuration (REQ-OSA-46)", () => {
+    const pyYaml = generatePreCommitConfig("python", "pytest");
+    expect(pyYaml).toContain("id: branch-protection");
+    expect(pyYaml).toContain("entry: pytest");
+    expect(pyYaml).not.toContain("make test");
+
+    const goYaml = generatePreCommitConfig("go", "go test ./...");
+    expect(goYaml).toContain("entry: go test ./...");
+
+    const rustYaml = generatePreCommitConfig("rust", "cargo test");
+    expect(rustYaml).toContain("entry: cargo test");
+
+    const tsYaml = generatePreCommitConfig("ts", "npm test");
+    expect(tsYaml).toContain("entry: npm test");
+  });
+
+  it("removes pre-commit.legacy and does not write raw git hook script (REQ-OSA-46)", () => {
+    const gitHooksDir = path.join(tempDir, ".git/hooks");
+    fs.mkdirSync(gitHooksDir, { recursive: true });
+    const legacyHook = path.join(gitHooksDir, "pre-commit.legacy");
+    fs.writeFileSync(legacyHook, "# old hook");
+
+    // Initialize in a repo with openspec
+    fs.mkdirSync(path.join(tempDir, "openspec"));
+    initProject({ cwd: tempDir, stack: "python" });
+
+    // Legacy hook must be gone
+    expect(fs.existsSync(legacyHook)).toBe(false);
+    // Raw git hook must not contain the manual shell script
+    const rawHook = path.join(gitHooksDir, "pre-commit");
+    if (fs.existsSync(rawHook)) {
+      expect(fs.readFileSync(rawHook, "utf-8")).not.toContain("ERROR: Direct commits to '$branch' are forbidden");
+    }
   });
 });
