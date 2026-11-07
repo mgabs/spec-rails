@@ -70,12 +70,10 @@ Why this shape: the protocol and rules ship with the addon (`openspec/spec-rails
 
 ```text
 spec-rails/
-├── bin/
-│   ├── spec-rails            # Installer (`spec-rails [init] [target-repo]`)
-│   ├── spec-rails-check      # Gate & lane check (hook + CI)
-│   └── spec-rails-verify     # CI-only traceability, evidence & rail verifier
+├── src/                      # TypeScript CLI implementation (init, check, verify, audit)
+├── dist/cli.js               # Bundled CLI binary (Node >= 18)
 ├── schemas/spec-rails/       # OpenSpec schema + artifact templates (copied into target repos)
-├── templates/                # spec-rails-ci.yml, bug-report.md, roadmap.md, mutation configs, pre-commit config
+├── templates/                # spec-rails-ci.yml, bug-report.md, roadmap.md, presets, pre-commit config
 ├── rules/                    # AGENTS.md (always-on guardrails), WORKFLOW.md (canonical protocol, shipped to openspec/spec-rails/)
 ├── skills/spec-rails/SKILL.md# Agent skill runbook
 ├── openspec/                 # This repo's own OpenSpec layout (specs, changes, installed schema and spec-rails/ copies)
@@ -91,12 +89,12 @@ spec-rails/
 ## Quick Start
 
 ### Install on an OpenSpec Project
-Prerequisites: an existing `openspec init` project, OpenSpec ≥ 1.15.0 on `PATH`, and `jq` (for `spec-rails-check`).
+Prerequisites: an existing `openspec init` project, OpenSpec ≥ 1.15.0, and Node.js ≥ 18.
 ```bash
-/path/to/spec-rails/bin/spec-rails [init] [target-repo]
+npx spec-rails init [target-repo]
 ```
 
-Copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: spec-rails` in `openspec/config.yaml` (other keys preserved), installs the branch-protection hook, CI workflow, mutation templates, agent rules (`openspec/spec-rails/`, which `openspec update` does not regenerate), and `.agents/skills/spec-rails/SKILL.md` automatically, keeps any existing `.pre-commit-config.yaml`, and ignores `.worktrees/`. Re-running is a no-op. Spec requirements use `### Requirement: REQ-<DOMAIN>-<N> <name>` headers in OpenSpec delta specs. Gate and lane check: `bin/spec-rails-check`. See `openspec/spec-rails/WORKFLOW.md` §7.
+Scaffolds `spec-rails.config.json` with detected stack commands and thresholds, copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: spec-rails` in `openspec/config.yaml`, installs local hooks into `.pre-commit-config.yaml` (spec-rails gate check, unresolved LGTM directives, branch protection), copies mutation presets, agent rules (`openspec/spec-rails/`), and `.agents/skills/spec-rails/SKILL.md` automatically, and ignores `.worktrees/`. Re-running is a no-op. Spec requirements use `### Requirement: REQ-<DOMAIN>-<N> <name>` headers in OpenSpec delta specs. Gate and lane check: `npx spec-rails check`. See `openspec/spec-rails/WORKFLOW.md` §7.
 
 ### Documentation & Guides
 
@@ -113,11 +111,17 @@ Copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: 
 ### Running Tests
 ```bash
 make test        # lint, installer, schema, gate check, CI audit, self-copy sync, e2e, BDD
-make test-e2e    # real OpenSpec CLI in a throwaway repo; skips if openspec or jq is missing
+make test-e2e    # real OpenSpec CLI in a throwaway repo; skips if openspec is missing
 ```
 `make test-lint` also checks that doc links resolve, docs do not tell users to copy templates by hand, and no shell helper is unused.
 
 ### Verifying the Test Rails in CI
-The installer adds `openspec/spec-rails/spec-rails-verify` and a "Verify Test Rails" CI step (never a commit hook). It fails the PR when a `REQ-*`/`NFR-*` key in an active change appears in no file under `RAILS_TEST_DIRS`, when a ticked Red/Green/Coverage/Mutation task lacks `Evidence: <command and result>`, or when a command in `openspec/spec-rails/rails.conf` (`RAILS_TEST`, `RAILS_COVERAGE`, `RAILS_MUTATION`) exits non-zero. The commands are yours, so any language works; `rails.conf` is never overwritten. Tag requirements in tests, for example `@REQ-X-1` in a `.feature` file.
+The CI workflow runs `npx spec-rails verify` as a verification step (never a commit hook). It fails the PR when:
+- A `REQ-*`/`NFR-*` key in an active change appears in no discovered test file matching `testGlobs`.
+- A ticked Red/Green/Coverage/Mutation task lacks `Evidence: <command and result>`.
+- Any configured command (`testCommand`, `coverageCommand`, `mutationCommand`) exits non-zero.
+- The coverage score falls below `coverageMinScore` (default: 95%).
+- The mutation command output lacks a numeric percentage score or falls below `mutationMinScore` (default: 95%).
+- Any rail command execution exceeds the process execution timeout (default: 10 minutes).
 
-Configure your mutation command to exit non-zero when its required threshold is missed. `verify` uses that exit status, not its output; `mutationMinScore` applies to task evidence, not the command.
+The commands are yours, configured in `spec-rails.config.json`, so any language or stack works. For docs-only or spec-only changesets, the mutation rail is skipped with an informational pass. Tag requirements in tests, for example `@REQ-X-1` in a `.feature` file.

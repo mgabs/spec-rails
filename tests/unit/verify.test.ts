@@ -54,6 +54,38 @@ describe("verify", () => {
       });
 
       expect(defaultExec("command", tmpDir)).toEqual({ status: 0, output: "stdoutstderr" });
+      expect(spawnSync).toHaveBeenCalledWith("command", {
+        cwd: tmpDir,
+        shell: true,
+        encoding: "utf-8",
+        maxBuffer: 67108864,
+        timeout: 600000,
+      });
+    });
+
+    it("handles ETIMEDOUT error when execution times out", () => {
+      vi.mocked(spawnSync).mockReturnValue({
+        pid: 0,
+        output: [],
+        stdout: "",
+        stderr: "",
+        status: null,
+        signal: null,
+        error: Object.assign(new Error("timed out"), { code: "ETIMEDOUT" }),
+      });
+
+      const res = defaultExec("slow-cmd", tmpDir, 5000);
+      expect(res).toEqual({
+        status: 124,
+        output: "Command timed out after 5000ms: slow-cmd",
+      });
+      expect(spawnSync).toHaveBeenCalledWith("slow-cmd", {
+        cwd: tmpDir,
+        shell: true,
+        encoding: "utf-8",
+        maxBuffer: 67108864,
+        timeout: 5000,
+      });
     });
 
     it("returns null when git cannot detect changed files", () => {
@@ -195,8 +227,8 @@ Performance notes.
   });
 
   describe("runVerify", () => {
-    // REQ-OSA-47: mutation commands own their threshold
-    describe("mutation command exit status", () => {
+    // REQ-OSA-47: strict mutation rails and timeout execution
+    describe("strict mutation rail execution", () => {
       beforeEach(() => {
         fs.writeFileSync(
           path.join(tmpDir, "spec-rails.config.json"),
@@ -211,21 +243,48 @@ Performance notes.
         );
       });
 
-      it.each(["progress 20%", "no score was reported"])(
-        "accepts a successful mutation command with output %s",
-        (output) => {
-          const result = runVerify({
-            cwd: tmpDir,
-            runCommands: true,
-            changedFiles: ["src/app.ts"],
-            exec: (command: string) => ({
-              status: 0,
-              output: command === "mutation" ? output : "coverage 100%",
-            }),
-          });
-          expect(result.errors).toEqual([]);
-        }
-      );
+      it("rejects mutation output missing a score percentage", () => {
+        const result = runVerify({
+          cwd: tmpDir,
+          runCommands: true,
+          changedFiles: ["src/app.ts"],
+          exec: (command: string) => ({
+            status: 0,
+            output: command === "mutation" ? "no score was reported" : "coverage 100%",
+          }),
+        });
+        expect(result.errors).toContain(
+          "mutation output missing score percentage: mutation\nno score was reported"
+        );
+      });
+
+      it("rejects mutation score below threshold", () => {
+        const result = runVerify({
+          cwd: tmpDir,
+          runCommands: true,
+          changedFiles: ["src/app.ts"],
+          exec: (command: string) => ({
+            status: 0,
+            output: command === "mutation" ? "Mutation score: 20%" : "coverage 100%",
+          }),
+        });
+        expect(result.errors).toContain(
+          "mutation score 20% is below threshold 98%"
+        );
+      });
+
+      it("accepts mutation score meeting or exceeding threshold", () => {
+        const result = runVerify({
+          cwd: tmpDir,
+          runCommands: true,
+          changedFiles: ["src/app.ts"],
+          exec: (command: string) => ({
+            status: 0,
+            output: command === "mutation" ? "Mutation score: 99%" : "coverage 100%",
+          }),
+        });
+        expect(result.errors).toEqual([]);
+      });
 
       it("reports a failed mutation command and its output", () => {
         const result = runVerify({
@@ -239,6 +298,21 @@ Performance notes.
         });
         expect(result.errors).toContain(
           "mutation command failed (exit 1): mutation\nmutation threshold missed"
+        );
+      });
+
+      it("reports command timeout failure", () => {
+        const result = runVerify({
+          cwd: tmpDir,
+          runCommands: true,
+          changedFiles: ["src/app.ts"],
+          exec: (command: string) =>
+            command === "mutation"
+              ? { status: 124, output: "Command timed out after 600000ms: mutation" }
+              : { status: 0, output: "coverage 100%" },
+        });
+        expect(result.errors).toContain(
+          "mutation command failed (exit 124): mutation\nCommand timed out after 600000ms: mutation"
         );
       });
 

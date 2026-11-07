@@ -19,10 +19,13 @@ export interface VerifyOptions {
   changedFiles?: string[] | null;
 }
 
-export type CommandRunner = (command: string, cwd: string) => { status: number; output: string };
+export type CommandRunner = (command: string, cwd: string, timeoutMs?: number) => { status: number; output: string };
 
-export const defaultExec: CommandRunner = (command, cwd) => {
-  const r = spawnSync(command, { cwd, shell: true, encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 });
+export const defaultExec: CommandRunner = (command, cwd, timeoutMs = 600000) => {
+  const r = spawnSync(command, { cwd, shell: true, encoding: "utf-8", maxBuffer: 64 * 1024 * 1024, timeout: timeoutMs });
+  if (r.error && (r.error as any).code === "ETIMEDOUT") {
+    return { status: 124, output: `Command timed out after ${timeoutMs}ms: ${command}` };
+  }
   return { status: r.status ?? 1, output: `${r.stdout}${r.stderr}` };
 };
 
@@ -50,19 +53,23 @@ export interface RailSpec {
   command: string | undefined;
   minScore?: number;
   required: boolean;
+  timeoutMs?: number;
 }
 
 export function runRail(spec: RailSpec, cwd: string, exec: CommandRunner): string[] {
   if (!spec.command || !spec.command.trim()) {
     return spec.required ? [`${spec.name} command is empty; configure it in spec-rails.config.json`] : [];
   }
-  const res = exec(spec.command, cwd);
+  const res = exec(spec.command, cwd, spec.timeoutMs);
   if (res.status !== 0) {
     return [`${spec.name} command failed (exit ${res.status}): ${spec.command}\n${res.output}`];
   }
   if (spec.minScore !== undefined) {
     const score = parseScore(res.output);
-    if (score !== null && score < spec.minScore) {
+    if (score === null) {
+      return [`${spec.name} output missing score percentage: ${spec.command}\n${res.output}`];
+    }
+    if (score < spec.minScore) {
       return [`${spec.name} score ${score}% is below threshold ${spec.minScore}%`];
     }
   }
@@ -171,7 +178,7 @@ export function runVerify(options: VerifyOptions = {}): VerifyResult {
     rails = [
       { name: "test", command: config.testCommand, required: true },
       { name: "coverage", command: config.coverageCommand, minScore: config.coverageMinScore, required: false },
-      { name: "mutation", command: config.mutationCommand, required: false },
+      { name: "mutation", command: config.mutationCommand, minScore: config.mutationMinScore, required: false },
     ];
   } catch (err: unknown) {
     errors.push(`Failed to load config: ${(err as Error).message}`);
