@@ -27,9 +27,14 @@
     "cac": "^6.7.14",
     "fast-glob": "^3.3.2",
     "tsup": "^8.3.5",
-    "typescript": "^5.7.2",
+    "typescript": "^6.0.3",
     "vitest": "^5.1.0",
     "zod": "^4.6.7"
+  },
+  "overrides": {
+    "@stryker-mutator/core": {
+      "minimatch": "11.0.1"
+    }
   },
   "engines": {
     "node": ">=18.0.0"
