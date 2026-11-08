@@ -415,7 +415,7 @@ Delivery status MUST live in `docs/ROADMAP.md` (template `templates/roadmap.md`)
 - **THEN** it reads gate states from `.changeRoot` and forwards `--store <id>` to `openspec`
 
 ### Requirement: REQ-OSA-32 Installer CLI Flags and Symlink Resolution
-`spec-rails init` MUST support `--stack`, `--force`, `--help`, and `--version`, and MUST resolve canonical filesystem paths using Node.js realpath APIs. It MUST fail fast with an actionable error if the target directory does not contain an `openspec/` directory. When `openspec/` is present, it MUST scaffold `spec-rails.config.json` without an external `$schema` URL, copy schemas from `openspec/schemas/spec-rails/`, copy agent rules from `openspec/spec-rails/`, copy skills into `.agents/skills/spec-rails/`, configure `openspec/config.yaml`, scaffold developer documentation in `docs/spec-rails/`, and set up pre-commit hooks and workflows invoking `npx --no-install spec-rails`.
+`spec-rails init` MUST support `--stack`, `--force`, `--help`, and `--version`, and MUST resolve canonical filesystem paths using Node.js realpath APIs. It MUST fail fast with an actionable error if the target directory does not contain an `openspec/` directory. When `openspec/` is present, it MUST scaffold `spec-rails.config.json` without an external `$schema` URL, copy schemas from `openspec/schemas/spec-rails/`, copy agent rules from `openspec/spec-rails/` (excluding `rails.conf`), copy skills into `.agents/skills/spec-rails/`, configure `openspec/config.yaml`, scaffold developer documentation in `docs/spec-rails/GUIDE.md`, `COMMANDS.md`, and `RAILS.md`, and prune any legacy `openspec/spec-rails/spec-rails-check`, `openspec/spec-rails/spec-rails-verify`, and `openspec/spec-rails/rails.conf` files.
 
 #### Scenario: Symlinked binary and CLI version
 - **GIVEN** `spec-rails` invoked via `spec-rails --version` or `spec-rails <target>`
@@ -430,7 +430,12 @@ Delivery status MUST live in `docs/ROADMAP.md` (template `templates/roadmap.md`)
 #### Scenario: Scaffolds target developer guide
 - **GIVEN** a target directory where `openspec/` is present
 - **WHEN** `spec-rails init` runs
-- **THEN** it creates `docs/spec-rails/WORKFLOW.md`, `docs/spec-rails/COMMANDS.md`, and `docs/spec-rails/RAILS.md`
+- **THEN** it creates `docs/spec-rails/GUIDE.md`, `docs/spec-rails/COMMANDS.md`, and `docs/spec-rails/RAILS.md`
+
+#### Scenario: Pruning legacy shell scripts and duplicate config
+- **GIVEN** an existing repository containing legacy `openspec/spec-rails/spec-rails-check`, `spec-rails-verify`, or `rails.conf`
+- **WHEN** `spec-rails init` runs
+- **THEN** it removes those legacy files from the target directory and does not seed `rails.conf`
 
 ### Requirement: REQ-OSA-33 Contract Scaffolding Rail
 Before delegating slice implementation to code generation, shared types, domain interfaces, schemas, and empty function/method signatures MUST be committed on the feature branch or stream to establish rigid boundaries; coding agents MUST only generate logic within the scaffolded contracts without inventing new abstractions or altering signatures.
@@ -616,7 +621,7 @@ The system MUST NOT distribute executable shell scripts in `bin/` and MUST NOT r
 - **THEN** both commands execute and parse JSON natively without error
 
 ### Requirement: REQ-OSA-46 Pre-Commit Framework Standard
-`spec-rails init` MUST NOT write standalone shell scripts directly to `.git/hooks/pre-commit`. It MUST scaffold `.pre-commit-config.yaml` containing local hooks for `spec-rails-check` (`npx --no-install spec-rails check`), branch protection on `main`/`master`, and test hooks configured for the detected stack (e.g. `npm test`, `pytest`, `cargo test`, `go test`). It MUST NOT include external review-tool hooks or directives. When a git repository is present and `pre-commit` is on `PATH`, it MUST run `pre-commit install` and ensure no `.git/hooks/pre-commit.legacy` file remains.
+`spec-rails init` MUST NOT write standalone shell scripts directly to `.git/hooks/pre-commit`. When `.pre-commit-config.yaml` is absent, it MUST scaffold `.pre-commit-config.yaml` containing local hooks for `spec-rails-check` (`npx --no-install spec-rails check`), branch protection on `main`/`master`, and test hooks configured for the detected stack (e.g. `npm test`, `pytest`, `cargo test`, `go test`, `./gradlew test`). When `.pre-commit-config.yaml` already exists, it MUST surgically modernize it in-place by updating `spec-rails-check` to `npx --no-install spec-rails check` and removing any legacy `check-lgtm-directives` or pre-commit `spec-rails-verify` hooks while preserving all other repos and hooks. It MUST NOT include external review-tool hooks. When a git repository is present and `pre-commit` is on `PATH`, it MUST run `pre-commit install` and ensure no `.git/hooks/pre-commit.legacy` file remains.
 
 #### Scenario: Installer does not write raw git hook
 - **GIVEN** a git repository initialized with `git init`
@@ -633,8 +638,13 @@ The system MUST NOT distribute executable shell scripts in `bin/` and MUST NOT r
 - **WHEN** inspected
 - **THEN** it defines a local branch protection hook that fails on direct commits to `main` and `master`
 
+#### Scenario: Surgical upgrade of existing pre-commit configuration
+- **GIVEN** an existing `.pre-commit-config.yaml` containing `check-lgtm-directives`, legacy `sh openspec/spec-rails/spec-rails-check`, or `spec-rails-verify`
+- **WHEN** `spec-rails init` runs
+- **THEN** `check-lgtm-directives` and `spec-rails-verify` are removed, `spec-rails-check` entry is updated to `npx --no-install spec-rails check`, and custom project hooks are preserved
+
 #### Scenario: No-install flag on hook execution
-- **GIVEN** `.pre-commit-config.yaml` generated by `spec-rails init`
+- **GIVEN** `.pre-commit-config.yaml` generated or modernized by `spec-rails init`
 - **WHEN** inspected
 - **THEN** the `spec-rails-check` hook entry uses `npx --no-install spec-rails check` and contains no LGTM directives
 
@@ -766,3 +776,16 @@ Agent orchestration guidelines and skills MUST enforce a zero-polling invariant:
 - **GIVEN** an active background task
 - **WHEN** the background task completes
 - **THEN** the agent resumes execution upon receiving the system message notification
+
+### Requirement: REQ-OSA-54 Gradle and Kotlin Stack Auto-Detection
+`detectStack` MUST recognize Gradle and Kotlin projects when `build.gradle.kts`, `build.gradle`, or `gradlew` is present in the target directory. It MUST return stack `"gradle"` and configure `testCommand` defaulting to `./gradlew test`, or `make test` if a root `Makefile` containing `^test:` exists.
+
+#### Scenario: Gradle stack detection via build.gradle.kts
+- **GIVEN** a directory containing `build.gradle.kts`
+- **WHEN** `detectStack` executes
+- **THEN** it returns `"gradle"` and provides `testCommand: "./gradlew test"`
+
+#### Scenario: Gradle stack with existing Makefile test target
+- **GIVEN** a directory containing `gradlew` and a `Makefile` with a `test:` target
+- **WHEN** `detectStack` executes
+- **THEN** it returns `"gradle"` and provides `testCommand: "make test"`

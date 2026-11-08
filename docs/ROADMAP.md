@@ -48,3 +48,12 @@ Refocus Spec-Rails as a thin, pure Spec Quality Gate and Testing-Railed workflow
 - [x] Multi-agent worktree execution rails codified: declarative command shapes mandated, atomic worktree slice commit hook bypass permitted, and subagent zero-polling invariant enforced in `WORKFLOW.md` and agent skill.
 - [x] `npm test` and `npm run lint` pass with $\ge 95\%$ coverage and $\ge 95\%$ mutation kill score.
 - [x] Scan and update Repo, Roadmap, Docs & Wiki.
+
+---
+
+## 4. Wave 7: Ecosystem & Developer Experience
+
+| ID | Item | Depends on | Status | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **W7.1** | Init Upgrade Hygiene & Gradle Detection | W6.3 | ✅ Shipped | Surgically modernize existing `.pre-commit-config.yaml` in-place (updating `spec-rails-check` to `npx --no-install spec-rails check`, removing legacy `check-lgtm-directives` and `spec-rails-verify`); auto-detect Gradle/Kotlin projects (`build.gradle.kts`, `build.gradle`, `gradlew`) to configure stack `"gradle"` and `testCommand` defaulting to `./gradlew test` (or `make test` if `Makefile` contains `test:`); auto-prune legacy v0.1 binaries (`openspec/spec-rails/spec-rails-check` and `spec-rails-verify`) and duplicate `rails.conf`; disambiguate developer guide to `docs/spec-rails/GUIDE.md`. |
+
