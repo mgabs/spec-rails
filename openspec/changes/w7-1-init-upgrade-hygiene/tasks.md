@@ -48,8 +48,8 @@ flowchart TD
 
 - [x] 7.1 Full test suite, lint, and build (`npm test`, `npm run lint`, `npm run build`)
 - [x] 7.2 Run gates with `node dist/cli.js check` and `node dist/cli.js verify`
-- [ ] 7.3 Dry run on `~/Workbench/enclave` to verify 100% clean in-place upgrade with zero orphans or duplicates
-- [ ] 7.4 Archive change with `openspec archive w7-1-init-upgrade-hygiene` and sync living spec
+- [x] 7.3 Dry run on `~/Workbench/enclave` to verify 100% clean in-place upgrade with zero orphans or duplicates
+- [x] 7.4 Archive change with `openspec archive w7-1-init-upgrade-hygiene` and sync living spec
 
 ## Review Gate
 - [x] **Gate 3 Approval**: Tasks breakdown approved by human before writing test code.
