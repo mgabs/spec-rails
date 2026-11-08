@@ -246,15 +246,12 @@ flowchart TD
 
 ---
 
-## 5. Coding Agents & Review Harness
+## 5. Coding Agents & Review Protocol
 
-Spec-Rails pairs with [mgabs/lgtm](https://github.com/mgabs/lgtm) as the review cockpit and agent steering harness.
+Spec-Rails enforces strict boundaries for autonomous coding agents:
 
-- **Directive Preemption**: Review directives (`#ref file:line <directive>`) preempt all forward work. When directives exist in `.lgtm/reviews/` or chat, halt `tasks.md` execution, resolve every directive to clean verification, then resume.
-- **Anchor Directives**: Resolve at the exact target line, verify tests pass, commit (Rule 4).
-- **Review Inbox**: Check `.lgtm/reviews/` and inline directives every turn.
-- **Test Integrity (Anti-Fraud)**:
-  - NEVER delete or weaken assertions to force green (`lgtm`'s test-neutering guard will flag it).
+- **Test Integrity**:
+  - NEVER delete or weaken assertions to force green.
   - NEVER write vacuous assertions or tautological mocks.
   - NEVER skip/ignore failing tests without explicit human sign-off.
 - **Boundaries & Hygiene (The Ponytail Mindset & Strict YAGNI)**:
@@ -268,7 +265,7 @@ Spec-Rails pairs with [mgabs/lgtm](https://github.com/mgabs/lgtm) as the review 
 
 ---
 
-## 6. Gate 6: Living Spec Sync, Archive & Merge
+## 6. Gate 4: Living Spec Sync, Archive & Merge
 
 All steps on the feature branch unless stated otherwise:
 
@@ -277,9 +274,9 @@ All steps on the feature branch unless stated otherwise:
 3. Full test suite: $100\%$ pass, $\ge 95\%$ line and branch coverage.
 4. Full-project mutation suite: $\ge 95\%$ kill score on core logic.
 5. **Human Comprehension Verification**: Reviewer verifies complete line-by-line understanding of all generated code; delete ununderstood code.
-6. Tick every completed slice item and the final integration task in `tasks.md` (with `Evidence:` on Red/Green/Coverage/Mutation items).
+6. Tick every completed slice item and the final integration task in `tasks.md` (with `Evidence:` notes on Red/Green/Coverage/Mutation items).
 7. Run `openspec validate <id>-<slug>` (also required after every stream rebase).
-8. Sync and archive in one step (no Spec-Rails-owned copy or move):
+8. Sync and archive in one step:
    ```bash
    openspec archive <id>-<slug> --yes
    ```
@@ -289,16 +286,16 @@ All steps on the feature branch unless stated otherwise:
    git merge --ff-only feat/<id>-<slug>
    git branch -d feat/<id>-<slug>
    ```
-9. Mark `✅ Shipped` in `docs/ROADMAP.md` via `chore/roadmap-<id>` (§2).
+10. Mark `✅ Shipped` in `docs/ROADMAP.md` via `chore/roadmap-<id>` (§2).
 
 ## 7. OpenSpec Layout & Enforcement
 
-Spec-Rails is an addon on an OpenSpec project (`spec-rails [init] [dir]`, requires OpenSpec ≥ 1.15.0 and `jq`). OpenSpec owns the artifact graph, specs and archive; Spec-Rails supplies the `spec-rails` schema (`research → proposal → specs → design → tasks`), gates, lanes and testing rails.
+Spec-Rails is an addon on an OpenSpec project (`npx spec-rails init`, requires OpenSpec ≥ 1.15.0 and Node.js ≥ 18). OpenSpec owns the artifact graph, specs and archive; Spec-Rails supplies the `spec-rails` schema (`research → proposal → specs → design → tasks`), gates, lanes and testing rails.
 
 - **Layout**: changes live in `openspec/changes/<id>-<slug>/`, capabilities in `openspec/specs/<capability>/spec.md`, finished changes in `openspec/changes/archive/`. `docs/ROADMAP.md` and `docs/bug-reports/` live under `docs/`; this protocol ships as `openspec/spec-rails/WORKFLOW.md`.
-- **Gates**: each artifact template ends with an unticked `## Review Gate` box. A human ticks it before the next artifact is created. `spec-rails-check` (pre-commit and CI) fails if an artifact exists whose upstream gate is unticked, and fails commits on `main`/`master`.
+- **Gates**: artifact templates end with an unticked `## Review Gate` box. A human ticks it before implementation tasks or code changes are committed. `spec-rails check` (pre-commit and CI) fails commits on `main`/`master` and enforces gate sign-off before code changes.
 - **Streams**: after rebasing a stream onto the feature branch, run `openspec validate <change>` in addition to the test suite.
-- **Requirement IDs**: `REQ-*`/`NFR-*` live in the change's delta specs and are synced into `openspec/specs/` by `openspec archive`; Gate 6 adds only the rails (tests, mutation, `openspec validate`) around that command.
+- **Requirement IDs**: `REQ-*`/`NFR-*` live in the change's delta specs and are synced into `openspec/specs/` by `openspec archive`; Gate 4 adds only the rails (tests, mutation, `openspec validate`) around that command.
 - **Parallel streams, delta specs, and `tasks.md`**: shared capability delta specs are locked at Gate 2 on the feature branch before spawning parallel slice worktrees (Rule 3.1); if streams must edit a shared delta spec, apply Rule 3.7 (strictly additive) with distinct `REQ-*` IDs. Update `tasks.md` slice checkboxes on the parent feature branch when integrating streams (or confine edits to each stream's own slice section) to avoid rebase collisions.
 - **Bugfix lane**: B1–B3 stay outside `openspec/changes/`; the report in `docs/bug-reports/` is the artifact. A fix that alters a living requirement edits `openspec/specs/` directly in the same branch (B3), with no delta change.
 - **Roadmap vs OpenSpec**: `docs/ROADMAP.md` tracks delivery status of initiatives (one row = one or more changes); OpenSpec tracks each change's artifacts. The row's Spec / Feature Dir points at the change or its archive.

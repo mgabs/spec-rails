@@ -1,4 +1,4 @@
-# How-To: Drive a Feature Through Gates 0–6
+# How-To: Drive a Feature Through Gates 0–4
 
 This guide demonstrates end-to-end execution of a feature under the Spec-Rails lifecycle.
 
@@ -19,7 +19,7 @@ openspec new change w1-1-user-authentication
 openspec status --change w1-1-user-authentication
 ```
 
-For gated planning, generate one artifact at a time with `openspec instructions <artifact> --change w1-1-user-authentication`, pausing for a human to review, and tick its `## Review Gate` checkbox before generating the next file. Note that `/opsx-propose` drafts all planning artifacts in one pass, so `spec-rails-check` will block commits until Gates 0–3 are reviewed and ticked. Run `/opsx-apply` and `/opsx-archive` only after Gate 4 is ticked by a human; agents never self-tick Gate 0–4 or Gate 5.x sign-off boxes. Commit at stage boundaries rather than per gate tick: once after planning (research through tasks), once after the code (one commit per slice is fine when there are several), and once after `openspec archive`. Exceptions: green slice commits (Rule 4), rebases and stream merges, and the bugfix and chore lanes. This is guidance; `spec-rails-check` reads the working tree and does not enforce it.
+You can draft planning artifacts one by one (`openspec instructions <artifact> --change w1-1-user-authentication`) or draft all planning artifacts in one pass using `/opsx-propose`. Human Review Gates must be approved and ticked before implementation tasks in `tasks.md` are executed or production code is modified. Run `/opsx-apply` and `/opsx-archive` only after Gate 3 is ticked by a human.
 
 ---
 
@@ -31,7 +31,7 @@ For gated planning, generate one artifact at a time with `openspec instructions 
    - **2–3 Options**: Concrete candidate architectures (e.g. standard library vs minimal custom vs alternative).
    - **Tradeoff Matrix**: Compare complexity, dependencies, performance, and maintenance burden.
    - **Recommendation**: Agent's reasoned suggestion.
-3. **Gate 0 Review**: Present options to human developer. The developer explicitly selects the winning path before Gate 1 starts.
+3. **Gate 0 Review**: Present options to human developer. The developer explicitly selects the winning path (Go) before Gate 1 starts.
 
 ---
 
@@ -47,60 +47,53 @@ For gated planning, generate one artifact at a time with `openspec instructions 
 
 ---
 
-## Step 4: Gate 2 — Specifications
+## Step 4: Gate 2 — Architecture & Technical Design
 
-1. For each capability, write a **delta spec** (`## ADDED|MODIFIED|REMOVED Requirements`):
-   - **Existing capability** — MODIFIED/REMOVED deltas repeat the existing `### Requirement: REQ-... <name>` header verbatim so OpenSpec header matching succeeds (for retired requirements, keep the exact header and place `**[DEPRECATED by w1-1-user-authentication]**` at the start of the requirement body; never reuse keys).
-   - **New capability** — ADDED requirements in `openspec/changes/w1-1-user-authentication/specs/token-verification/spec.md`, structured per `openspec instructions specs --change w1-1-user-authentication`.
-2. Fill in:
+1. Generate delta specifications (`specs/<capability>/spec.md`):
    - **Functional Requirements**: `REQ-AUTH-1`, `REQ-AUTH-2`, etc.
-   - **Non-Functional Requirements & Budgets**: `NFR-AUTH-1` (e.g. verification latency $< 2\text{ms}$).
-   - **Given / When / Then Scenarios**: Behavioral test cases.
-3. **Gate 2 Review**: Present specifications to human reviewer.
+   - **Non-Functional Requirements & Budgets**: `NFR-AUTH-1` (e.g. latency $< 2\text{ms}$).
+   - **Given / When / Then Scenarios**: Behavioral test contracts.
+2. Generate `design.md` (`openspec instructions design --change w1-1-user-authentication`):
+   - Domain models, state machines, and interface contracts.
+   - Boundary rules: Pure core logic isolated from I/O and network shell.
+   - Concurrency, allocation, or performance invariants.
+   - Concrete test strategy and test cases covering all `REQ-*` and `NFR-*` requirements.
+3. **Gate 2 Review**: Present architecture, specs, and test strategy to human reviewer.
 
 ---
 
-## Step 5: Gate 3 — Architecture & Design
-
-1. Generate `design.md` (`openspec instructions design --change w1-1-user-authentication`).
-2. Document:
-   - Domain models, state machines, and interfaces.
-   - Boundary rules: Pure core logic isolated from I/O and network.
-   - Concurrency, allocation, or frame deadline invariants.
-3. **Gate 3 Review**: Human approval required before writing task breakdown.
-
----
-
-## Step 6: Gate 4 — Task Breakdown & Worktree DAG
+## Step 5: Gate 3 — Task Breakdown & Worktree DAG
 
 1. Generate `tasks.md` (`openspec instructions tasks --change w1-1-user-authentication`).
 2. Structure the DAG into vertical slices and identify orthogonal streams suitable for parallel worktrees.
-3. **Gate 4 Review**: Human approval required before writing any test code.
+3. **Gate 3 Review**: Human approval required before writing test code or spawning slice worktrees.
 
 ---
 
-## Step 7: Step 5.x — Vertical Slice Apply Phase
+## Step 6: Vertical Slice Apply Phase
 
 For each vertical slice:
 
-1. **Step 5.x-A (BDD)**: Write Gherkin `.feature` scenarios.
-   - **Gate 5.x Review**: Human inspects scenarios.
-2. **Step 5.x-B (Red-Green-Refactor)**:
+1. **Contract Scaffolding**: Commit domain interfaces, types, schemas, and empty function signatures before implementation.
+2. **Red-Green-Refactor**:
    - Write failing unit tests (`Red`). Verify test failure. Do **not** commit yet — the pre-commit suite would reject it.
    - Implement minimal code to pass (`Green`). Commit tests and code together.
    - Clean up code under green test protection.
    - Enforce $\ge 95\%$ line and branch coverage.
-3. **Step 5.x-C (Mutation Testing)**:
+3. **Mutation Testing**:
    - Run mutation tests scoped to the slice.
    - Maintain >= 95% mutation kill score: add an assertion, delete dead code, or restructure equivalent mutants away.
 
 ---
 
-## Step 8: Gate 6 — Sync, Archive & Merge
+## Step 7: Gate 4 — Verify, Archive & Merge
 
 1. Merge stream worktrees (rebase + re-verify each, then `--ff-only`) and prune them.
-2. Rebase onto `main`, then run the full test suite and full-project mutation suite.
-3. Tick completed slice items and the final integration task in `tasks.md` (with `Evidence:` on Red/Green/Coverage/Mutation items), then validate:
+2. Rebase onto `main`, then run the full test suite and mutation verification:
+   ```bash
+   npx spec-rails verify
+   ```
+3. Tick completed slice items and the final integration task in `tasks.md` (with `Evidence:` notes on Red/Green/Coverage/Mutation items), then validate:
    ```bash
    openspec validate w1-1-user-authentication
    ```
