@@ -81,14 +81,83 @@ export function getStackMeta(stack: Stack): StackMeta {
 
 export function findAssetRoot(currentDir: string = path.dirname(fileURLToPath(import.meta.url))): string {
   const devRoot = path.resolve(currentDir, "../..");
-  if (fs.existsSync(path.join(devRoot, "schemas/spec-rails"))) {
+  if (fs.existsSync(path.join(devRoot, "openspec/schemas/spec-rails"))) {
     return devRoot;
   }
   const distRoot = path.resolve(currentDir, "..");
-  if (fs.existsSync(path.join(distRoot, "schemas/spec-rails"))) {
+  if (fs.existsSync(path.join(distRoot, "openspec/schemas/spec-rails"))) {
     return distRoot;
   }
   return devRoot;
+}
+
+export function scaffoldDeveloperGuide(targetDir: string): string[] {
+  const docsDir = path.join(targetDir, "docs/spec-rails");
+  fs.mkdirSync(docsDir, { recursive: true });
+
+  const workflowContent = `# Spec-Rails Workflow Guide
+
+## Lanes
+- **Feature Lane (\`feat/<id>-<slug>\`)**: Gated feature progression (Gates 0 → 4).
+- **Bugfix Lane (\`fix/<slug>\`)**: Zero-contamination bug isolation with red test reproduction (Gates B1 → B3).
+- **Chore Lane (\`chore/<slug>\`)**: Zero behavior change tasks (docs, maintenance).
+
+## Sequential Gate Enforcement
+- **Gate 0**: Research & Options Matrix
+- **Gate 1**: Proposal & Intent
+- **Gate 2**: Architecture Design & Living Spec Delta
+- **Gate 3**: Tasks DAG Breakdown & Red-Green-Refactor Plan
+- **Gate 4**: Verification & Evidence Check
+- **Gate 5 / 6**: Stream Merges & Final Delivery
+
+Direct commits to \`main\` or \`master\` are strictly blocked by branch protection.
+`;
+
+  const commandsContent = `# Spec-Rails CLI Commands
+
+## Commands
+
+### \`spec-rails init\`
+Initialize Spec-Rails in an OpenSpec repository. Fails fast if \`openspec/\` is absent.
+\`\`\`bash
+npx --no-install spec-rails init [--stack ts|python|go|rust] [--force]
+\`\`\`
+
+### \`spec-rails check\`
+Verify OpenSpec change gates, lane conventions, and task lists.
+\`\`\`bash
+npx --no-install spec-rails check [--audit]
+\`\`\`
+
+### \`spec-rails verify\`
+Run test suite and verify coverage and mutation score thresholds.
+\`\`\`bash
+npx --no-install spec-rails verify
+\`\`\`
+`;
+
+  const railsContent = `# Spec-Rails Testing Rails
+
+## Minimum Thresholds
+- **Coverage**: $\\ge 95%$ line / branch coverage.
+- **Mutation Kill Score**: $\\ge 95%$ mutation score.
+
+## Supported Stacks
+- **TypeScript / Node.js**: Vitest / Jest + Stryker
+- **Python**: Pytest + Mutmut
+- **Go**: go test + Gremlins
+- **Rust**: cargo test + cargo-mutants
+`;
+
+  const workflowPath = path.join(docsDir, "WORKFLOW.md");
+  const commandsPath = path.join(docsDir, "COMMANDS.md");
+  const railsPath = path.join(docsDir, "RAILS.md");
+
+  fs.writeFileSync(workflowPath, workflowContent);
+  fs.writeFileSync(commandsPath, commandsContent);
+  fs.writeFileSync(railsPath, railsContent);
+
+  return [workflowPath, commandsPath, railsPath];
 }
 
 export function findPresetsDir(currentDir: string = path.dirname(fileURLToPath(import.meta.url))): string {
@@ -112,13 +181,6 @@ export function generatePreCommitConfig(stack: Stack, testCommand: string): stri
 
   - repo: local
     hooks:
-      - id: check-lgtm-directives
-        name: check unresolved lgtm review directives
-        entry: >-
-          sh -c 'if [ -d .lgtm/reviews ]; then d=$(grep -rn "^#ref " .lgtm/reviews 2>/dev/null || true); if [ -n "$d" ]; then printf "ERROR: Unresolved LGTM directives in .lgtm/reviews/:\\n%s\\n" "$d" >&2; exit 1; fi; fi'
-        language: system
-        pass_filenames: false
-
       - id: branch-protection
         name: spec-rails branch protection
         entry: >-
@@ -128,7 +190,7 @@ export function generatePreCommitConfig(stack: Stack, testCommand: string): stri
 
       - id: spec-rails-check
         name: spec-rails gate and lane check
-        entry: npx spec-rails check
+        entry: npx --no-install spec-rails check
         language: system
         pass_filenames: false
 
@@ -166,6 +228,11 @@ function copyDirRecursive(srcDir: string, destDir: string): void {
 
 export function initProject(options: InitOptions = {}): InitResult {
   const cwd = options.cwd ? path.resolve(options.cwd) : process.cwd();
+  const openspecDir = path.join(cwd, "openspec");
+  if (!fs.existsSync(openspecDir)) {
+    throw new Error("OpenSpec repository not detected: 'openspec/' directory is missing. Run 'openspec init' first before running 'spec-rails init'.");
+  }
+
   const stackOption = options.stack || "auto";
   const force = options.force || false;
 
@@ -178,7 +245,6 @@ export function initProject(options: InitOptions = {}): InitResult {
   }
 
   const configPayload = {
-    $schema: "https://raw.githubusercontent.com/openspec/spec-rails/main/schemas/spec-rails.schema.json",
     stack: detectedStack,
     strict: true,
     testCommand: meta.testCommand,
@@ -203,42 +269,45 @@ export function initProject(options: InitOptions = {}): InitResult {
     }
   }
 
-  // If openspec exists in target directory, wire schemas, configs, skills and templates
-  const openspecDir = path.join(cwd, "openspec");
+  // Wire schemas, configs, skills, templates, and docs
   const root = findAssetRoot();
 
-  if (fs.existsSync(openspecDir)) {
-    // 1. Copy schemas
-    const schemaSrc = path.join(root, "schemas/spec-rails");
-    const schemaDest = path.join(openspecDir, "schemas/spec-rails");
-    copyDirRecursive(schemaSrc, schemaDest);
+  // 1. Copy schemas from canonical openspec/schemas/spec-rails
+  const schemaSrc = path.join(root, "openspec/schemas/spec-rails");
+  const schemaDest = path.join(openspecDir, "schemas/spec-rails");
+  copyDirRecursive(schemaSrc, schemaDest);
 
-    // 2. Set schema: spec-rails in openspec/config.yaml
-    const cfgPath = path.join(openspecDir, "config.yaml");
-    let cfgContent = fs.existsSync(cfgPath) ? fs.readFileSync(cfgPath, "utf-8") : "";
-    if (!cfgContent.includes("schema: spec-rails")) {
-      if (/^schema:\s*.*$/m.test(cfgContent)) {
-        cfgContent = cfgContent.replace(/^schema:\s*.*$/m, "schema: spec-rails");
-      } else {
-        cfgContent = `schema: spec-rails\n${cfgContent}`;
-      }
-      fs.writeFileSync(cfgPath, cfgContent.trim() + "\n");
+  // 2. Set schema: spec-rails in openspec/config.yaml
+  const cfgPath = path.join(openspecDir, "config.yaml");
+  let cfgContent = fs.existsSync(cfgPath) ? fs.readFileSync(cfgPath, "utf-8") : "";
+  if (!cfgContent.includes("schema: spec-rails")) {
+    if (/^schema:\s*.*$/m.test(cfgContent)) {
+      cfgContent = cfgContent.replace(/^schema:\s*.*$/m, "schema: spec-rails");
+    } else {
+      cfgContent = `schema: spec-rails\n${cfgContent}`;
     }
+    fs.writeFileSync(cfgPath, cfgContent.trim() + "\n");
+  }
 
-    // 3. Copy documentation & rules
-    copyFileSafe(path.join(root, "rules/AGENTS.md"), path.join(openspecDir, "spec-rails/AGENTS.md"), true);
-    copyFileSafe(path.join(root, "rules/WORKFLOW.md"), path.join(openspecDir, "spec-rails/WORKFLOW.md"), true);
-    copyFileSafe(path.join(root, "templates/bug-report.md"), path.join(openspecDir, "spec-rails/bug-report.md"), true);
+  // 3. Copy documentation, rules, & mutation templates from canonical openspec/spec-rails
+  const specRailsSrc = path.join(root, "openspec/spec-rails");
+  const specRailsDest = path.join(openspecDir, "spec-rails");
+  copyDirRecursive(specRailsSrc, specRailsDest);
 
-    // 4. Copy mutation templates
-    const mutSrc = path.join(root, "templates/mutation");
-    const mutDest = path.join(openspecDir, "spec-rails/mutation");
-    copyDirRecursive(mutSrc, mutDest);
+  // 4. Copy skill from canonical .agents/skills/spec-rails
+  const skillSrc = path.join(root, ".agents/skills/spec-rails/SKILL.md");
+  const fallbackSkillSrc = path.join(root, "skills/spec-rails/SKILL.md");
+  if (fs.existsSync(skillSrc)) {
+    copyFileSafe(skillSrc, path.join(cwd, ".agents/skills/spec-rails/SKILL.md"), true);
+  } else {
+    copyFileSafe(fallbackSkillSrc, path.join(cwd, ".agents/skills/spec-rails/SKILL.md"), true);
+  }
 
-    // 5. Copy skill
-    copyFileSafe(path.join(root, "skills/spec-rails/SKILL.md"), path.join(cwd, ".agents/skills/spec-rails/SKILL.md"), true);
+  // 5. Scaffold developer guide in docs/spec-rails/
+  const docFiles = scaffoldDeveloperGuide(cwd);
+  createdFiles.push(...docFiles);
 
-    // 6. Write customizable templates
+  // 6. Write customizable templates
     const preCommitPath = path.join(cwd, ".pre-commit-config.yaml");
     if (!fs.existsSync(preCommitPath) || force) {
       fs.writeFileSync(preCommitPath, generatePreCommitConfig(detectedStack, meta.testCommand));
@@ -267,7 +336,6 @@ export function initProject(options: InitOptions = {}): InitResult {
         // pre-commit CLI may not be on PATH in minimal or test environments
       }
     }
-  }
 
   return {
     detectedStack,

@@ -25,7 +25,7 @@ jobs:
 
       - name: Prepare local Spec-Rails CLI
         run: |
-          if [ -f package.json ] && grep -q '"name": "@openspec/spec-rails"' package.json; then
+          if [ -f package.json ] && grep -q '"name": "spec-rails"' package.json; then
             npm ci
             npm run build
           fi
@@ -36,10 +36,10 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
         run: |
           npm install -g @fission-ai/openspec@1.16.0
-          if [ -f package.json ] && grep -q '"name": "@openspec/spec-rails"' package.json; then
+          if [ -f package.json ] && grep -q '"name": "spec-rails"' package.json; then
             node dist/cli.js check --audit
           else
-            npx spec-rails check --audit
+            npx --no-install spec-rails check --audit
           fi
 
       - name: Set up Python
@@ -52,10 +52,10 @@ jobs:
 
       - name: Verify Test Rails
         run: |
-          if [ -f package.json ] && grep -q '"name": "@openspec/spec-rails"' package.json; then
+          if [ -f package.json ] && grep -q '"name": "spec-rails"' package.json; then
             node dist/cli.js verify
           else
-            npx spec-rails verify
+            npx --no-install spec-rails verify
           fi
 
       - name: Pre-Commit

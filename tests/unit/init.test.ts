@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { detectStack, initProject, getStackMeta, findPresetsDir, generatePreCommitConfig } from "../../src/commands/init.js";
+import { detectStack, initProject, getStackMeta, findPresetsDir, generatePreCommitConfig, findAssetRoot, scaffoldDeveloperGuide } from "../../src/commands/init.js";
 import { loadConfigFile } from "../../src/config.js";
 
 describe("Stack Auto-Detection & Init Command", () => {
@@ -88,7 +88,52 @@ describe("Stack Auto-Detection & Init Command", () => {
     expect(fs.existsSync(path.join(dir, "ts", "stryker.config.json"))).toBe(true);
   });
 
+  it("fails fast when openspec directory is missing (REQ-OSA-32)", () => {
+    expect(() =>
+      initProject({
+        cwd: tempDir,
+        stack: "ts",
+      })
+    ).toThrow("OpenSpec repository not detected: 'openspec/' directory is missing. Run 'openspec init' first before running 'spec-rails init'.");
+  });
+
+  it("scaffolds developer guide in docs/spec-rails/ (REQ-OSA-32)", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
+    const result = initProject({
+      cwd: tempDir,
+      stack: "ts",
+    });
+
+    const docsDir = path.join(tempDir, "docs/spec-rails");
+    const workflowDoc = path.join(docsDir, "WORKFLOW.md");
+    const commandsDoc = path.join(docsDir, "COMMANDS.md");
+    const railsDoc = path.join(docsDir, "RAILS.md");
+
+    expect(fs.existsSync(workflowDoc)).toBe(true);
+    expect(fs.existsSync(commandsDoc)).toBe(true);
+    expect(fs.existsSync(railsDoc)).toBe(true);
+    expect(fs.readFileSync(workflowDoc, "utf-8")).toContain("Spec-Rails Workflow Guide");
+    expect(fs.readFileSync(commandsDoc, "utf-8")).toContain("spec-rails init");
+    expect(fs.readFileSync(railsDoc, "utf-8")).toContain("95%");
+    expect(result.createdFiles).toContain(workflowDoc);
+    expect(result.createdFiles).toContain(commandsDoc);
+    expect(result.createdFiles).toContain(railsDoc);
+  });
+
+  it("resolves and copies assets from canonical openspec/ source tree (REQ-OSA-32)", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
+    initProject({
+      cwd: tempDir,
+      stack: "ts",
+    });
+
+    expect(fs.existsSync(path.join(tempDir, "openspec/schemas/spec-rails/schema.yaml"))).toBe(true);
+    expect(fs.existsSync(path.join(tempDir, "openspec/spec-rails/AGENTS.md"))).toBe(true);
+    expect(fs.existsSync(path.join(tempDir, ".agents/skills/spec-rails/SKILL.md"))).toBe(true);
+  });
+
   it("initializes a TypeScript repository with config and stryker preset", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
     fs.writeFileSync(path.join(tempDir, "package.json"), "{}");
     const result = initProject({
       cwd: tempDir,
@@ -99,14 +144,13 @@ describe("Stack Auto-Detection & Init Command", () => {
     expect(result.detectedStack).toBe("ts");
     const configPath = path.join(tempDir, "spec-rails.config.json");
     const strykerPath = path.join(tempDir, "stryker.config.json");
-    expect(result.createdFiles).toEqual([configPath, strykerPath]);
+    expect(result.createdFiles).toContain(configPath);
+    expect(result.createdFiles).toContain(strykerPath);
     expect(fs.existsSync(configPath)).toBe(true);
 
     const rawContent = fs.readFileSync(configPath, "utf-8");
     expect(rawContent.endsWith("\n")).toBe(true);
-    expect(JSON.parse(rawContent).$schema).toBe(
-      "https://raw.githubusercontent.com/openspec/spec-rails/main/schemas/spec-rails.schema.json"
-    );
+    expect(JSON.parse(rawContent).$schema).toBeUndefined();
 
     const cfg = loadConfigFile(configPath);
     expect(cfg.stack).toBe("ts");
@@ -119,6 +163,7 @@ describe("Stack Auto-Detection & Init Command", () => {
   });
 
   it("initializes a Python repository with config and mutmut preset", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
     fs.writeFileSync(path.join(tempDir, "pyproject.toml"), "");
     const result = initProject({
       cwd: tempDir,
@@ -129,7 +174,8 @@ describe("Stack Auto-Detection & Init Command", () => {
     expect(result.detectedStack).toBe("python");
     const configPath = path.join(tempDir, "spec-rails.config.json");
     const mutmutPath = path.join(tempDir, "mutmut.ini");
-    expect(result.createdFiles).toEqual([configPath, mutmutPath]);
+    expect(result.createdFiles).toContain(configPath);
+    expect(result.createdFiles).toContain(mutmutPath);
 
     const cfg = loadConfigFile(configPath);
     expect(cfg.stack).toBe("python");
@@ -139,6 +185,7 @@ describe("Stack Auto-Detection & Init Command", () => {
   });
 
   it("initializes a Go repository with config and gremlins preset", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
     fs.writeFileSync(path.join(tempDir, "go.mod"), "module myapp\n");
     const result = initProject({
       cwd: tempDir,
@@ -149,7 +196,8 @@ describe("Stack Auto-Detection & Init Command", () => {
     expect(result.detectedStack).toBe("go");
     const configPath = path.join(tempDir, "spec-rails.config.json");
     const gremlinsPath = path.join(tempDir, "gremlins.yaml");
-    expect(result.createdFiles).toEqual([configPath, gremlinsPath]);
+    expect(result.createdFiles).toContain(configPath);
+    expect(result.createdFiles).toContain(gremlinsPath);
 
     const cfg = loadConfigFile(configPath);
     expect(cfg.stack).toBe("go");
@@ -159,6 +207,7 @@ describe("Stack Auto-Detection & Init Command", () => {
   });
 
   it("initializes a Rust repository with config and cargo-mutants preset", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
     fs.writeFileSync(path.join(tempDir, "Cargo.toml"), "[package]\n");
     const result = initProject({
       cwd: tempDir,
@@ -169,7 +218,8 @@ describe("Stack Auto-Detection & Init Command", () => {
     expect(result.detectedStack).toBe("rust");
     const configPath = path.join(tempDir, "spec-rails.config.json");
     const mutantsPath = path.join(tempDir, "cargo-mutants.toml");
-    expect(result.createdFiles).toEqual([configPath, mutantsPath]);
+    expect(result.createdFiles).toContain(configPath);
+    expect(result.createdFiles).toContain(mutantsPath);
 
     const cfg = loadConfigFile(configPath);
     expect(cfg.stack).toBe("rust");
@@ -179,13 +229,14 @@ describe("Stack Auto-Detection & Init Command", () => {
   });
 
   it("initializes an unrecognized repo with auto stack and no preset file", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
     const result = initProject({
       cwd: tempDir,
       stack: "auto",
       force: false,
     });
     expect(result.detectedStack).toBe("auto");
-    expect(result.createdFiles.length).toBe(1);
+    expect(result.createdFiles.length).toBeGreaterThanOrEqual(1);
     const cfg = loadConfigFile(path.join(tempDir, "spec-rails.config.json"));
     expect(cfg.stack).toBe("auto");
     expect(cfg.testCommand).toBe("npm test");
@@ -194,6 +245,7 @@ describe("Stack Auto-Detection & Init Command", () => {
   });
 
   it("does not overwrite preset file when already present unless force is true", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
     const destPreset = path.join(tempDir, "stryker.config.json");
     fs.writeFileSync(destPreset, "// custom stryker config");
 
@@ -204,7 +256,8 @@ describe("Stack Auto-Detection & Init Command", () => {
       force: false,
     });
     // config was created, but destPreset was NOT pushed to createdFiles because it was skipped
-    expect(res1.createdFiles).toEqual([path.join(tempDir, "spec-rails.config.json")]);
+    expect(res1.createdFiles).toContain(path.join(tempDir, "spec-rails.config.json"));
+    expect(res1.createdFiles).not.toContain(destPreset);
     expect(fs.readFileSync(destPreset, "utf-8")).toBe("// custom stryker config");
 
     // Init with force: overwrites preset
@@ -213,11 +266,13 @@ describe("Stack Auto-Detection & Init Command", () => {
       stack: "ts",
       force: true,
     });
-    expect(res2.createdFiles).toEqual([path.join(tempDir, "spec-rails.config.json"), destPreset]);
+    expect(res2.createdFiles).toContain(path.join(tempDir, "spec-rails.config.json"));
+    expect(res2.createdFiles).toContain(destPreset);
     expect(fs.readFileSync(destPreset, "utf-8")).not.toBe("// custom stryker config");
   });
 
   it("refuses to overwrite existing config unless force is true", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
     fs.writeFileSync(path.join(tempDir, "spec-rails.config.json"), "{}");
     expect(() =>
       initProject({
@@ -243,11 +298,37 @@ describe("Stack Auto-Detection & Init Command", () => {
     expect(presetsDir).toBe(path.resolve(fakeDistDir, "../templates/presets"));
   });
 
+  it("finds asset root using dist fallback when dev root does not have openspec/schemas", () => {
+    const fakeDistDir = path.join(tempDir, "pkg/dist");
+    const fakeDevDir = path.join(tempDir, "pkg");
+    fs.mkdirSync(path.join(fakeDevDir, "openspec/schemas/spec-rails"), { recursive: true });
+    const root = findAssetRoot(fakeDistDir);
+    expect(root).toBe(fakeDevDir);
+
+    // Fallback to devRoot when neither has schemas
+    const emptyDir = path.join(tempDir, "empty/sub");
+    fs.mkdirSync(emptyDir, { recursive: true });
+    const emptyRoot = findAssetRoot(emptyDir);
+    expect(emptyRoot).toBe(path.resolve(emptyDir, "../.."));
+  });
+
+  it("updates existing schema in openspec/config.yaml", () => {
+    const osDir = path.join(tempDir, "openspec");
+    fs.mkdirSync(osDir, { recursive: true });
+    fs.writeFileSync(path.join(osDir, "config.yaml"), "schema: other\nfoo: bar\n");
+    initProject({ cwd: tempDir, stack: "ts" });
+    const cfg = fs.readFileSync(path.join(osDir, "config.yaml"), "utf-8");
+    expect(cfg).toContain("schema: spec-rails");
+  });
+
   it("generates stack-aware pre-commit configuration (REQ-OSA-46)", () => {
     const pyYaml = generatePreCommitConfig("python", "pytest");
     expect(pyYaml).toContain("id: branch-protection");
     expect(pyYaml).toContain("entry: pytest");
     expect(pyYaml).not.toContain("make test");
+    expect(pyYaml).toContain("entry: npx --no-install spec-rails check");
+    expect(pyYaml).not.toContain("check-lgtm-directives");
+    expect(pyYaml).not.toContain(".lgtm");
 
     const goYaml = generatePreCommitConfig("go", "go test ./...");
     expect(goYaml).toContain("entry: go test ./...");
@@ -257,6 +338,12 @@ describe("Stack Auto-Detection & Init Command", () => {
 
     const tsYaml = generatePreCommitConfig("ts", "npm test");
     expect(tsYaml).toContain("entry: npm test");
+  });
+
+  it("package.json is named spec-rails (REQ-OSA-32)", () => {
+    const root = findAssetRoot();
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
+    expect(pkg.name).toBe("spec-rails");
   });
 
   it("removes pre-commit.legacy and does not write raw git hook script (REQ-OSA-46)", () => {

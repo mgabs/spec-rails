@@ -51,6 +51,7 @@ describe("CLI Binary Integration & Unit (REQ-OSA-32, REQ-OSA-45)", () => {
   it("invokes init command handler", () => {
     const cli = createCli();
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-init-test-"));
+    fs.mkdirSync(path.join(tempDir, "openspec"), { recursive: true });
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     cli.parse(["node", "spec-rails", "init", tempDir, "--stack=python"]);
     expect(logSpy).toHaveBeenCalledWith("[spec-rails] Initialized repository for stack: python");
@@ -110,6 +111,7 @@ describe("CLI Binary Integration & Unit (REQ-OSA-32, REQ-OSA-45)", () => {
 
   it("runs runCli with provided argv", () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-runcli-test-"));
+    fs.mkdirSync(path.join(tempDir, "openspec"), { recursive: true });
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     runCli(["node", "spec-rails", "init", tempDir]);
     expect(logSpy).toHaveBeenCalledWith("[spec-rails] Initialized repository for stack: auto");

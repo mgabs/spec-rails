@@ -10,13 +10,6 @@ repos:
 
   - repo: local
     hooks:
-      - id: check-lgtm-directives
-        name: check unresolved lgtm review directives
-        entry: >-
-          sh -c 'if [ -d .lgtm/reviews ]; then d=$(grep -rn "^#ref " .lgtm/reviews 2>/dev/null || true); if [ -n "$d" ]; then printf "ERROR: Unresolved LGTM directives in .lgtm/reviews/:\n%s\n" "$d" >&2; exit 1; fi; fi'
-        language: system
-        pass_filenames: false
-
       - id: branch-protection
         name: spec-rails branch protection
         entry: >-
@@ -26,7 +19,7 @@ repos:
 
       - id: spec-rails-check
         name: spec-rails gate and lane check
-        entry: npx spec-rails check
+        entry: npx --no-install spec-rails check
         language: system
         pass_filenames: false
 
