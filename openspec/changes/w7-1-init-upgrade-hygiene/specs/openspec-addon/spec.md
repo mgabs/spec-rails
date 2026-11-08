@@ -48,6 +48,11 @@
 - **WHEN** `spec-rails init` runs
 - **THEN** `check-lgtm-directives` and `spec-rails-verify` are removed, `spec-rails-check` entry is updated to `npx --no-install spec-rails check`, and custom project hooks are preserved
 
+#### Scenario: No-install flag on hook execution
+- **GIVEN** `.pre-commit-config.yaml` generated or modernized by `spec-rails init`
+- **WHEN** inspected
+- **THEN** the `spec-rails-check` hook entry uses `npx --no-install spec-rails check` and contains no LGTM directives
+
 ## ADDED Requirements
 
 ### Requirement: REQ-OSA-54 Gradle and Kotlin Stack Auto-Detection

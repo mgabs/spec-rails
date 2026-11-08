@@ -2,7 +2,7 @@ import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-export const StackSchema = z.enum(["auto", "ts", "python", "go", "rust"]);
+export const StackSchema = z.enum(["auto", "ts", "python", "go", "rust", "gradle"]);
 export type Stack = z.infer<typeof StackSchema>;
 
 export function getDefaultTestGlobs(stack: Stack): string[] {

@@ -48,6 +48,36 @@ describe("Stack Auto-Detection & Init Command", () => {
     expect(detectStack(tempDir)).toBe("rust");
   });
 
+  it("detects Gradle stack when build.gradle.kts, build.gradle, or gradlew is present (REQ-OSA-54)", () => {
+    const g1 = path.join(tempDir, "g1");
+    fs.mkdirSync(g1);
+    fs.writeFileSync(path.join(g1, "build.gradle.kts"), "");
+    expect(detectStack(g1)).toBe("gradle");
+
+    const g2 = path.join(tempDir, "g2");
+    fs.mkdirSync(g2);
+    fs.writeFileSync(path.join(g2, "build.gradle"), "");
+    expect(detectStack(g2)).toBe("gradle");
+
+    const g3 = path.join(tempDir, "g3");
+    fs.mkdirSync(g3);
+    fs.writeFileSync(path.join(g3, "gradlew"), "");
+    expect(detectStack(g3)).toBe("gradle");
+  });
+
+  it("resolves Gradle test command preferring make test when Makefile defines test: (REQ-OSA-54)", () => {
+    expect(getStackMeta("gradle")).toEqual({
+      testCommand: "./gradlew test",
+    });
+
+    const gMake = path.join(tempDir, "gMake");
+    fs.mkdirSync(gMake);
+    fs.writeFileSync(path.join(gMake, "Makefile"), ".PHONY: test\ntest:\n\t./gradlew testDebug\n");
+    expect(getStackMeta("gradle", gMake)).toEqual({
+      testCommand: "make test",
+    });
+  });
+
   it("falls back to auto when no recognized manifest is present", () => {
     expect(detectStack(tempDir)).toBe("auto");
   });
@@ -97,7 +127,7 @@ describe("Stack Auto-Detection & Init Command", () => {
     ).toThrow("OpenSpec repository not detected: 'openspec/' directory is missing. Run 'openspec init' first before running 'spec-rails init'.");
   });
 
-  it("scaffolds developer guide in docs/spec-rails/ (REQ-OSA-32)", () => {
+  it("scaffolds developer guide in docs/spec-rails/GUIDE.md (REQ-OSA-32)", () => {
     fs.mkdirSync(path.join(tempDir, "openspec"));
     const result = initProject({
       cwd: tempDir,
@@ -105,17 +135,19 @@ describe("Stack Auto-Detection & Init Command", () => {
     });
 
     const docsDir = path.join(tempDir, "docs/spec-rails");
+    const guideDoc = path.join(docsDir, "GUIDE.md");
     const workflowDoc = path.join(docsDir, "WORKFLOW.md");
     const commandsDoc = path.join(docsDir, "COMMANDS.md");
     const railsDoc = path.join(docsDir, "RAILS.md");
 
-    expect(fs.existsSync(workflowDoc)).toBe(true);
+    expect(fs.existsSync(guideDoc)).toBe(true);
+    expect(fs.existsSync(workflowDoc)).toBe(false);
     expect(fs.existsSync(commandsDoc)).toBe(true);
     expect(fs.existsSync(railsDoc)).toBe(true);
-    expect(fs.readFileSync(workflowDoc, "utf-8")).toContain("Spec-Rails Workflow Guide");
+    expect(fs.readFileSync(guideDoc, "utf-8")).toContain("Spec-Rails Workflow Guide");
     expect(fs.readFileSync(commandsDoc, "utf-8")).toContain("spec-rails init");
     expect(fs.readFileSync(railsDoc, "utf-8")).toContain("95%");
-    expect(result.createdFiles).toContain(workflowDoc);
+    expect(result.createdFiles).toContain(guideDoc);
     expect(result.createdFiles).toContain(commandsDoc);
     expect(result.createdFiles).toContain(railsDoc);
   });
@@ -344,6 +376,73 @@ describe("Stack Auto-Detection & Init Command", () => {
     const root = findAssetRoot();
     const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
     expect(pkg.name).toBe("spec-rails");
+  });
+
+  it("prunes legacy v0.1 shell scripts and duplicate rails.conf during init (REQ-OSA-32)", () => {
+    const osDir = path.join(tempDir, "openspec/spec-rails");
+    fs.mkdirSync(osDir, { recursive: true });
+    const legacyCheck = path.join(osDir, "spec-rails-check");
+    const legacyVerify = path.join(osDir, "spec-rails-verify");
+    const legacyConf = path.join(osDir, "rails.conf");
+    fs.writeFileSync(legacyCheck, "#!/bin/sh\nexit 0");
+    fs.writeFileSync(legacyVerify, "#!/bin/sh\nexit 0");
+    fs.writeFileSync(legacyConf, "RAILS_TEST=foo");
+
+    initProject({ cwd: tempDir, stack: "ts" });
+
+    expect(fs.existsSync(legacyCheck)).toBe(false);
+    expect(fs.existsSync(legacyVerify)).toBe(false);
+    expect(fs.existsSync(legacyConf)).toBe(false);
+  });
+
+  it("surgically modernizes existing .pre-commit-config.yaml in-place (REQ-OSA-46)", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
+    const existingYaml = `repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+
+  - repo: local
+    hooks:
+      - id: check-lgtm-directives
+        name: check unresolved lgtm review directives
+        entry: >-
+          sh -c 'if [ -d .lgtm/reviews ]; then exit 1; fi'
+        language: system
+
+      - id: branch-protection
+        name: spec-rails branch protection
+        entry: sh -c 'exit 0'
+        language: system
+
+      - id: spec-rails-check
+        name: spec-rails gate and lane check
+        entry: sh -c 'if [ -f openspec/spec-rails/spec-rails-check ]; then sh openspec/spec-rails/spec-rails-check; fi'
+        language: system
+
+      - id: spec-rails-verify
+        name: spec-rails test rails verification
+        entry: sh -c 'if [ -f openspec/spec-rails/spec-rails-verify ]; then sh openspec/spec-rails/spec-rails-verify; fi'
+        language: system
+
+      - id: detekt
+        name: custom android detekt hook
+        entry: ./gradlew detekt
+        language: system
+`;
+    const preCommitPath = path.join(tempDir, ".pre-commit-config.yaml");
+    fs.writeFileSync(preCommitPath, existingYaml);
+
+    initProject({ cwd: tempDir, stack: "ts" });
+
+    const updatedYaml = fs.readFileSync(preCommitPath, "utf-8");
+    expect(updatedYaml).not.toContain("check-lgtm-directives");
+    expect(updatedYaml).not.toContain("spec-rails-verify");
+    expect(updatedYaml).toContain("entry: npx --no-install spec-rails check");
+    expect(updatedYaml).toContain("id: branch-protection");
+    expect(updatedYaml).toContain("id: detekt");
+    expect(updatedYaml).toContain("./gradlew detekt");
   });
 
   it("removes pre-commit.legacy and does not write raw git hook script (REQ-OSA-46)", () => {

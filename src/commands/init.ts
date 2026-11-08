@@ -32,6 +32,13 @@ export function detectStack(targetDir: string): Stack {
   if (fs.existsSync(path.join(targetDir, "Cargo.toml"))) {
     return "rust";
   }
+  if (
+    fs.existsSync(path.join(targetDir, "build.gradle.kts")) ||
+    fs.existsSync(path.join(targetDir, "build.gradle")) ||
+    fs.existsSync(path.join(targetDir, "gradlew"))
+  ) {
+    return "gradle";
+  }
   return "auto";
 }
 
@@ -42,7 +49,7 @@ interface StackMeta {
   presetFile?: string;
 }
 
-export function getStackMeta(stack: Stack): StackMeta {
+export function getStackMeta(stack: Stack, targetDir?: string): StackMeta {
   switch (stack) {
     case "ts":
       return {
@@ -72,6 +79,21 @@ export function getStackMeta(stack: Stack): StackMeta {
         mutationCommand: "cargo mutants",
         presetFile: "cargo-mutants.toml",
       };
+    case "gradle": {
+      let testCommand = "./gradlew test";
+      if (targetDir) {
+        const makefilePath = path.join(targetDir, "Makefile");
+        if (fs.existsSync(makefilePath)) {
+          const content = fs.readFileSync(makefilePath, "utf-8");
+          if (/^test:/m.test(content)) {
+            testCommand = "make test";
+          }
+        }
+      }
+      return {
+        testCommand,
+      };
+    }
     default:
       return {
         testCommand: "npm test",
@@ -89,6 +111,20 @@ export function findAssetRoot(currentDir: string = path.dirname(fileURLToPath(im
     return distRoot;
   }
   return devRoot;
+}
+
+export function pruneLegacyFiles(targetDir: string): string[] {
+  const openspecSpecRails = path.join(targetDir, "openspec/spec-rails");
+  const legacyFiles = ["spec-rails-check", "spec-rails-verify", "rails.conf"];
+  const pruned: string[] = [];
+  for (const file of legacyFiles) {
+    const fullPath = path.join(openspecSpecRails, file);
+    if (fs.existsSync(fullPath)) {
+      fs.rmSync(fullPath, { force: true });
+      pruned.push(fullPath);
+    }
+  }
+  return pruned;
 }
 
 export function scaffoldDeveloperGuide(targetDir: string): string[] {
@@ -149,15 +185,19 @@ npx --no-install spec-rails verify
 - **Rust**: cargo test + cargo-mutants
 `;
 
-  const workflowPath = path.join(docsDir, "WORKFLOW.md");
+  const guidePath = path.join(docsDir, "GUIDE.md");
+  const oldWorkflowPath = path.join(docsDir, "WORKFLOW.md");
+  if (fs.existsSync(oldWorkflowPath)) {
+    fs.rmSync(oldWorkflowPath, { force: true });
+  }
   const commandsPath = path.join(docsDir, "COMMANDS.md");
   const railsPath = path.join(docsDir, "RAILS.md");
 
-  fs.writeFileSync(workflowPath, workflowContent);
+  fs.writeFileSync(guidePath, workflowContent);
   fs.writeFileSync(commandsPath, commandsContent);
   fs.writeFileSync(railsPath, railsContent);
 
-  return [workflowPath, commandsPath, railsPath];
+  return [guidePath, commandsPath, railsPath];
 }
 
 export function findPresetsDir(currentDir: string = path.dirname(fileURLToPath(import.meta.url))): string {
@@ -166,6 +206,29 @@ export function findPresetsDir(currentDir: string = path.dirname(fileURLToPath(i
     return devPresets;
   }
   return path.resolve(currentDir, "../templates/presets");
+}
+
+export function removeHookBlock(yaml: string, hookId: string): string {
+  const regex = new RegExp(`^[ \\t]*-[ \\t]+id:[ \\t]+${hookId}\\b[\\s\\S]*?(?=^[ \\t]*-[ \\t]+(?:id|repo):|\\Z)`, "m");
+  return yaml.replace(regex, "");
+}
+
+export function modernizePreCommitConfig(content: string): string {
+  let updated = content;
+
+  // 1. Remove legacy / unwanted hooks
+  updated = removeHookBlock(updated, "check-lgtm-directives");
+  updated = removeHookBlock(updated, "spec-rails-verify");
+
+  // 2. Modernize spec-rails-check entry
+  const checkBlockRegex = /(^[ \t]*-[ \t]+id:[ \t]+spec-rails-check\b[\s\S]*?^[ \t]*entry:)[ \t]*(?:>-|\|[+-]?)?(?:[^\n]*\n(?:[ \t]{8,}[^\n]*\n)*|[^\n]*)/m;
+  if (checkBlockRegex.test(updated)) {
+    updated = updated.replace(checkBlockRegex, `$1 npx --no-install spec-rails check`);
+  }
+
+  // 3. Clean up excessive blank lines
+  updated = updated.replace(/\n{3,}/g, "\n\n");
+  return updated;
 }
 
 export function generatePreCommitConfig(stack: Stack, testCommand: string): string {
@@ -237,7 +300,7 @@ export function initProject(options: InitOptions = {}): InitResult {
   const force = options.force || false;
 
   const detectedStack = stackOption === "auto" ? detectStack(cwd) : stackOption;
-  const meta = getStackMeta(detectedStack);
+  const meta = getStackMeta(detectedStack, cwd);
 
   const configPath = path.join(cwd, "spec-rails.config.json");
   if (fs.existsSync(configPath) && !force) {
@@ -289,10 +352,15 @@ export function initProject(options: InitOptions = {}): InitResult {
     fs.writeFileSync(cfgPath, cfgContent.trim() + "\n");
   }
 
-  // 3. Copy documentation, rules, & mutation templates from canonical openspec/spec-rails
+  // 3. Prune legacy v0.1 files and copy documentation, rules, & mutation templates
+  pruneLegacyFiles(cwd);
   const specRailsSrc = path.join(root, "openspec/spec-rails");
   const specRailsDest = path.join(openspecDir, "spec-rails");
   copyDirRecursive(specRailsSrc, specRailsDest);
+  const copiedConf = path.join(specRailsDest, "rails.conf");
+  if (fs.existsSync(copiedConf)) {
+    fs.rmSync(copiedConf, { force: true });
+  }
 
   // 4. Copy skill from canonical .agents/skills/spec-rails
   const skillSrc = path.join(root, ".agents/skills/spec-rails/SKILL.md");
@@ -307,11 +375,17 @@ export function initProject(options: InitOptions = {}): InitResult {
   const docFiles = scaffoldDeveloperGuide(cwd);
   createdFiles.push(...docFiles);
 
-  // 6. Write customizable templates
-    const preCommitPath = path.join(cwd, ".pre-commit-config.yaml");
-    if (!fs.existsSync(preCommitPath) || force) {
-      fs.writeFileSync(preCommitPath, generatePreCommitConfig(detectedStack, meta.testCommand));
+  // 6. Write or modernize customizable templates
+  const preCommitPath = path.join(cwd, ".pre-commit-config.yaml");
+  if (!fs.existsSync(preCommitPath) || force) {
+    fs.writeFileSync(preCommitPath, generatePreCommitConfig(detectedStack, meta.testCommand));
+  } else {
+    const existingPreCommit = fs.readFileSync(preCommitPath, "utf-8");
+    const modernized = modernizePreCommitConfig(existingPreCommit);
+    if (modernized !== existingPreCommit) {
+      fs.writeFileSync(preCommitPath, modernized);
     }
+  }
     copyFileSafe(path.join(root, "templates/spec-rails-ci.yml"), path.join(cwd, ".github/workflows/spec-rails-ci.yml"), force);
 
     // 7. Configure .gitignore for .worktrees/
