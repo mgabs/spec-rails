@@ -77,10 +77,10 @@ spec-rails/
 ### Install on an OpenSpec Project
 Prerequisites: an existing `openspec init` project, OpenSpec ≥ 1.15.0, and Node.js ≥ 18.
 ```bash
-npx spec-rails init [target-repo]
+npx --no-install spec-rails init [target-repo]
 ```
 
-Scaffolds `spec-rails.config.json` with detected stack commands and thresholds, copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: spec-rails` in `openspec/config.yaml`, installs local hooks into `.pre-commit-config.yaml` (spec-rails gate check, branch protection), copies mutation presets, agent rules (`openspec/spec-rails/`), and `.agents/skills/spec-rails/SKILL.md` automatically, and ignores `.worktrees/`. Re-running is a no-op. Gate and lane check: `npx spec-rails check`.
+Scaffolds `spec-rails.config.json` with detected stack commands and thresholds, copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: spec-rails` in `openspec/config.yaml`, installs local hooks into `.pre-commit-config.yaml` (spec-rails gate check, branch protection), scaffolds developer guidance in `docs/spec-rails/`, copies mutation presets, agent rules (`openspec/spec-rails/`), and `.agents/skills/spec-rails/SKILL.md` automatically, and ignores `.worktrees/`. Re-running is a no-op. Gate and lane check: `npx --no-install spec-rails check`.
 
 ### Documentation & Guides
 
@@ -96,12 +96,12 @@ Scaffolds `spec-rails.config.json` with detected stack commands and thresholds, 
 
 ### Running Tests
 ```bash
-npm test         # Native TypeScript Vitest suite (13 suites, 155+ tests, < 1s)
+npm test         # Native TypeScript Vitest suite (13 suites, 166 tests, < 1s)
 npm run lint     # TypeScript type check (tsc --noEmit)
 ```
 
 ### Verifying the Test Rails in CI
-The CI workflow runs `npx spec-rails verify` as a verification step (never a commit hook). It fails the PR when:
+The CI workflow runs `npx --no-install spec-rails verify` as a verification step (never a commit hook). It fails the PR when:
 - A `REQ-*`/`NFR-*` key in an active change appears in no discovered test file matching `testGlobs`.
 - A ticked Red/Green/Coverage/Mutation task lacks `Evidence: <note>`.
 - Any configured command (`testCommand`, `coverageCommand`, `mutationCommand`) exits non-zero.

@@ -38,13 +38,13 @@ Refocus Spec-Rails as a thin, pure Spec Quality Gate and Testing-Railed workflow
 
 ## 3. Wave 6 Exit Criteria
 
-- [ ] All W6 items (W6.1–W6.5) marked `✅ Shipped`.
+- [x] All W6 items (W6.1–W6.5) marked `✅ Shipped`.
 - [x] Planning workflow enforces step-by-step human review pauses at each gate (Gates 0–3); `spec.md` template has no `## Review Gate` footer.
 - [x] `spec-rails check` runs `openspec validate --strict`, validates whitespace/EOF newline hygiene on change artifacts, verifies `REQ-*`/`NFR-*` keys on delta requirements, and enforces Gates 0–3 before code diffs (`--audit`) or ticked implementation tasks.
 - [x] `spec-rails verify` accepts free-text `Evidence:` notes on rail tasks and verifies all `REQ-*`/`NFR-*` keys across `tests/unit/`.
 - [x] `spec-rails init` fails fast when `openspec/` is absent, scaffolds developer guide in `docs/spec-rails/`, and sets up stack-specific CI & pre-commit using `npx --no-install spec-rails`.
 - [x] Zero legacy `.sh` test scripts, zero `Makefile`, zero `.feature` files, and zero dual-harness test runners remain.
-- [ ] Zero duplicate asset directories (`schemas/`, `rules/`, `skills/`, `templates/mutation/`), zero `templates/roadmap.md`, and zero external review-tool hooks remain (W6.3).
+- [x] Single canonical asset tree wired in init; zero `templates/roadmap.md`, zero non-existent `$schema` URLs, and zero external review-tool hooks remain (W6.3).
 - [x] Multi-agent worktree execution rails codified: declarative command shapes mandated, atomic worktree slice commit hook bypass permitted, and subagent zero-polling invariant enforced in `WORKFLOW.md` and agent skill.
-- [ ] `npm test` and `npm run lint` pass with $\ge 95\%$ coverage and $\ge 95\%$ mutation kill score.
-- [ ] Scan and update Repo, Roadmap, Docs & Wiki.
+- [x] `npm test` and `npm run lint` pass with $\ge 95\%$ coverage and $\ge 95\%$ mutation kill score.
+- [x] Scan and update Repo, Roadmap, Docs & Wiki.
