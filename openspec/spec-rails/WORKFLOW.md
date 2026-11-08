@@ -8,11 +8,11 @@ Every change travels through exactly one lane. Pick it before touching anything.
 
 | Lane | Branch | Use When | Gates |
 | :--- | :--- | :--- | :--- |
-| **Feature** | `feat/<id>-<slug>` | New or changed behavior | 0 → 6 (§2, §4, §6) |
+| **Feature** | `feat/<id>-<slug>` | New or changed behavior | 0 → 4 (§2, §4, §6) |
 | **Bugfix** | `fix/<slug>` | Merged behavior contradicts spec, docs, or user intent | B1 → B3 (§3) |
 | **Chore** | `chore/<slug>` | Zero behavior change: docs, formatting, tooling/CI config, refactors that keep every existing test unchanged | None (Rule 5) |
 
-- `<id>` is the work item ID from `docs/ROADMAP.md`, lowercased with dots normalized to hyphens so `openspec new change` (`[a-z0-9-]+` only) accepts it (e.g., roadmap `W1.2` → `feat/w1-2-data-ingestion`, `openspec/changes/w1-2-data-ingestion/`).
+- `<id>` is the work item ID, lowercased with dots normalized to hyphens so `openspec new change` (`[a-z0-9-]+` only) accepts it (e.g., `W1.2` → `feat/w1-2-data-ingestion`, `openspec/changes/w1-2-data-ingestion/`).
 - If a chore turns out to change behavior, stop and restart in the Feature or Bugfix lane.
 
 ### Rule 1: Never Commit on `main`
@@ -90,40 +90,26 @@ docs/
 ```
 
 ### Gate Approval Evidence
-A gate passes only when the agent, after explicit human approval, ticks the artifact's **Review Gate** checkbox in the working tree. An unticked box means the gate has not passed, whatever was said in chat.
-
-### ROADMAP.md Updates (Main-Only via Chore Lane)
-`docs/ROADMAP.md` is never edited on feature branches; that avoids conflicts between parallel features and keeps status visible on `main`. Status changes land through a tiny `chore/roadmap-<id>` branch merged per Rule 2:
-
-| Moment | Status Change |
-| :--- | :--- |
-| Gate 0 start | `⬜` → `🔬 In Research` |
-| Gate 0 decision: Go | `🔬` → `🚀 In Progress` |
-| Gate 0 decision: No-Go | `🔬` → `❌ Dropped` + rationale; also commits `research.md` to `openspec/changes/archive/<id>-<slug>/` |
-| Gate 6 end (after feature merge) | `🚀` → `✅ Shipped` |
+A gate passes only when the agent, after explicit human approval, ticks the artifact's **Review Gate** checkbox in the working tree. An unticked box means the gate has not passed, whatever was said in chat. Agents MUST draft planning artifacts step-by-step, pausing after each gate for human review rather than generating all artifacts in one unreviewed pass.
 
 ```mermaid
 flowchart TD
-    RD["ROADMAP.md: pick item, mark 🔬 (chore)"] --> B0[Checkout feat/id-slug]
-    B0 --> G0[Gate 0: Research & Tradeoffs]
+    B0[Checkout feat/id-slug] --> G0[Gate 0: Research & Tradeoffs]
     G0 --> Dec0{Developer Decision}
 
-    Dec0 -- Go --> Go["Mark 🚀 (chore)"]
-    Go --> G1[Gate 1: Proposal]
-    Dec0 -- No-Go --> Drop["Archive research.md + mark ❌ (chore), delete feat branch"]
+    Dec0 -- Go --> G1[Gate 1: Proposal]
+    Dec0 -- No-Go --> Drop["Archive research.md, delete feat branch"]
 
-    G1 --> G2[Gate 2: Specs]
-    G2 --> G3[Gate 3: Architecture & Design]
-    G3 --> G4[Gate 4: Tasks & DAG]
-    G4 --> DAG{Analyze Task DAG}
+    G1 --> G2[Gate 2: Architecture, Specs & Test Strategy]
+    G2 --> G3[Gate 3: Tasks & DAG]
+    G3 --> DAG{Analyze Task DAG}
 
     DAG -- Independent --> S_A[Stream A: Worktree A]
     DAG -- Independent --> S_B[Stream B: Worktree B]
     DAG -- Dependent --> S_Seq[Sequential Slices]
 
-    subgraph Slice_Loop [Gate 5.x: Vertical Slice Loop]
-        A1[BDD Scenarios] --> GA[Gate 5.x Review]
-        GA --> A2[Unit Tests Red]
+    subgraph Slice_Loop [Vertical Slice Loop]
+        A1[Contract Scaffolding] --> A2[Unit Tests Red]
         A2 --> A3[Implement Green + Commit]
         A3 --> A4[Coverage >= 95%]
         A4 --> A5["Mutation >= 95% Kill"]
@@ -134,8 +120,7 @@ flowchart TD
     S_Seq --> Slice_Loop
 
     Slice_Loop --> MS["Rebase, re-verify, merge streams --ff-only"]
-    MS --> G6[Gate 6: Spec Sync, Archive, Rebase on main, Merge]
-    G6 --> Ship["Mark ✅ (chore)"]
+    MS --> G4[Gate 4: Spec Sync, Archive, Rebase on main, Merge]
 ```
 
 ### Gate 0: Research & Tradeoffs
@@ -147,36 +132,30 @@ flowchart TD
   - **Tradeoff Matrix**: Complexity, dependencies, performance, maintenance, blast radius.
   - **Breaking Changes & Deprecations**: Every `REQ-*` / `NFR-*` in `openspec/specs/` that will be modified, superseded, or deprecated.
   - **Recommendation**: 1–2 sentences, YAGNI-first.
-- **Gate**: Developer decides **Go** (option chosen → Gate 1) or **No-Go** (archive research to `main` via chore, mark `❌`, delete the feature branch).
+- **Gate**: Developer decides **Go** (option chosen → Gate 1) or **No-Go** (archive research to `main`, delete the feature branch).
 
 ### Gate 1: Proposal
 - **Artifact**: `openspec/changes/<id>-<slug>/proposal.md`
 - **Mandatory Sections**: Intent, Problem Statement, Scope (In-Scope / Out-of-Scope YAGNI), Success Metrics, Assumptions (`ASM-GEN-*`), built on the option chosen at Gate 0.
-- **Gate**: Human approval before drafting specs.
+- **Gate**: Human approval before drafting specs and design.
 
-### Gate 2: Specifications
-- **Artifacts**: `openspec/changes/<id>-<slug>/specs/<capability>/spec.md`
+### Gate 2: Architecture, Specifications & Test Strategy
+- **Artifacts**: `openspec/changes/<id>-<slug>/specs/<capability>/spec.md` (pure OpenSpec delta specs) and `openspec/changes/<id>-<slug>/design.md`
 - **Delta Specs**: Feature specs are OpenSpec delta specs (`## ADDED|MODIFIED|REMOVED Requirements`), never full copies.
   - **Existing capability**: MODIFIED/REMOVED deltas repeat the existing `### Requirement: REQ-... <Name>` header verbatim so OpenSpec header matching succeeds. For deprecated requirements, keep the exact header and place `**[DEPRECATED by <change>]**` at the start of the requirement body (or use `## RENAMED Requirements` when changing a header); keys are never reused.
   - **New capability**: ADDED requirements, starting with `## Purpose`.
-  - Headers are `### Requirement: REQ-<DOMAIN>-<N> <name>`; bodies contain `MUST`/`SHALL`; every requirement has at least one `#### Scenario:`.
-  - `openspec archive` merges the deltas into `openspec/specs/` at Gate 6.
-- **Mandatory Sections**: Functional Requirements (`REQ-*`), Non-Functional Requirements & Budgets (`NFR-*`), Assumptions (`ASM-*`), Edge Cases & Errors, Behavioral Scenarios (`Given / When / Then`).
-- **Traceability**: Every requirement uniquely keyed (`REQ-<DOMAIN>-<N>`, `NFR-<DOMAIN>-<N>`).
-- **Gate**: Human approval before technical design.
-
-### Gate 3: Architecture & Design
-- **Artifact**: `openspec/changes/<id>-<slug>/design.md`
-- **Mandatory Sections**: Overview & Invariants; Domain Models, State & Interface Contracts; Architecture Diagrams & Data Flow; Boundary Rules (Pure Core vs I/O Shell); Concurrency, Latency & Resource Budgets (matching `NFR-*`); Testing Strategy.
+  - Headers are `### Requirement: REQ-<DOMAIN>-<N> <name>`; bodies contain `MUST`/`SHALL`; every requirement has at least one `#### Scenario:` (`GIVEN / WHEN / THEN`).
+  - `openspec archive` merges the deltas into `openspec/specs/` at Gate 4.
+- **Design Sections**: Overview & Invariants; Domain Models, State & Interface Contracts; Architecture Diagrams & Data Flow; Boundary Rules (Pure Core vs I/O Shell); Concurrency, Latency & Resource Budgets (matching `NFR-*`); Testing Strategy & Concrete Test Cases.
 - **Contract Scaffolding Rail**: Skeletons, domain interfaces, and empty function signatures are drafted here and committed prior to slice code generation.
 - **Domain-Specific Baselines**:
   - **UI / Interactive**: Frame deadlines (e.g., $< 16\text{ms}$), input latency budgets, background I/O offloading.
   - **ML / Data / Heuristics**: Deterministic Tier 0 baseline before complex models or external APIs.
-- **Gate**: Human approval before task breakdown.
+- **Gate**: Human approval on `design.md` before task breakdown.
 
-### Gate 4: Tasks & DAG
+### Gate 3: Tasks & DAG
 - **Artifact**: `openspec/changes/<id>-<slug>/tasks.md`
-- **Mandatory Sections**: Dependency DAG; Streams with worktrees (`.worktrees/<id>-<stream>`); test-first order per slice (Contract Scaffolding → BDD → Gate 5.x → Red → Green → Coverage → Mutation); Integration & Rebase Plan.
+- **Mandatory Sections**: Dependency DAG; Streams with worktrees (`.worktrees/<id>-<stream>`); test-first order per slice (Contract Scaffolding → Red → Green → Coverage → Mutation); Integration & Rebase Plan.
 - **Gate**: Human approval before spawning worktrees or writing tests.
 
 ---
@@ -220,23 +199,22 @@ flowchart TD
 
 ---
 
-## 4. Gate 5.x: Vertical-Slice Apply Loop
+## 4. Vertical-Slice Apply Loop
 
-`x` = slice number from `tasks.md`. Each slice runs three strict steps:
+Each vertical slice from `tasks.md` runs in strict order after Gate 3 is approved:
 
-### Step 5.x-A: BDD Scenarios (100% Behavior Coverage)
-- Write Gherkin scenarios (`tests/bdd/features/*.feature` or stack equivalent) covering all `REQ-*`, `NFR-*`, and boundaries.
-- **Gate 5.x**: Present in ultra-compact bullets (title, key assertions, boundaries). Wait for explicit approval before writing tests.
+### Step 1: Contract Scaffolding
+- Commit domain types, interface contracts, schemas, and empty function signatures before generating implementation logic.
 
-### Step 5.x-B: Red → Green → Refactor ($\ge 95\%$ Coverage)
-- **Red**: Write failing unit tests; verify they fail for the expected reason. Do not commit yet (Rule 4).
+### Step 2: Red → Green → Refactor ($\ge 95\%$ Coverage)
+- **Red**: Write failing unit tests covering all `REQ-*`, `NFR-*`, and scenarios; verify they fail for the expected reason. Do not commit yet (Rule 4).
 - **Green**: Minimal production code to pass (strict YAGNI). Commit tests + code together.
 - **Refactor**: Under green protection.
 - **Coverage**: Line and branch $\ge 95\%$ on the target module.
 - **Performance**: Verify `NFR-*` budgets with deterministic benchmarks/assertions.
 
-### Step 5.x-C: Mutation Testing (>= 95% Kill Score)
-- **Scoped run**: Mutate only the slice's modules. Full-project mutation runs at Gate 6.
+### Step 3: Mutation Testing (>= 95% Kill Score)
+- **Scoped run**: Mutate only the slice's modules. Full-project mutation runs at Gate 4.
 - **Surviving mutants below threshold are blocking defects**. Resolve by:
   1. **Add a targeted assertion** that kills it.
   2. **Delete dead code**: unreachable defensive branches or assertions get removed (YAGNI).
@@ -286,17 +264,15 @@ All steps on the feature branch unless stated otherwise:
    git merge --ff-only feat/<id>-<slug>
    git branch -d feat/<id>-<slug>
    ```
-10. Mark `✅ Shipped` in `docs/ROADMAP.md` via `chore/roadmap-<id>` (§2).
 
 ## 7. OpenSpec Layout & Enforcement
 
 Spec-Rails is an addon on an OpenSpec project (`npx spec-rails init`, requires OpenSpec ≥ 1.15.0 and Node.js ≥ 18). OpenSpec owns the artifact graph, specs and archive; Spec-Rails supplies the `spec-rails` schema (`research → proposal → specs → design → tasks`), gates, lanes and testing rails.
 
-- **Layout**: changes live in `openspec/changes/<id>-<slug>/`, capabilities in `openspec/specs/<capability>/spec.md`, finished changes in `openspec/changes/archive/`. `docs/ROADMAP.md` and `docs/bug-reports/` live under `docs/`; this protocol ships as `openspec/spec-rails/WORKFLOW.md`.
-- **Gates**: artifact templates end with an unticked `## Review Gate` box. A human ticks it before implementation tasks or code changes are committed. `spec-rails check` (pre-commit and CI) fails commits on `main`/`master` and enforces gate sign-off before code changes.
+- **Layout**: changes live in `openspec/changes/<id>-<slug>/`, capabilities in `openspec/specs/<capability>/spec.md`, finished changes in `openspec/changes/archive/`. Bug reports live in `docs/bug-reports/`; this protocol ships as `openspec/spec-rails/WORKFLOW.md`.
+- **Gates**: artifact templates end with an unticked `## Review Gate` box. A human ticks it before subsequent planning artifacts or implementation tasks are created. `spec-rails check` (pre-commit and CI) fails commits on `main`/`master` and enforces gate sign-off before code changes.
 - **Streams**: after rebasing a stream onto the feature branch, run `openspec validate <change>` in addition to the test suite.
 - **Requirement IDs**: `REQ-*`/`NFR-*` live in the change's delta specs and are synced into `openspec/specs/` by `openspec archive`; Gate 4 adds only the rails (tests, mutation, `openspec validate`) around that command.
 - **Parallel streams, delta specs, and `tasks.md`**: shared capability delta specs are locked at Gate 2 on the feature branch before spawning parallel slice worktrees (Rule 3.1); if streams must edit a shared delta spec, apply Rule 3.7 (strictly additive) with distinct `REQ-*` IDs. Update `tasks.md` slice checkboxes on the parent feature branch when integrating streams (or confine edits to each stream's own slice section) to avoid rebase collisions.
 - **Bugfix lane**: B1–B3 stay outside `openspec/changes/`; the report in `docs/bug-reports/` is the artifact. A fix that alters a living requirement edits `openspec/specs/` directly in the same branch (B3), with no delta change.
-- **Roadmap vs OpenSpec**: `docs/ROADMAP.md` tracks delivery status of initiatives (one row = one or more changes); OpenSpec tracks each change's artifacts. The row's Spec / Feature Dir points at the change or its archive.
 - **Update survival**: Spec-Rails rules live in `openspec/spec-rails/`, outside files regenerated by `openspec update`.

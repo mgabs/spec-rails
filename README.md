@@ -60,7 +60,7 @@ spec-rails/
 ├── src/                      # TypeScript CLI implementation (init, check, verify, audit)
 ├── dist/cli.js               # Bundled CLI binary (Node >= 18)
 ├── schemas/spec-rails/       # OpenSpec schema + artifact templates
-├── templates/                # spec-rails-ci.yml, bug-report.md, roadmap.md, presets, pre-commit config
+├── templates/                # spec-rails-ci.yml, bug-report.md, presets, pre-commit config
 ├── rules/                    # AGENTS.md (always-on guardrails), WORKFLOW.md (canonical protocol)
 ├── skills/spec-rails/SKILL.md# Agent skill runbook
 ├── openspec/                 # This repo's own OpenSpec layout (specs, changes, installed schema)

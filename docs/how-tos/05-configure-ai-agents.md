@@ -28,8 +28,8 @@ cp openspec/spec-rails/AGENTS.md .agents/rules/spec-rails.md
 Commit `.agents/` and `openspec/spec-rails/` so the entire team's agents follow Spec-Rails rules.
 
 ### OpenSpec CLI & `/opsx-*` Command Discipline
-- Create changes with `openspec new change <id>-<slug>` (normalizing roadmap dots to hyphens: `W1.2` → `w1-2-<slug>`).
-- For planning, run `openspec instructions <artifact> --change <id>-<slug>` or draft with `/opsx-propose`. Human Review Gates must be approved before implementation code is committed.
+- Create changes with `openspec new change <id>-<slug>` (normalizing work item dots to hyphens: `W1.2` → `w1-2-<slug>`).
+- For planning, run `openspec instructions <artifact> --change <id>-<slug>` step-by-step, pausing after each gate for explicit human review and checkbox approval before drafting the next artifact.
 - Run `/opsx-apply` and `/opsx-archive` (`openspec archive <id>-<slug> --yes`) only after Gate 3 is ticked by a human. Agents never self-tick human Review Gate boxes.
 
 ---

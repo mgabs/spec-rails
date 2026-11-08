@@ -39,7 +39,7 @@ your-project/
     └── spec-rails/                     # WORKFLOW.md, AGENTS.md, bug-report.md
 ```
 
-Optional: copy `templates/roadmap.md` from the spec-rails repo to `docs/ROADMAP.md` if you track delivery status; bug reports go in `docs/bug-reports/`. These are project data, so they live in `docs/`, not under `openspec/` (see the Wiki, §1.6). Create changes afterwards with `openspec new change <id>-<slug>`, normalizing roadmap dots to hyphens (`W1.2` → `w1-2-<slug>`; see [How-To 2](02-drive-feature-lifecycle.md)).
+Bug reports go in `docs/bug-reports/`. Create changes afterwards with `openspec new change <id>-<slug>`, normalizing work item dots to hyphens (`W1.2` → `w1-2-<slug>`; see [How-To 2](02-drive-feature-lifecycle.md)).
 
 ---
 

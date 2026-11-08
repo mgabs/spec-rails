@@ -19,7 +19,7 @@ openspec new change w1-1-user-authentication
 openspec status --change w1-1-user-authentication
 ```
 
-You can draft planning artifacts one by one (`openspec instructions <artifact> --change w1-1-user-authentication`) or draft all planning artifacts in one pass using `/opsx-propose`. Human Review Gates must be approved and ticked before implementation tasks in `tasks.md` are executed or production code is modified. Run `/opsx-apply` and `/opsx-archive` only after Gate 3 is ticked by a human.
+Draft planning artifacts one by one (`openspec instructions <artifact> --change w1-1-user-authentication`), pausing after each gate for explicit human review and checkbox approval before drafting the next artifact (never generate all planning artifacts in one unreviewed pass). Run `/opsx-apply` and `/opsx-archive` only after Gate 3 is ticked by a human.
 
 ---
 
@@ -106,4 +106,3 @@ For each vertical slice:
    git merge --ff-only feat/w1-1-user-authentication
    git branch -d feat/w1-1-user-authentication
    ```
-5. Mark `✅ Shipped` in `docs/ROADMAP.md` through a `chore/roadmap-w1-1` branch.
