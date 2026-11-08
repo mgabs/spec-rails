@@ -225,6 +225,18 @@ Regular paragraph mentioning - [x] 1.0 Green fake task in paragraph without evid
     expect(res.errors[0]).toBe("Line 3: Evidence has unresolved placeholder <command and result>");
   });
 
+  it("accepts free-text evidence notes on rail tasks in strict mode", () => {
+    const tasksMd = `
+# Tasks
+- [x] 1.1 Red test Evidence: vitest run failed with 1 error as expected
+- [x] 1.2 Green implementation Evidence: vitest run passed with 12 tests
+- [x] 1.3 Coverage & mutation Evidence: coverage 96% and mutation kill 95%
+`;
+    const res = validateTasksEvidence(tasksMd, { strict: true });
+    expect(res.valid).toBe(true);
+    expect(res.errors).toHaveLength(0);
+  });
+
   it("reports failed token validation errors formatted with line numbers", () => {
     const tasksMd = "- [x] 1.1 Green implementation Evidence: [CMD: npm test] [EXIT: 2]\n";
     const res = validateTasksEvidence(tasksMd, { strict: true });

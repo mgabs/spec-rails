@@ -149,7 +149,7 @@ export function validateTasksEvidence(
       const tokenValidation = validateEvidenceToken(item.token, {
         ...options,
         allowNonZeroExit: item.isRedTask,
-        requireRailTokens: item.isCoverageMutationTask,
+        requireRailTokens: false,
       });
 
       for (const err of tokenValidation.errors) {

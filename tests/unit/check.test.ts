@@ -178,21 +178,20 @@ describe("Baseline loading (check.ts - REQ-OSA-47)", () => {
       fs.writeFileSync(baselinePath, "old-change\n");
 
       const mockCommands = () => {
-        vi.mocked(execSync)
-          .mockReturnValueOnce(Buffer.from("feat/test\n"))
-          .mockReturnValueOnce(Buffer.from(JSON.stringify({ changes: ["old-change", "new-change"] })))
-          .mockReturnValueOnce(Buffer.from(JSON.stringify({
-            artifacts: [
-              { id: "research", status: "done" },
-              { id: "proposal", requires: ["research"], status: "done" },
-            ],
-          })))
-          .mockReturnValueOnce(Buffer.from(JSON.stringify({
-            artifacts: [
-              { id: "research", status: "done" },
-              { id: "proposal", requires: ["research"], status: "done" },
-            ],
-          })));
+        vi.mocked(execSync).mockImplementation((cmd: string) => {
+          if (cmd.includes("git branch")) return Buffer.from("feat/test\n");
+          if (cmd.includes("openspec list")) return Buffer.from(JSON.stringify({ changes: ["old-change", "new-change"] }));
+          if (cmd.includes("openspec status")) {
+            return Buffer.from(JSON.stringify({
+              artifacts: [
+                { id: "research", status: "done" },
+                { id: "proposal", requires: ["research"], status: "done" },
+              ],
+            }));
+          }
+          if (cmd.includes("openspec validate")) return Buffer.from("");
+          return Buffer.from("");
+        });
       };
 
       mockCommands();
@@ -205,6 +204,120 @@ describe("Baseline loading (check.ts - REQ-OSA-47)", () => {
       mockCommands();
       expect(runCheck({ cwd: dir, writeBaseline: true }).success).toBe(true);
       expect(fs.readFileSync(baselinePath, "utf-8")).toContain("new-change\nold-change\n");
+    } finally {
+      vi.mocked(execSync).mockReset();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("Artifact hygiene and requirement key checks (check.ts - REQ-OSA-49)", () => {
+  it("detects missing trailing newline and trailing whitespace", async () => {
+    const { checkArtifactHygiene } = await import("../../src/commands/check.js");
+    const noEof = "# Title";
+    const violations1 = checkArtifactHygiene("test.md", noEof);
+    expect(violations1).toContainEqual({
+      file: "test.md",
+      message: "Missing trailing newline at EOF",
+    });
+
+    const trailingWs = "# Title  \nSecond line\t \nClean line\n";
+    const violations2 = checkArtifactHygiene("test.md", trailingWs);
+    expect(violations2).toContainEqual({
+      file: "test.md",
+      line: 1,
+      message: "Trailing whitespace on line 1",
+    });
+    expect(violations2).toContainEqual({
+      file: "test.md",
+      line: 2,
+      message: "Trailing whitespace on line 2",
+    });
+
+    const clean = "# Clean\nValid line\n";
+    expect(checkArtifactHygiene("clean.md", clean)).toEqual([]);
+  });
+
+  it("validates REQ-* and NFR-* keys in delta requirements", async () => {
+    const { checkRequirementKeys } = await import("../../src/commands/check.js");
+    const invalidSpec = `
+# Spec Delta
+## ADDED Requirements
+### Requirement: Unkeyed title
+The system MUST do something.
+### Requirement: REQ-VALID-1 Proper Keyed
+The system MUST do something.
+### Invalid Header Format
+`;
+    const errors = checkRequirementKeys("specs/test/spec.md", invalidSpec);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]).toContain("Invalid requirement header");
+    expect(errors[0]).toContain("Unkeyed title");
+
+    const validSpec = `
+# Spec Delta
+## ADDED Requirements
+### Requirement: REQ-FOO-1 First
+### Requirement: NFR-BAR-2 Second
+## MODIFIED Requirements
+### Requirement: REQ-FOO-3 Third
+`;
+    expect(checkRequirementKeys("specs/test/spec.md", validSpec)).toEqual([]);
+  });
+
+  it("flags unticked Gate 3 when code changes exist under audit", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gate3-audit-test-"));
+    try {
+      const changeDir = path.join(dir, "openspec/changes", "feat-test");
+      fs.mkdirSync(changeDir, { recursive: true });
+      fs.writeFileSync(path.join(changeDir, "tasks.md"), "## Review Gate\n- [ ] Pending\n");
+
+      vi.mocked(execSync).mockImplementation((cmd: string) => {
+        if (cmd.includes("git branch")) return Buffer.from("feat/my-feature\n");
+        if (cmd.includes("diff")) return Buffer.from("src/index.ts\n");
+        if (cmd.includes("openspec list")) return Buffer.from(JSON.stringify({ changes: ["feat-test"] }));
+        if (cmd.includes("openspec status")) {
+          return Buffer.from(JSON.stringify({
+            changeRoot: path.join(dir, "openspec/changes/feat-test"),
+            artifacts: [
+              { id: "research", status: "done" },
+              { id: "proposal", status: "done" },
+              { id: "specs", status: "done" },
+              { id: "design", status: "done" },
+              { id: "tasks", status: "done" },
+            ],
+          }));
+        }
+        if (cmd.includes("openspec validate")) return Buffer.from("");
+        return Buffer.from("");
+      });
+
+      const result = runCheck({ cwd: dir, audit: true });
+      expect(result.success).toBe(false);
+      expect(result.violations.some((v) => v.includes("Gate 3 (tasks) unticked but code changes exist"))).toBe(true);
+    } finally {
+      vi.mocked(execSync).mockReset();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("runs openspec validate --strict and flags validation errors", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "strict-validate-test-"));
+    try {
+      const changeDir = path.join(dir, "openspec/changes", "bad-change");
+      fs.mkdirSync(changeDir, { recursive: true });
+
+      vi.mocked(execSync).mockImplementation((cmd: string) => {
+        if (cmd.includes("git branch")) return Buffer.from("feat/my-feature\n");
+        if (cmd.includes("openspec list")) return Buffer.from(JSON.stringify({ changes: ["bad-change"] }));
+        if (cmd.includes("openspec status")) return Buffer.from(JSON.stringify({ artifacts: [] }));
+        if (cmd.includes("openspec validate")) throw new Error("Validation failed: missing required section");
+        return Buffer.from("");
+      });
+
+      const result = runCheck({ cwd: dir });
+      expect(result.success).toBe(false);
+      expect(result.violations.some((v) => v.includes("openspec validate bad-change --strict' failed"))).toBe(true);
     } finally {
       vi.mocked(execSync).mockReset();
       fs.rmSync(dir, { recursive: true, force: true });

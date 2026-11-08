@@ -101,6 +101,52 @@ export function parseGateState(content: string): GateStateResult {
   };
 }
 
+export interface HygieneViolation {
+  file: string;
+  line?: number;
+  message: string;
+}
+
+export function checkArtifactHygiene(filePath: string, content: string): HygieneViolation[] {
+  const violations: HygieneViolation[] = [];
+  if (content.length > 0 && !content.endsWith("\n")) {
+    violations.push({ file: filePath, message: "Missing trailing newline at EOF" });
+  }
+  const lines = content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    if (/[ \t]+$/.test(lines[i])) {
+      violations.push({ file: filePath, line: i + 1, message: `Trailing whitespace on line ${i + 1}` });
+    }
+  }
+  return violations;
+}
+
+export function checkRequirementKeys(filePath: string, content: string): string[] {
+  const errors: string[] = [];
+  const lines = content.split(/\r?\n/);
+  let inSection = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^##\s+(ADDED|MODIFIED)\s+Requirements/i.test(line)) {
+      inSection = true;
+      continue;
+    } else if (/^##\s+/.test(line)) {
+      inSection = false;
+      continue;
+    }
+
+    if (inSection && /^###\s+/.test(line)) {
+      if (!/^###\s+Requirement:\s+(REQ|NFR)-[A-Z0-9]+-[0-9]+\s+.+$/.test(line)) {
+        errors.push(
+          `Invalid requirement header in ${filePath}:${i + 1}: '${line}'. Must match '### Requirement: (REQ|NFR)-<DOMAIN>-<N> <Name>'`
+        );
+      }
+    }
+  }
+  return errors;
+}
+
 export function getGateNumber(id: string): number | string | null {
   switch (id) {
     case "research":
@@ -353,6 +399,52 @@ export function runCheck(options: CheckOptions = {}): CheckResult {
     }
 
     const changeViolations = findGateViolations(changeName, artifacts, states, hasEarlyTasks);
+
+    // Validate change strictly using OpenSpec CLI
+    try {
+      execSync(`openspec validate ${changeName} --strict ${storeFlag}`.trim(), {
+        cwd,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+    } catch (err: any) {
+      changeViolations.push(
+        `spec-rails-check: 'openspec validate ${changeName} --strict' failed: ${err.message}`
+      );
+    }
+
+    // Assert Gate 3 is ticked if code modifications exist under audit
+    if (auditResult && auditResult.codeChanges.length > 0 && !auditResult.isChoreExempt) {
+      if (states["tasks"] !== "ticked") {
+        changeViolations.push(
+          `${changeName}: Gate 3 (tasks) unticked but code changes exist`
+        );
+      }
+    }
+
+    // Artifact hygiene & requirement key validation
+    if (fs.existsSync(changeRoot)) {
+      const mdFiles = fg.sync(["**/*.md"], { cwd: changeRoot, absolute: true });
+      for (const mdFile of mdFiles) {
+        const content = fs.readFileSync(mdFile, "utf-8");
+        const relPath = path.relative(cwd, mdFile);
+        const hygieneErrors = checkArtifactHygiene(relPath, content);
+        for (const h of hygieneErrors) {
+          changeViolations.push(
+            h.line
+              ? `${changeName}: ${h.file}:${h.line} ${h.message}`
+              : `${changeName}: ${h.file} ${h.message}`
+          );
+        }
+
+        if (mdFile.includes(`${path.sep}specs${path.sep}`) || mdFile.includes("/specs/")) {
+          const keyErrors = checkRequirementKeys(relPath, content);
+          for (const k of keyErrors) {
+            changeViolations.push(`${changeName}: ${k}`);
+          }
+        }
+      }
+    }
+
     if (changeViolations.length > 0) offenders.add(changeName);
     if (!baseline.has(changeName)) violations.push(...changeViolations);
   }
