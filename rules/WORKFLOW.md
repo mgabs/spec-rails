@@ -40,28 +40,36 @@ Never merge a branch whose rails were verified only against a stale base.
      ```bash
      git worktree add .worktrees/<id>-<stream> -b feat/<id>/<stream>
      ```
-  4. **Path Resolution**: Tests and modules MUST resolve paths relative to the project root or Git boundary, never hardcoded parent traversal. Reuse the project's shared build cache and dependencies inside worktrees.
-  5. **Subagent Dispatch & Gate Escalation**:
+  4. **Declarative Command Shapes**:
+     - When executing commands targeting a worktree, **always use declarative target flags**:
+       - `git -C .worktrees/<id>-<stream> <cmd>`
+       - `npm --prefix .worktrees/<id>-<stream> <cmd>`
+       - `cargo --manifest-path .worktrees/<id>-<stream>/Cargo.toml <cmd>`
+     - **NEVER** run directory-changing compound commands like `cd .worktrees/... && <cmd>`. Chained `cd` commands defeat terminal prefix-matching auto-approvals, break directory-sensitive sandbox boundary monitors, and leak working directory state across turns.
+  5. **Path Resolution**: Tests and modules MUST resolve paths relative to the project root or Git boundary, never hardcoded parent traversal. Reuse the project's shared build cache and dependencies inside worktrees.
+  6. **Subagent Dispatch & Gate Escalation**:
      - The orchestrating agent dispatches one subagent per stream, scoped to its worktree.
-     - **Hard Prohibition**: Subagents **NEVER** self-approve any human gate (0–6, 5.x, B1–B3) or skip ahead into code.
+     - **Hard Prohibition**: Subagents **NEVER** self-approve any human gate (0–4, B1–B3) or skip ahead into code.
      - **Escalation**: On completing a gate artifact, the subagent halts and reports to the orchestrating agent, which presents the artifact to the human. Clearance flows back only after explicit human approval.
-  6. **Stream Merge Sequence**: First finished stream merges into the feature branch `--ff-only`. Every later stream follows Rule 2 (rebase onto the updated feature branch, re-run unit + slice mutation suite), then merges `--ff-only`. Clean up the worktree completely after each merge:
+  7. **Stream Merge Sequence**: First finished stream merges into the feature branch `--ff-only`. Every later stream follows Rule 2 (rebase onto the updated feature branch, re-run unit + slice mutation suite), then merges `--ff-only`. Clean up the worktree completely after each merge:
      ```bash
      git worktree remove .worktrees/<id>-<stream>
      git branch -d feat/<id>/<stream>
      git worktree prune
      ```
-  7. **Shared File Collision Protocol**: When streams touch shared dispatch, routing, or harness files (key matchers, enum routers, status bars, BDD runners), resolve conflicts **strictly additively**: keep both streams' registrations, handlers, and test cases. NEVER drop another stream's registrations or assertions.
-  8. **Optional Candidate Bake-Off Mode**: For high-uncertainty or algorithmic slices, teams MAY spawn competing candidate worktrees (`.worktrees/<id>-cand-a`, `.worktrees/<id>-cand-b`) to run different prompts/models. Candidates are evaluated on passing tests, mutation kill score (>= 95%), and smallest diff complexity. The winning branch merges `--ff-only` into the feature branch, and candidate worktrees are pruned. Bake-offs are strictly optional and not required for standard linear workflows.
+  8. **Shared File Collision Protocol**: When streams touch shared dispatch, routing, or harness files (key matchers, enum routers, status bars, BDD runners), resolve conflicts **strictly additively**: keep both streams' registrations, handlers, and test cases. NEVER drop another stream's registrations or assertions.
+  9. **Optional Candidate Bake-Off Mode**: For high-uncertainty or algorithmic slices, teams MAY spawn competing candidate worktrees (`.worktrees/<id>-cand-a`, `.worktrees/<id>-cand-b`) to run different prompts/models. Candidates are evaluated on passing tests, mutation kill score (>= 95%), and smallest diff complexity. The winning branch merges `--ff-only` into the feature branch, and candidate worktrees are pruned. Bake-offs are strictly optional and not required for standard linear workflows.
 
-### Rule 4: Pre-Commit Hooks & Red-Commit Policy
+### Rule 4: Pre-Commit Hooks & Tiered Commit Policy
 - **Install hooks**: Every project MUST configure `.pre-commit-config.yaml` and run `pre-commit install`.
-- **Before every commit**:
+- **Before integration commits**:
   1. Inspect `git status` and `git diff`.
   2. Run all linters and formatters (`pre-commit run --all-files` or equivalent).
   3. Run the full unit and integration suite.
-- **Zero bypass**: `git commit --no-verify` / `-n` is forbidden. Fix the failure instead.
-- **Red is never committed alone**: Red tests are written and verified failing locally (output shown to the human where a gate requires it), then committed together with the Green implementation that makes them pass. The tip of every branch is always green.
+- **Tiered Commit Policy (Worktrees vs. Integration Branches)**:
+  - **Zero bypass on Integration**: `git commit --no-verify` / `-n` is strictly forbidden on `main`, on feature branch integration commits, and during stream branch merges. Every merge into a base branch must pass all pre-commit hooks and testing rails.
+  - **Intermediate Worktree Commits**: Inside isolated stream worktrees (`.worktrees/<id>-<stream>`), developers and agents MAY pass `--no-verify` on atomic intermediate commits (e.g. committing a failing Red test step or partial slice WIP) to enable fine-grained commit history without getting blocked by whole-project pre-commit suites mid-slice. Full pre-commit hooks MUST pass before the stream is rebased and merged into the base branch.
+- **Red is never merged alone**: While intermediate Red commits are permitted in isolated stream branches, Red tests must be accompanied by their Green implementation before merging into the base feature branch or `main`. The tip of every integrated branch is always green.
 
 ### Rule 5: Chore Lane
 1. `git checkout -b chore/<slug>` from the target branch.

@@ -99,4 +99,28 @@ describe("Repository hygiene and documentation linting (REQ-OSA-23, REQ-OSA-24, 
       }
     }
   });
+
+  it("codifies worktree intermediate commit rails (REQ-OSA-51)", () => {
+    const workflowFile = path.join(root, "rules/WORKFLOW.md");
+    expect(fs.existsSync(workflowFile)).toBe(true);
+    const content = fs.readFileSync(workflowFile, "utf-8");
+    expect(content).toMatch(/--no-verify/);
+    expect(content).toMatch(/intermediate/i);
+  });
+
+  it("mandates declarative command shapes over cd chains (REQ-OSA-52)", () => {
+    const workflowFile = path.join(root, "rules/WORKFLOW.md");
+    expect(fs.existsSync(workflowFile)).toBe(true);
+    const content = fs.readFileSync(workflowFile, "utf-8");
+    expect(content).toMatch(/git -C/);
+    expect(content).toMatch(/--prefix/);
+  });
+
+  it("enforces subagent zero-polling invariant (REQ-OSA-53)", () => {
+    const skillFile = path.join(root, "skills/spec-rails/SKILL.md");
+    expect(fs.existsSync(skillFile)).toBe(true);
+    const content = fs.readFileSync(skillFile, "utf-8");
+    expect(content).toMatch(/zero-polling|polling/i);
+    expect(content).toMatch(/reactive wakeup/i);
+  });
 });

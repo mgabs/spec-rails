@@ -38,4 +38,18 @@ Follow `openspec/spec-rails/WORKFLOW.md`. Normalize work item IDs to lowercase h
    - **Mutation Testing**: Run mutation testing $\rightarrow$ achieve $\ge 95\%$ kill score on core logic (kill, delete dead code, or restructure equivalent mutants).
 6. **Gate 4 (Verify, Archive & Merge)**: Ensure all stream worktrees are merged, removed, and pruned (`git worktree prune`). Reviewer verifies line-by-line understanding of all code (delete ununderstood code). Tick completed slice items and the final integration task in `tasks.md` (with `Evidence:` on Red/Green/Coverage/Mutation tasks), rebase onto `main`, run `npx spec-rails verify`, run `openspec validate <change>`, then run `openspec archive <change> --yes` (or `/opsx-archive`; syncs deltas into `openspec/specs/` and archives the change), and merge `--ff-only`.
 
+## 3. Multi-Agent Worktree Rails & Subagent Hygiene
+
+- **Declarative Command Shapes**:
+  - Always use declarative target flags instead of compound `cd <dir> && <cmd>` chains:
+    - `git -C .worktrees/<id>-<stream> <cmd>`
+    - `npm --prefix .worktrees/<id>-<stream> <cmd>`
+    - `cargo --manifest-path .worktrees/<id>-<stream>/Cargo.toml <cmd>`
+- **Tiered Commit Policy**:
+  - Inside isolated stream worktrees (`.worktrees/<id>-<stream>`), intermediate commits MAY use `--no-verify` to commit failing Red tests or atomic slice WIP.
+  - Zero-bypass pre-commit hooks and testing rails are strictly enforced before stream merges, feature branch merges, and PR integration.
+- **Subagent Zero-Polling Invariant**:
+  - Never run status checks, log polls, or transcript checks in a loop while waiting for background tasks or subagents.
+  - Dispatch tasks with fire-and-halt: end your turn immediately and wait for reactive wakeup notifications to strictly preserve conversation context economy below 200,000 tokens.
+
 Never tick a Gate 0–3 Review Gate box yourself. Run `openspec validate` after stream rebases, and run `npx spec-rails check` before committing. See `openspec/spec-rails/WORKFLOW.md` §7.
