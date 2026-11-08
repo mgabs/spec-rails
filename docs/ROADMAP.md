@@ -8,7 +8,7 @@ Baseline: `main` · Status: Active
 
 ```mermaid
 flowchart LR
-    W1[Wave 1: Protocol & Rails] --> W2[Wave 2: CI & Review Harness Pairing] --> W3[Wave 3: OpenSpec Addon] --> W4[Wave 4: OpenSpec Addon Hardening] --> W5[Wave 5: TS CLI & Adopter Hardening]
+    W1[Wave 1: Protocol & Rails] --> W2[Wave 2: CI & Review Harness Pairing] --> W3[Wave 3: OpenSpec Addon] --> W4[Wave 4: OpenSpec Addon Hardening] --> W5[Wave 5: TS CLI & Adopter Hardening] --> W6[Wave 6: Pure OpenSpec Addon & Simplification]
 ```
 
 ---
@@ -86,6 +86,17 @@ Driven by the first third-party adoption (a uv/pytest/mutmut repo): empty rails 
 
 Dropped, do not re-propose: `spec-rails scaffold-check` (AST inspection of contract scaffolding; the Red rail already proves unfulfilled contracts) and `spec-rails lint` (duplicates `openspec validate` and the schema constraints). Neither shipped.
 
+### Wave 6: Pure OpenSpec Addon & Simplification
+
+Refocus Spec-Rails as a thin, pure Spec Quality Gate and Testing-Railed workflow on top of `@fission-ai/openspec`: eliminate file-by-file planning gate friction with `/opsx-propose`, validate real spec quality via `openspec validate --strict`, drop `.feature` files and fake markdown evidence tokens, collapse duplicate asset trees, remove external tool coupling (`lgtm`), and unify all repo tests under Vitest.
+
+| ID | Item | Effort | Depends on | Status | Spec / Feature Dir | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **W6.1** | Pure OpenSpec Schema & Gates 0–4 | S | W5.5 | ⬜ | `openspec/schemas/spec-rails/` | Remove `## Review Gate` from `spec.md` (keep delta specs 100% pure); fold test cases/strategy into `design.md` (**Gate 2**); renumber `tasks.md` to **Gate 3** and Verify & Archive to **Gate 4**; drop `.feature` tasks and Gate 5.x human pauses from `schema.yaml` and `tasks.md` (`Contract scaffolding → Red → Green → Coverage & Mutation`). |
+| **W6.2** | Spec Quality Gate & Free-Text Evidence | M | W6.1 | ⬜ | `src/commands/check.ts`, `src/utils/evidence.ts` | Allow `/opsx-propose` to draft all planning files (`research`, `proposal`, `specs`, `design`, `tasks`) at once; enforce in `spec-rails check` that Gates 0–3 are ticked before implementation tasks in `tasks.md` are ticked or production code is modified (`--audit`); run `openspec validate <change> --strict` and verify every added/modified requirement in delta `spec.md` has a `REQ-<DOM>-<N>` or `NFR-<DOM>-<N>` key; simplify `evidence.ts` to require a free-text `Evidence:` note on ticked rail tasks (drop `[CMD: ...][EXIT: 0]` bracket token regex). |
+| **W6.3** | Single Asset Tree, Thin `init` & LGTM Purge | M | W6.2 | ⬜ | `src/commands/init.ts`, `src/config.ts`, `package.json` | Set `package.json` name to `spec-rails` and use `npx --no-install spec-rails` in generated hooks/CI; keep canonical assets in `openspec/schemas/spec-rails/`, `openspec/spec-rails/`, and `.agents/skills/spec-rails/` (delete duplicate root `schemas/`, `rules/`, `skills/`, `templates/mutation/`, `openspec/spec-rails/mutation/`, `templates/rails.conf`, `templates/.pre-commit-config.yaml`, `loadLegacyRailsConf`, and non-existent `$schema` URL); fail fast in `spec-rails init` if `openspec/` is missing; generate clean stack-specific CI workflow (no internal repo branching or forced Python/`uv` on non-Python stacks); strip all `lgtm` / `.lgtm/reviews` hooks and documentation references. |
+| **W6.4** | Vitest-Only Harness & Dead Code Deletion | S | W6.3 | ⬜ | `tests/unit/`, `.github/workflows/` | Move `REQ-OSA-*` traceability IDs from `tests/bdd/` to `tests/unit/*.test.ts`; add `tests/unit/schema.test.ts` for schema/template checks; delete `tests/bdd/`, all 10 `tests/*.sh` scripts (`test_check.sh`, `test_installer.sh`, `test_verify.sh`, `test_ci_audit.sh`, `test_e2e.sh`, `test_lint.sh`, `test_schema.sh`, `test_selfcopy.sh`, `check_hygiene.sh`), and `Makefile`; update `.github/workflows/` and `README.md` to run `npm test` and `npm run lint`. |
+
 ---
 
 ## 3. Wave Exit Criteria
@@ -120,3 +131,13 @@ Dropped, do not re-propose: `spec-rails scaffold-check` (AST inspection of contr
 - [x] CI template pins the OpenSpec CLI version and installs stack tooling before verify.
 - [x] Docs and installed agent skills agree on command names and on which agent folders to commit.
 - [x] `make test` green and 100% requirement traceability.
+
+### Wave 6 Exit Criteria
+- [ ] All W6 items (W6.1–W6.4) marked `✅ Shipped`.
+- [ ] `spec.md` template has no `## Review Gate` footer; `/opsx-propose` can draft all planning artifacts (`research`, `proposal`, `specs`, `design`, `tasks`) in one pass without failing `spec-rails check`.
+- [ ] `spec-rails check` runs `openspec validate --strict`, verifies `REQ-*`/`NFR-*` keys on delta requirements, and enforces Gates 0–3 before code diffs (`--audit`) or ticked implementation tasks.
+- [ ] `spec-rails verify` accepts free-text `Evidence:` notes on rail tasks and verifies all `REQ-*`/`NFR-*` keys in `tests/unit/`.
+- [ ] `spec-rails init` fails fast when `openspec/` is absent and scaffolds stack-specific CI & pre-commit using `npx --no-install spec-rails`.
+- [ ] Zero `lgtm` references, zero `.sh` test scripts, zero `Makefile`, zero duplicate asset directories (`schemas/`, `rules/`, `skills/`, `templates/mutation/`), and zero `.feature` files remain.
+- [ ] `npm test` and `npm run lint` pass with >= 95% coverage and >= 95% mutation kill score.
+
