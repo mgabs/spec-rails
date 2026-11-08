@@ -40,7 +40,7 @@ flowchart TD
 
 - [x] 6.1 Run full test suite, lint, and build (`npm test`, `npm run lint`, `npm run build`)
 - [x] 6.2 Verify gates with `node dist/cli.js check` and `node dist/cli.js verify`
-- [ ] 6.3 Archive change with `openspec archive w6-3-single-asset-tree-init` and sync living spec
+- [x] 6.3 Archive change with `openspec archive w6-3-single-asset-tree-init` and sync living spec
 
 ## Review Gate
 - [x] **Gate 3 Approval**: Tasks breakdown approved by human before writing test code.
