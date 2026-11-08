@@ -238,7 +238,7 @@ The CI spec-to-code audit in `templates/spec-rails-ci.yml` MUST treat a PR as sp
 - **THEN** the audit step exits 1
 
 ### Requirement: REQ-OSA-22 Self-Copy Sync
-The repo's installed self-copies (`openspec/schemas/spec-rails/`, `openspec/spec-rails/`, `.agents/skills/spec-rails/SKILL.md`, `.github/workflows/spec-rails-ci.yml`), excluding project-configured `rails.conf`, MUST stay byte-identical to their sources in `schemas/`, `bin/`, `rules/`, `skills/` and `templates/`, and `make test` MUST fail when they differ.
+The repo's installed self-copies (`openspec/schemas/spec-rails/`, `openspec/spec-rails/`, `.agents/skills/spec-rails/SKILL.md`, `.github/workflows/spec-rails-ci.yml`), excluding project-configured `rails.conf`, MUST stay byte-identical to their sources in `schemas/`, `bin/`, `rules/`, `skills/` and `templates/`, and test execution (`npm test`) MUST fail when they differ.
 
 #### Scenario: Drift detected
 - **WHEN** a source file is changed without updating its installed copy
