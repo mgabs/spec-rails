@@ -47,3 +47,4 @@ Refocus Spec-Rails as a thin, pure Spec Quality Gate and Testing-Railed workflow
 - [ ] Zero duplicate asset directories (`schemas/`, `rules/`, `skills/`, `templates/mutation/`), zero `templates/roadmap.md`, and zero external review-tool hooks remain (W6.3).
 - [ ] Multi-agent worktree execution rails codified: declarative command shapes mandated, atomic worktree slice commit hook bypass permitted, and subagent zero-polling invariant enforced in `WORKFLOW.md` and agent skill.
 - [ ] `npm test` and `npm run lint` pass with $\ge 95\%$ coverage and $\ge 95\%$ mutation kill score.
+- [ ] Scan and update Repo, Roadmap, Docs & Wiki.
