@@ -96,7 +96,7 @@ Scaffolds `spec-rails.config.json` with detected stack commands and thresholds, 
 
 ### Running Tests
 ```bash
-npm test         # Unit tests, config, paths, verify, audit, and check suites
+npm test         # Native TypeScript Vitest suite (13 suites, 155+ tests, < 1s)
 npm run lint     # TypeScript type check (tsc --noEmit)
 ```
 

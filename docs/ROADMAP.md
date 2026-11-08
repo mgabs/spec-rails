@@ -43,6 +43,7 @@ Refocus Spec-Rails as a thin, pure Spec Quality Gate and Testing-Railed workflow
 - [x] `spec-rails check` runs `openspec validate --strict`, validates whitespace/EOF newline hygiene on change artifacts, verifies `REQ-*`/`NFR-*` keys on delta requirements, and enforces Gates 0–3 before code diffs (`--audit`) or ticked implementation tasks.
 - [x] `spec-rails verify` accepts free-text `Evidence:` notes on rail tasks and verifies all `REQ-*`/`NFR-*` keys across `tests/unit/`.
 - [ ] `spec-rails init` fails fast when `openspec/` is absent, scaffolds developer guide in `docs/spec-rails/`, and sets up stack-specific CI & pre-commit using `npx --no-install spec-rails`.
-- [ ] Zero legacy `.sh` test scripts, zero `Makefile`, zero duplicate asset directories (`schemas/`, `rules/`, `skills/`, `templates/mutation/`), zero `templates/roadmap.md`, zero `.feature` files, and zero external review-tool hooks remain.
+- [x] Zero legacy `.sh` test scripts, zero `Makefile`, zero `.feature` files, and zero dual-harness test runners remain.
+- [ ] Zero duplicate asset directories (`schemas/`, `rules/`, `skills/`, `templates/mutation/`), zero `templates/roadmap.md`, and zero external review-tool hooks remain (W6.3).
 - [ ] Multi-agent worktree execution rails codified: declarative command shapes mandated, atomic worktree slice commit hook bypass permitted, and subagent zero-polling invariant enforced in `WORKFLOW.md` and agent skill.
 - [ ] `npm test` and `npm run lint` pass with $\ge 95\%$ coverage and $\ge 95\%$ mutation kill score.
