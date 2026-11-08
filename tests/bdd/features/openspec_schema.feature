@@ -22,10 +22,11 @@ Feature: spec-rails OpenSpec schema
     And proposal requires research, specs requires proposal, design requires specs, tasks requires design
 
   @REQ-OSA-4
-  Scenario: Every template ends with an unticked Review Gate
-    Given each template in "schemas/spec-rails/templates/"
-    Then it ends with a "## Review Gate" section
+  Scenario: Planning templates end with an unticked Review Gate, spec.md has none
+    Given templates "research.md", "proposal.md", "design.md", "tasks.md" in "schemas/spec-rails/templates/"
+    Then each ends with a "## Review Gate" section
     And that section contains one unticked "- [ ]" checkbox naming its gate
+    And template "spec.md" contains no "## Review Gate" section
 
   @REQ-OSA-5
   Scenario: Artifact instructions carry the gate's mandatory sections
@@ -38,7 +39,7 @@ Feature: spec-rails OpenSpec schema
   Scenario: Apply drives the slice loop
     Given the "apply" block of the "spec-rails" schema
     Then it requires "tasks" and tracks "tasks.md"
-    And its instruction lists BDD, Gate 5.x approval, Red, Green, coverage, mutation in order
+    And its instruction lists Contract scaffolding, Red, Green, coverage, mutation in order
 
   @REQ-OSA-10
   Scenario: Feature changes use the lowercased hyphen-normalized roadmap ID

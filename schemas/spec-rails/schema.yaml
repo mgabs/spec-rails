@@ -41,7 +41,7 @@ artifacts:
 
   - id: specs
     generates: "specs/**/*.md"
-    description: Gate 2 delta specifications with uniquely keyed requirements
+    description: Gate 2 delta specifications with uniquely keyed requirements (pure OpenSpec specs; no Review Gate footer)
     template: spec.md
     instruction: |
       Create one OpenSpec delta spec per capability listed in the proposal, at `specs/<capability-path>/spec.md`.
@@ -61,13 +61,13 @@ artifacts:
       - Requirement text uses MUST/SHALL. Scenarios use exactly four hashtags (`#### Scenario:`) with GIVEN/WHEN/THEN steps (for OpenSpec 1.16 `--strict`).
       - Cover Non-Functional Requirements and budgets (`NFR-*`), Assumptions (`ASM-*`), and Edge Cases & Errors.
 
-      Stop at the Review Gate: only the human ticks the Gate 2 box.
+      Delta specs contain no ## Review Gate footer; approval occurs at Gate 2 in design.md.
     requires:
       - proposal
 
   - id: design
     generates: design.md
-    description: Gate 3 architecture and design
+    description: Gate 2 architecture, specifications review and technical design
     template: design.md
     instruction: |
       Create design.md explaining HOW to implement the specs.
@@ -81,24 +81,24 @@ artifacts:
       - Testing Strategy (BDD, unit >= 95% line and branch coverage, mutation >= 95% kill).
       UI work adds frame and input-latency budgets; ML/data work starts from a deterministic Tier 0 baseline.
 
-      Stop at the Review Gate: only the human ticks the Gate 3 box.
+      Stop at the Review Gate: only the human ticks the Gate 2 box.
     requires:
       - specs
 
   - id: tasks
     generates: tasks.md
-    description: Gate 4 task breakdown and dependency DAG
+    description: Gate 3 task breakdown and dependency DAG
     template: tasks.md
     instruction: |
       Create tasks.md with a Dependency DAG, streams with worktrees (`.worktrees/<id>-<stream>`),
-      the test-first order per vertical slice (BDD, Gate 5.x review, Red, Green, Coverage, Mutation),
+      the test-first order per vertical slice (Contract scaffolding, Red, Green, Coverage, Mutation),
       and an Integration & Rebase Plan.
 
       Every tracked task MUST be a checkbox: `- [ ] X.Y Task description`, stating how to verify it.
       Streams may only be created for slices with no mutual dependencies, after the shared contract is committed.
-      Human `## Review Gate` and Gate 5.x sign-off checkboxes MUST NOT be ticked by `/opsx-apply` agents.
+      Human `## Review Gate` checkboxes MUST NOT be ticked by `/opsx-apply` agents.
 
-      Stop at the Review Gate: only the human ticks the Gate 4 box.
+      Stop at the Review Gate: only the human ticks the Gate 3 box.
     requires:
       - design
 
@@ -107,11 +107,12 @@ apply:
   tracks: tasks.md
   instruction: |
     Work one vertical slice at a time, in this order:
-    1. BDD: write Gherkin scenarios for every REQ and NFR in the slice, then STOP for the human's Gate 5.x approval (human Review Gate and Gate 5.x sign-off checkboxes MUST NOT be ticked by `/opsx-apply` agents).
+    1. Contract scaffolding: commit interfaces, domain types, and empty function signatures.
     2. Red: write failing unit tests and confirm they fail for the expected reason. Do not commit them alone.
     3. Green: write the minimal production code, then commit tests and code together.
     4. Coverage: at least 95% line and branch on the slice's modules.
     5. Mutation: >= 95% kill score on the slice's modules; fix survivors with an assertion, dead-code deletion, or a restructure.
+    Human Review Gate checkboxes MUST NOT be ticked by `/opsx-apply` agents.
     Never delete or weaken assertions, skip failing tests, or touch files outside the slice.
     When ticking a Red, Green, Coverage or Mutation task, end its line with `Evidence: <command and result>`; CI (`spec-rails-verify`) rejects ticked tasks without it.
     Commit at stage boundaries, not per gate tick: after planning, after the code (one commit per slice is fine when there are several), and after `openspec archive`; Rule 4 green commits and rebases are exceptions.

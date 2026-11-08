@@ -208,12 +208,9 @@ The system MUST validate tokens deterministically.
 - **GIVEN** a non-empty token string
 - **WHEN** `validate` runs
 - **THEN** validation succeeds with exit status 0
-
-## Review Gate
-- [x] **Gate 2 Approval**: Specifications reviewed and approved by human before technical design.
 EOF
 
-sed 's/^- \[ \] \*\*Gate 3/- [x] **Gate 3/' docs/templates/design.md > openspec/changes/w1-1-core-contracts/design.md
+sed 's/^- \[ \] \*\*Gate 2/- [x] **Gate 2/' docs/templates/design.md > openspec/changes/w1-1-core-contracts/design.md
 
 cat <<'EOF' > openspec/changes/w1-1-core-contracts/tasks.md
 # Tasks: w1-1-core-contracts
@@ -223,7 +220,7 @@ cat <<'EOF' > openspec/changes/w1-1-core-contracts/tasks.md
 - [x] 4.1 Validate and archive change
 
 ## Review Gate
-- [x] **Gate 4 Approval**: Tasks breakdown approved by human before writing test code.
+- [x] **Gate 3 Approval**: Tasks breakdown approved by human before writing test code.
 EOF
 
 # Production code and tests (committed together per Rule 4)

@@ -106,7 +106,7 @@ describe("Transitive DAG violations (check.ts)", () => {
     expect(violations[0]).toContain("Gate 0 (research) unticked");
   });
 
-  it("flags early task completion when Gate 4 unticked", () => {
+  it("flags early task completion when Gate 3 unticked", () => {
     const artifacts = [
       { id: "research", requires: [], status: "done" },
       { id: "tasks", requires: ["research"], status: "done" },
@@ -116,7 +116,39 @@ describe("Transitive DAG violations (check.ts)", () => {
       tasks: "unticked" as const,
     };
     const violations = findGateViolations("test-change", artifacts, states, true);
-    expect(violations).toContain("test-change: Gate 4 (tasks) unticked but implementation tasks are ticked");
+    expect(violations).toContain("test-change: Gate 3 (tasks) unticked but implementation tasks are ticked");
+  });
+
+  it("flags unticked Gate 2 (design) when downstream tasks exists", () => {
+    const artifacts = [
+      { id: "research", requires: [], status: "done" },
+      { id: "proposal", requires: ["research"], status: "done" },
+      { id: "specs", requires: ["proposal"], status: "done" },
+      { id: "design", requires: ["specs"], status: "done" },
+      { id: "tasks", requires: ["design"], status: "done" },
+    ];
+    const states = {
+      research: "ticked" as const,
+      proposal: "ticked" as const,
+      specs: "ticked" as const,
+      design: "unticked" as const,
+      tasks: "unticked" as const,
+    };
+    const violations = findGateViolations("test-change", artifacts, states, false);
+    expect(violations).toContain("test-change: Gate 2 (design) unticked but 'tasks' exists");
+  });
+
+  it("treats pure spec files without Review Gate as satisfied in parseArtifactState", () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pure-spec-test-"));
+    try {
+      const specDir = path.join(tempDir, "specs", "sample");
+      fs.mkdirSync(specDir, { recursive: true });
+      fs.writeFileSync(path.join(specDir, "spec.md"), "# Spec Delta\n## ADDED Requirements\n### Requirement: REQ-1 Test\nThe system MUST work.\n");
+      const state = parseArtifactState(tempDir, "specs");
+      expect(state).toBe("ticked");
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });
 

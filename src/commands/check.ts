@@ -101,18 +101,18 @@ export function parseGateState(content: string): GateStateResult {
   };
 }
 
-export function getGateNumber(id: string): number | string {
+export function getGateNumber(id: string): number | string | null {
   switch (id) {
     case "research":
       return 0;
     case "proposal":
       return 1;
-    case "specs":
-      return 2;
     case "design":
-      return 3;
+      return 2;
     case "tasks":
-      return 4;
+      return 3;
+    case "specs":
+      return null;
     default:
       return id;
   }
@@ -173,15 +173,10 @@ export function parseArtifactState(
 
     if (specFiles.length === 0) return "missing";
 
-    let agg: "ticked" | "unticked" | "missing" = "ticked";
     for (const file of specFiles) {
       if (!fs.existsSync(file)) return "missing";
-      const content = fs.readFileSync(file, "utf-8");
-      const res = parseGateState(content);
-      if (res.state === "missing") return "missing";
-      if (res.state === "unticked") agg = "unticked";
     }
-    return agg;
+    return "ticked";
   }
 
   const filePath = path.join(changeDir, `${artifactId}.md`);
@@ -235,6 +230,7 @@ export function findGateViolations(
 
     if (doneDownstream) {
       const num = getGateNumber(u);
+      if (num === null) continue;
       if (states[u] === "unticked") {
         violations.push(`${changeName}: Gate ${num} (${u}) unticked but '${doneDownstream.id}' exists`);
       } else {
@@ -249,9 +245,9 @@ export function findGateViolations(
   if (hasEarlyTasks) {
     const tasksState = states["tasks"];
     if (tasksState === "unticked") {
-      violations.push(`${changeName}: Gate 4 (tasks) unticked but implementation tasks are ticked`);
+      violations.push(`${changeName}: Gate 3 (tasks) unticked but implementation tasks are ticked`);
     } else if (tasksState !== "ticked") {
-      violations.push(`${changeName}: Gate 4 (tasks) Review Gate section missing but implementation tasks are ticked`);
+      violations.push(`${changeName}: Gate 3 (tasks) Review Gate section missing but implementation tasks are ticked`);
     }
   }
 

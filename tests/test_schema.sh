@@ -59,8 +59,8 @@ assert_eq "  requires: [tasks]
   "REQ-OSA-6 apply requires/tracks"
 
 apply_text="$(awk '/^apply:/ { on = 1 } on' "$SCHEMA")"
-order="$(printf '%s\n' "$apply_text" | grep -n -i -o 'BDD\|Gate 5\.x\|Red\|Green\|coverage\|mutation' | awk -F: '!seen[tolower($2)]++ { print tolower($2) }' | tr '\n' ' ')"
-assert_eq "bdd gate 5.x red green coverage mutation " "$order" "REQ-OSA-6 slice loop order"
+order="$(printf '%s\n' "$apply_text" | grep -n -i -o 'Contract scaffolding\|Red\|Green\|coverage\|mutation' | awk -F: '!seen[tolower($2)]++ { print tolower($2) }' | tr '\n' ' ')"
+assert_eq "contract scaffolding red green coverage mutation " "$order" "REQ-OSA-6 slice loop order"
 
 for term in "Tradeoff Matrix:research" "Breaking Changes:research" "Out-of-Scope (YAGNI):proposal" "Pure Core vs. I/O Shell:design"; do
   text="${term%%:*}"
@@ -72,7 +72,7 @@ for term in "Tradeoff Matrix:research" "Breaking Changes:research" "Out-of-Scope
   esac
 done
 
-for name in research proposal spec design tasks; do
+for name in research proposal design tasks; do
   tpl="$SCHEMA_DIR/templates/$name.md"
   if [ ! -f "$tpl" ]; then
     echo "FAIL: REQ-OSA-4 template missing: $name.md"
@@ -84,6 +84,9 @@ for name in research proposal spec design tasks; do
   assert_eq "0" "$(printf '%s\n' "$f" | grep -c '^- \[[xX]\]')" "REQ-OSA-4 $name.md has no ticked box"
   assert_eq "1" "$(tail -n 1 "$tpl" | grep -c '^- \[ \] \*\*Gate [0-4] ')" "REQ-OSA-4 $name.md ends with the gate box"
 done
+
+assert_eq "0" "$(grep -c '^## Review Gate' "$SCHEMA_DIR/templates/spec.md" || true)" \
+  "REQ-OSA-4 spec.md template has no Review Gate"
 
 assert_eq "0" "$(grep -c 'Evidence:' "$SCHEMA_DIR/templates/tasks.md" || true)" \
   "tasks.md template has no self-matching Evidence: literal"

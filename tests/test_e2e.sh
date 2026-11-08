@@ -124,12 +124,9 @@ The system MUST work.
 - **GIVEN** setup
 - **WHEN** action
 - **THEN** result
-
-## Review Gate
-- [x] **Gate 2 Approval**: x
 EOF
-printf '# Architecture & Technical Design\n\n## 1. Overview & Invariants\nPure core vs. I/O shell.\n\n## Review Gate\n- [x] **Gate 3 Approval**: x\n' > "$D/design.md"
-printf '# Tasks\n\n## 3. Slice 1: Demo\n- [ ] 3.1 Implement demo\n\n## Review Gate\n- [ ] **Gate 4 Approval**: x\n' > "$D/tasks.md"
+printf '# Architecture & Technical Design\n\n## 1. Overview & Invariants\nPure core vs. I/O shell.\n\n## Review Gate\n- [x] **Gate 2 Approval**: x\n' > "$D/design.md"
+printf '# Tasks\n\n## 3. Slice 1: Demo\n- [ ] 3.1 Implement demo\n\n## Review Gate\n- [x] **Gate 3 Approval**: x\n' > "$D/tasks.md"
 
 git add "$D/proposal.md" "$D/specs/demo-cap/spec.md" "$D/design.md" "$D/tasks.md"
 RC=0

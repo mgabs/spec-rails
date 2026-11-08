@@ -22,6 +22,3 @@ The system MUST <!-- exact verifiable behavior -->.
 - **THEN** <!-- within budget -->
 
 <!-- Also cover Assumptions (ASM-*) and Edge Cases & Errors as scenarios. -->
-
-## Review Gate
-- [ ] **Gate 2 Approval**: Specifications reviewed and approved by human before technical design.

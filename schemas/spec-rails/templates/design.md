@@ -19,4 +19,4 @@
 3. **Mutation Testing (>= 95% kill)**: <!-- core modules -->
 
 ## Review Gate
-- [ ] **Gate 3 Approval**: Architecture & design reviewed and approved by human before task breakdown.
+- [ ] **Gate 2 Approval**: Architecture & design reviewed and approved by human before task breakdown.

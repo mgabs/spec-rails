@@ -1,2 +1,0 @@
-# Grandfathered changes lacking Review Gate. New changes still gate.
-w6-1-pure-openspec-schema
