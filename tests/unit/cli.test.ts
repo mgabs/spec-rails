@@ -21,13 +21,20 @@ describe("CLI Binary Integration & Unit (REQ-OSA-32, REQ-OSA-45)", () => {
     const cli = createCli();
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-audit-test-"));
 
+    const cleanEnv = { ...process.env };
+    delete cleanEnv.GIT_DIR;
+    delete cleanEnv.GIT_WORK_TREE;
+    delete cleanEnv.GIT_INDEX_FILE;
+    delete cleanEnv.GIT_OBJECT_DIRECTORY;
+    delete cleanEnv.GIT_ALTERNATE_OBJECT_DIRECTORIES;
+
     try {
-      execFileSync("git", ["init", "-b", "main"], { cwd: tempDir, stdio: "ignore" });
-      execFileSync("git", ["config", "user.name", "Spec-Rails Test"], { cwd: tempDir });
-      execFileSync("git", ["config", "user.email", "spec-rails-test@example.com"], { cwd: tempDir });
+      execFileSync("git", ["init", "-b", "main"], { cwd: tempDir, stdio: "ignore", env: cleanEnv });
+      execFileSync("git", ["config", "user.name", "Spec-Rails Test"], { cwd: tempDir, env: cleanEnv });
+      execFileSync("git", ["config", "user.email", "spec-rails-test@example.com"], { cwd: tempDir, env: cleanEnv });
       fs.writeFileSync(path.join(tempDir, "README.md"), "test\n");
-      execFileSync("git", ["add", "README.md"], { cwd: tempDir });
-      execFileSync("git", ["commit", "--quiet", "-m", "test"], { cwd: tempDir });
+      execFileSync("git", ["add", "README.md"], { cwd: tempDir, env: cleanEnv });
+      execFileSync("git", ["commit", "--no-verify", "--quiet", "-m", "test"], { cwd: tempDir, env: cleanEnv });
 
       const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
       try {
