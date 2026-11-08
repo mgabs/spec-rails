@@ -8,7 +8,7 @@
 
 ## 1. Problem Statement
 
-Spec-Rails provides a gated specification and testing-railed workflow (Gates 0–6, Red-Green-Mutation rails, Git worktree streams) paired with `mgabs/lgtm` and OpenSpec. However, third-party adoption outside shell environments encounters two major failure modes:
+Spec-Rails provides a gated specification and testing-railed workflow (Gates 0–4, Red-Green-Mutation rails, Git worktree streams) on top of OpenSpec. However, third-party adoption outside shell environments encounters two major failure modes:
 
 1. **Third-Party Onboarding Rigidity & Stack Bias**:
    - Blanket symlink rejection (`bin/spec-rails:46-96`) aborts installation on standard developer environments (macOS `/var` / `/tmp`, pnpm symlinked virtual stores, monorepo workspaces).
