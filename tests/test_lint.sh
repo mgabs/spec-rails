@@ -20,8 +20,7 @@ echo "=== Running Shell Syntax & Spec Sanity Checks ==="
 
 # 1. POSIX shell syntax validation
 for script in \
-  "$REPO_ROOT"/tests/*.sh \
-  "$REPO_ROOT/tests/bdd/test_bdd.sh"; do
+  "$REPO_ROOT"/tests/*.sh; do
   rel="${script#"$REPO_ROOT/"}"
   if sh -n "$script"; then
     pass "Syntax valid: $rel"
@@ -72,8 +71,7 @@ fi
 # 4. Shellcheck if installed
 if command -v shellcheck >/dev/null 2>&1; then
   if shellcheck \
-    "$REPO_ROOT"/tests/*.sh \
-    "$REPO_ROOT/tests/bdd/test_bdd.sh"; then
+    "$REPO_ROOT"/tests/*.sh; then
     pass "ShellCheck passed"
   else
     fail "ShellCheck failed" "issues found"

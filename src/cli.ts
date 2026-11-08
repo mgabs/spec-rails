@@ -69,10 +69,12 @@ export function createCli(): CAC {
   cli
     .command("audit [dir]", "Audit spec-to-code mapping against base branch")
     .option("--base <ref>", "Base branch to compare against (default: main)", { default: "main" })
+    .option("--head <ref>", "Head branch to compare (default: current branch)")
     .action((dir, options) => {
       const res = runAudit({
         cwd: dir || process.cwd(),
         baseRef: options.base,
+        headRef: options.head,
       });
       if (res.isChoreExempt) {
         console.log("[spec-rails] Chore lane: spec-to-code audit skipped.");

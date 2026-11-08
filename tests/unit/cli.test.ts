@@ -38,7 +38,7 @@ describe("CLI Binary Integration & Unit (REQ-OSA-32, REQ-OSA-45)", () => {
 
       const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
       try {
-        cli.parse(["node", "spec-rails", "audit", tempDir, "--base=main"]);
+        cli.parse(["node", "spec-rails", "audit", tempDir, "--base=main", "--head=feat/audit-test"]);
         expect(logSpy).toHaveBeenCalledWith("[spec-rails] Spec-to-code audit passed.");
       } finally {
         logSpy.mockRestore();

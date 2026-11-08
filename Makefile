@@ -1,4 +1,4 @@
-.PHONY: test test-lint test-schema test-selfcopy test-unit test-bdd bdd lint check-directives
+.PHONY: test test-lint test-schema test-selfcopy test-unit lint check-directives
 
 test: test-lint test-schema test-selfcopy test-unit
 
@@ -25,8 +25,3 @@ test-selfcopy:
 
 test-unit:
 	@npm test
-
-test-bdd:
-	@sh tests/bdd/test_bdd.sh
-
-bdd: test-bdd
