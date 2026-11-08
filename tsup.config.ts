@@ -8,6 +8,8 @@ export default defineConfig({
   clean: true,
   bundle: true,
   noExternal: ["zod", "cac", "fast-glob"],
+  drop: ["debugger"],
+  pure: ["console.debug"],
   banner: {
     js: `#!/usr/bin/env node
 import { createRequire } from "node:module";
