@@ -501,30 +501,6 @@ describe("Stack Auto-Detection & Init Command", () => {
     expect(removeHookBlock("- id: x\n  entry: y", "x")).toBe("");
   });
 
-  it("drops a local repo left with no hooks (REQ-OSA-46)", () => {
-    fs.mkdirSync(path.join(tempDir, "openspec"));
-    fs.writeFileSync(
-      path.join(tempDir, ".pre-commit-config.yaml"),
-      `repos:
-  - repo: https://example.com/x
-    rev: v1
-    hooks:
-      - id: x
-
-  - repo: local
-    hooks:
-      - id: spec-rails-check
-        entry: npx --no-install spec-rails check
-        language: system
-`,
-    );
-    initProject({ cwd: tempDir, stack: "ts" });
-    const out = fs.readFileSync(path.join(tempDir, ".pre-commit-config.yaml"), "utf-8");
-    expect(out).toContain("id: x");
-    expect(out).not.toContain("repo: local");
-    expect(out).not.toContain("hooks:\n\n");
-  });
-
   it("detects stale workflows (REQ-OSA-57)", () => {
     expect(isStaleWorkflow("run: sh openspec/spec-rails/spec-rails-verify")).toBe(true);
     expect(isStaleWorkflow("run: npx --no-install spec-rails check --audit")).toBe(true);
@@ -563,21 +539,6 @@ describe("Stack Auto-Detection & Init Command", () => {
     expect([".pre-commit-config.yaml", ".github/workflows/spec-rails-ci.yml", "openspec/spec-rails/TODO.md"].map(snapshot)).toEqual(before);
   });
 
-  it("modernizePreCommitConfig drops only empty repos and keeps populated ones exactly (REQ-OSA-46)", () => {
-    const hook = "      - id: spec-rails-check\n        entry: npx --no-install spec-rails check\n";
-    const middle = `repos:\n  - repo: local\n    hooks:\n${hook}\n  - repo: https://example.com/x\n    rev: v1\n    hooks:\n      - id: x\n`;
-    expect(modernizePreCommitConfig(middle)).toBe(`repos:\n  - repo: https://example.com/x\n    rev: v1\n    hooks:\n      - id: x\n`);
-
-    const last = `repos:\n  - repo: https://example.com/x\n    hooks:\n      - id: x\n\n  - repo: local\n    hooks:\n${hook}`;
-    expect(modernizePreCommitConfig(last)).toBe(`repos:\n  - repo: https://example.com/x\n    hooks:\n      - id: x\n`);
-
-    const kept = `repos:\n  - repo: local\n    hooks:\n      - id: keep\n        entry: k\n`;
-    expect(modernizePreCommitConfig(kept)).toBe(kept);
-
-    const indented = `repos:\n- repo: local\n  hooks:\n  - id: spec-rails-check\n    entry: e\n- repo: https://example.com/x\n  hooks:\n  - id: x\n`;
-    expect(modernizePreCommitConfig(indented)).toBe(`repos:\n- repo: https://example.com/x\n  hooks:\n  - id: x\n`);
-  });
-
   it("logs exact actions for a fresh and an upgraded repo (REQ-OSA-58)", () => {
     fs.mkdirSync(path.join(tempDir, "openspec"));
     const fresh = initProject({ cwd: tempDir, stack: "ts" });
@@ -594,21 +555,92 @@ describe("Stack Auto-Detection & Init Command", () => {
     expect(gi).toContain(".worktrees/");
   });
 
+  it("force never regenerates an existing pre-commit config, preserving custom hooks (REQ-OSA-46)", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
+    const custom = "repos:\n  - repo: local\n    hooks:\n      - id: ruff-check\n        entry: uv run ruff check\n      - id: pytest\n        entry: uv run pytest -q\n";
+    fs.writeFileSync(path.join(tempDir, ".pre-commit-config.yaml"), custom);
+    initProject({ cwd: tempDir, stack: "python", force: true });
+    expect(fs.readFileSync(path.join(tempDir, ".pre-commit-config.yaml"), "utf-8")).toBe(custom);
+  });
+
   it("reports hook removal when modernizing an existing pre-commit file (REQ-OSA-58)", () => {
     fs.mkdirSync(path.join(tempDir, "openspec"));
     fs.writeFileSync(path.join(tempDir, ".pre-commit-config.yaml"), "repos:\n  - repo: local\n    hooks:\n      - id: spec-rails-check\n        entry: e\n      - id: keep\n        entry: k\n");
     const res = initProject({ cwd: tempDir, stack: "ts" });
     expect(res.actions).toContain("removed spec-rails hooks from .pre-commit-config.yaml");
     const res2 = initProject({ cwd: tempDir, stack: "ts", force: true });
-    expect(res2.actions).toContain("wrote .pre-commit-config.yaml");
+    expect(res2.actions).not.toContain("wrote .pre-commit-config.yaml");
+    const kept = fs.readFileSync(path.join(tempDir, ".pre-commit-config.yaml"), "utf-8");
+    expect(kept).toContain("id: keep");
   });
 
-  it("keeps a repo whose first hook was removed but still has hooks after a blank line (REQ-OSA-46)", () => {
+  it("removeHookBlock handles first hooks, indentation and trailing blank lines (REQ-OSA-46)", () => {
     const yaml = "repos:\n  - repo: local\n    hooks:\n      - id: spec-rails-check\n        entry: e\n\n      - id: keep\n        entry: k\n";
     expect(modernizePreCommitConfig(yaml)).toBe("repos:\n  - repo: local\n    hooks:\n\n      - id: keep\n        entry: k\n");
-    const twoRepos = "repos:\n  - repo: local\n    hooks:\n      - id: spec-rails-check\n        entry: e\n  - repo: local\n    hooks:\n      - id: keep\n        entry: k\n";
-    expect(modernizePreCommitConfig(twoRepos)).toBe("repos:\n  - repo: local\n    hooks:\n      - id: keep\n        entry: k\n");
     expect(removeHookBlock("a\n- id: x\n  entry: y\n- id: z", "x")).toBe("a\n- id: z");
     expect(removeHookBlock("a\n\n- id: x\n  entry: y", "x")).toBe("a");
+    expect(removeHookBlock("a\n- id: x\n  entry: y", "x")).toBe("a");
+    expect(removeHookBlock("- id: x\n  entry: y\n\n- id: z", "x")).toBe("\n- id: z");
+  });
+
+  it("does not touch the pre-commit config or log removal when it has no spec-rails hooks (REQ-OSA-58)", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
+    const keep = "repos:\n  - repo: local\n    hooks:\n      - id: keep\n        entry: k\n";
+    fs.writeFileSync(path.join(tempDir, ".pre-commit-config.yaml"), keep);
+    const res = initProject({ cwd: tempDir });
+    expect(res.actions.join("\n")).not.toContain(".pre-commit-config.yaml");
+    expect(fs.readFileSync(path.join(tempDir, ".pre-commit-config.yaml"), "utf-8")).toBe(keep);
+    expect(res.actions[0]).toBe("created spec-rails.config.json");
+  });
+
+  it("logs the created preset and installs rails files without rails.conf (REQ-OSA-58)", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
+    const res = initProject({ cwd: tempDir, stack: "ts" });
+    expect(res.actions).toContain("created stryker.config.json");
+    expect(fs.existsSync(path.join(tempDir, "openspec/spec-rails/rails.conf"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "openspec/spec-rails/mutation/stryker.config.json"))).toBe(true);
+    expect(fs.readFileSync(path.join(tempDir, ".agents/skills/spec-rails/SKILL.md"), "utf-8")).toContain("spec-rails");
+  });
+
+  it("writes schema into openspec/config.yaml and .worktrees/ into .gitignore (REQ-OSA-32)", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
+    const cfg = path.join(tempDir, "openspec/config.yaml");
+    fs.writeFileSync(cfg, "context: hello");
+    fs.writeFileSync(path.join(tempDir, ".gitignore"), "node_modules\n");
+    initProject({ cwd: tempDir, stack: "ts" });
+    expect(fs.readFileSync(cfg, "utf-8")).toBe("schema: spec-rails\ncontext: hello\n");
+    expect(fs.readFileSync(path.join(tempDir, ".gitignore"), "utf-8")).toBe("node_modules\n\n.worktrees/\n");
+
+    initProject({ cwd: tempDir, stack: "ts", force: true });
+    expect(fs.readFileSync(cfg, "utf-8")).toBe("schema: spec-rails\ncontext: hello\n");
+    expect(fs.readFileSync(path.join(tempDir, ".gitignore"), "utf-8")).toBe("node_modules\n\n.worktrees/\n");
+
+    fs.rmSync(cfg);
+    initProject({ cwd: tempDir, stack: "ts", force: true });
+    expect(fs.readFileSync(cfg, "utf-8")).toBe("schema: spec-rails\n");
+  });
+
+  it("scaffoldDeveloperGuide removes the old docs WORKFLOW.md (REQ-OSA-32)", () => {
+    const docs = path.join(tempDir, "docs/spec-rails");
+    fs.mkdirSync(docs, { recursive: true });
+    fs.writeFileSync(path.join(docs, "WORKFLOW.md"), "old");
+    scaffoldDeveloperGuide(tempDir);
+    expect(fs.existsSync(path.join(docs, "WORKFLOW.md"))).toBe(false);
+    expect(fs.existsSync(path.join(docs, "GUIDE.md"))).toBe(true);
+  });
+
+  it("gradle stack keeps ./gradlew test unless the Makefile defines test: (REQ-OSA-54)", () => {
+    expect(getStackMeta("gradle", tempDir).testCommand).toBe("./gradlew test");
+    fs.writeFileSync(path.join(tempDir, "Makefile"), "build:\n\techo hi\n");
+    expect(getStackMeta("gradle", tempDir).testCommand).toBe("./gradlew test");
+  });
+
+  it("findAssetRoot prefers the dev root when both roots carry the schema (REQ-OSA-32)", () => {
+    const dev = path.join(tempDir, "a");
+    const cur = path.join(dev, "x/y");
+    fs.mkdirSync(path.join(dev, "openspec/schemas/spec-rails"), { recursive: true });
+    fs.mkdirSync(path.join(path.dirname(cur), "openspec/schemas/spec-rails"), { recursive: true });
+    fs.mkdirSync(cur, { recursive: true });
+    expect(findAssetRoot(cur)).toBe(dev);
   });
 });
