@@ -229,7 +229,7 @@ Installer and check scripts MUST have ≥ 95% line and branch coverage under the
 ---
 
 ### Requirement: REQ-OSA-21 CI Audit Layout
-The CI spec-to-code audit in `templates/spec-rails-ci.yml` MUST treat a PR as spec-backed when it changes any file under an active `openspec/changes/<id>/` (excluding `openspec/changes/archive/`), `openspec/specs/` or `docs/bug-reports/`, MUST treat edits to `openspec/spec-rails/` and `.github/` as audited code changes, MUST bind branch refs via `env:`, and MUST NOT reference `specs/`. Chore-lane branches remain exempt.
+The CI spec-to-code audit in this repository's own `.github/workflows/spec-rails-ci.yml` MUST treat a PR as spec-backed when it changes any file under an active `openspec/changes/<id>/` (excluding `openspec/changes/archive/`), `openspec/specs/` or `docs/bug-reports/`, MUST treat edits to `openspec/spec-rails/` and `.github/` as audited code changes, MUST bind branch refs via `env:`, and MUST NOT reference `specs/`. Chore-lane branches remain exempt.
 
 #### Scenario: OpenSpec change passes audit
 - **WHEN** a PR changes code and a file under `openspec/changes/<id>/`
@@ -248,7 +248,7 @@ The CI spec-to-code audit in `templates/spec-rails-ci.yml` MUST treat a PR as sp
 - **THEN** the audit step exits 1
 
 ### Requirement: REQ-OSA-22 Self-Copy Sync
-The repo's installed self-copies (`openspec/schemas/spec-rails/`, `openspec/spec-rails/`, `.agents/skills/spec-rails/SKILL.md`, `.github/workflows/spec-rails-ci.yml`), excluding project-configured `rails.conf`, MUST stay byte-identical to their sources in `schemas/`, `bin/`, `rules/`, `skills/` and `templates/`, and test execution (`npm test`) MUST fail when they differ.
+The repo's installed self-copies (`openspec/schemas/spec-rails/`, `openspec/spec-rails/`, `.agents/skills/spec-rails/SKILL.md`), excluding project-configured `rails.conf`, MUST stay byte-identical to their sources in `schemas/`, `bin/`, `rules/`, `skills/` and `templates/`, and test execution (`npm test`) MUST fail when they differ. This repository's `.github/workflows/spec-rails-ci.yml` is project-owned and is not a copy of the CI template.
 
 #### Scenario: Drift detected
 - **WHEN** a source file is changed without updating its installed copy
@@ -358,21 +358,6 @@ For each active change, every ticked (`- [x]` or `- [X]`) task line in `tasks.md
 - **WHEN** the task is `- [ ]` with no evidence
 - **THEN** the verifier does not report it
 
-### Requirement: REQ-OSA-28 Config-Driven Test Commands in CI
-When `openspec/spec-rails/rails.conf` defines `RAILS_TEST`, `RAILS_COVERAGE` or `RAILS_MUTATION`, `spec-rails-verify` MUST run each defined command in that order from the repository root and MUST fail on the first non-zero exit, reporting which command failed. An undefined command MUST be skipped with a visible warning. The CI workflow MUST run `spec-rails-verify` and the commit hook MUST NOT.
-
-#### Scenario: Command fails
-- **WHEN** `RAILS_COVERAGE` exits 1
-- **THEN** the verifier exits non-zero and names `RAILS_COVERAGE`
-
-#### Scenario: Undefined commands
-- **WHEN** `rails.conf` is absent or defines no commands
-- **THEN** the verifier prints a warning per undefined command and exits 0
-
-#### Scenario: CI only
-- **WHEN** the installer runs
-- **THEN** the CI workflow contains a `spec-rails-verify` step and the installed git hook does not call it
-
 ### Requirement: NFR-OSA-9 Verifier Is Stack-Agnostic
 `spec-rails-verify` MUST be POSIX `sh`, MUST NOT invoke any language-specific tool itself, MUST NOT overwrite an existing `rails.conf`, and MUST finish its own checks (excluding configured commands) within 5 seconds on this repository.
 
@@ -462,7 +447,7 @@ The multi-agent workflow documentation MUST define an optional candidate bake-of
 - **THEN** competing worktrees are evaluated on rails and diff simplicity, the winner is merged with `--ff-only`, and losers are pruned without blocking teams that choose standard single-stream execution
 
 ### Requirement: REQ-OSA-36 Multi-Language Presets and Auto-Detection
-`spec-rails init` MUST accept `--stack=[auto|ts|python|go|rust]`. When set to `auto` (or omitted), it MUST inspect the target repository root for package manifests (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`) and automatically select the corresponding language stack. It MUST scaffold `spec-rails.config.json` with stack-appropriate test commands, test globs, coverage commands, and copy calibrated mutation configs from `templates/presets/`.
+`spec-rails init` MUST accept `--stack=[auto|ts|python|go|rust]`. When set to `auto` (or omitted), it MUST inspect the target repository root for package manifests (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`) and automatically select the corresponding language stack. It MUST scaffold `spec-rails.config.json` with stack-appropriate test commands, test globs and coverage commands, and copy calibrated mutation configs from `templates/presets/` except for Python, for which no mutation config is copied.
 
 #### Scenario: Auto-detect TypeScript project
 - **GIVEN** a repository containing `package.json`
@@ -472,7 +457,7 @@ The multi-agent workflow documentation MUST define an optional candidate bake-of
 #### Scenario: Auto-detect Python project
 - **GIVEN** a repository containing `pyproject.toml`
 - **WHEN** `spec-rails init` runs
-- **THEN** it selects the `python` preset and configures `pytest` and `mutmut`
+- **THEN** it selects the `python` preset, configures `pytest`, and copies no mutation config
 
 #### Scenario: Auto-detect Go project
 - **GIVEN** a repository containing `go.mod`
@@ -621,7 +606,7 @@ The system MUST NOT distribute executable shell scripts in `bin/` and MUST NOT r
 - **THEN** both commands execute and parse JSON natively without error
 
 ### Requirement: REQ-OSA-46 Pre-Commit Framework Standard
-`spec-rails init` MUST NOT write standalone shell scripts directly to `.git/hooks/pre-commit`. When `.pre-commit-config.yaml` is absent, it MUST scaffold `.pre-commit-config.yaml` containing local hooks for `spec-rails-check` (`npx --no-install spec-rails check`), branch protection on `main`/`master`, and test hooks configured for the detected stack (e.g. `npm test`, `pytest`, `cargo test`, `go test`, `./gradlew test`). When `.pre-commit-config.yaml` already exists, it MUST surgically modernize it in-place by updating `spec-rails-check` to `npx --no-install spec-rails check` and removing any legacy `check-lgtm-directives` or pre-commit `spec-rails-verify` hooks while preserving all other repos and hooks. It MUST NOT include external review-tool hooks. When a git repository is present and `pre-commit` is on `PATH`, it MUST run `pre-commit install` and ensure no `.git/hooks/pre-commit.legacy` file remains.
+`spec-rails init` MUST NOT write standalone shell scripts directly to `.git/hooks/pre-commit`. When `.pre-commit-config.yaml` is absent, it MUST scaffold it with local hooks for branch protection on `main`/`master` and test hooks configured for the detected stack (e.g. `npm test`, `pytest`, `cargo test`, `go test`, `./gradlew test`), and MUST NOT include any `spec-rails` hook. When it already exists, it MUST surgically modernize it in-place by removing the `spec-rails-check`, `check-lgtm-directives` and `spec-rails-verify` hooks while preserving every other hook, key and blank line byte-for-byte. It MUST NOT regenerate or overwrite an existing `.pre-commit-config.yaml`, even with `--force`. It MUST NOT include external review-tool hooks. When a git repository is present and `pre-commit` is on `PATH`, it MUST run `pre-commit install` and ensure no `.git/hooks/pre-commit.legacy` file remains.
 
 #### Scenario: Installer does not write raw git hook
 - **GIVEN** a git repository initialized with `git init`
@@ -639,14 +624,14 @@ The system MUST NOT distribute executable shell scripts in `bin/` and MUST NOT r
 - **THEN** it defines a local branch protection hook that fails on direct commits to `main` and `master`
 
 #### Scenario: Surgical upgrade of existing pre-commit configuration
-- **GIVEN** an existing `.pre-commit-config.yaml` containing `check-lgtm-directives`, legacy `sh openspec/spec-rails/spec-rails-check`, or `spec-rails-verify`
+- **GIVEN** an existing `.pre-commit-config.yaml` with a `spec-rails-check` hook (single-line or folded `entry:`) followed by other hooks with `language:` and `pass_filenames:` keys
 - **WHEN** `spec-rails init` runs
-- **THEN** `check-lgtm-directives` and `spec-rails-verify` are removed, `spec-rails-check` entry is updated to `npx --no-install spec-rails check`, and custom project hooks are preserved
+- **THEN** the whole `spec-rails-check` hook, and `check-lgtm-directives`/`spec-rails-verify` hooks, are removed, every other hook keeps all its keys and surrounding blank lines, and the file passes `pre-commit validate-config`
 
 #### Scenario: No-install flag on hook execution
 - **GIVEN** `.pre-commit-config.yaml` generated or modernized by `spec-rails init`
 - **WHEN** inspected
-- **THEN** the `spec-rails-check` hook entry uses `npx --no-install spec-rails check` and contains no LGTM directives
+- **THEN** it contains no `spec-rails` command, no `npx` invocation of spec-rails, and no LGTM directives
 
 ### Requirement: REQ-OSA-47 Strict Rails Execution
 `spec-rails verify` MUST execute configured test, coverage, and mutation commands and fail on a non-zero exit, an empty required command, a coverage score below `coverageMinScore`, or a mutation run where output lacks a numeric percentage score or reports a score below `mutationMinScore`. Command output MUST be shown on failure. Rail command executions MUST be bounded by an enforced execution timeout, failing verification if a command hangs or exceeds the timeout limit. For docs-only or spec-only changesets, the mutation rail MUST be skipped with an informational pass and the empty-test-files error MUST NOT apply.
@@ -705,12 +690,12 @@ The system MUST NOT distribute executable shell scripts in `bin/` and MUST NOT r
 - **THEN** its violation is reported
 
 ### Requirement: REQ-OSA-49 CI Template Hygiene
-The CI template MUST pin the OpenSpec CLI version, set up Python and `uv` before `spec-rails verify`, derive the pre-commit `SKIP` list from hook ids in `.pre-commit-config.yaml`, and MUST NOT contain a Makefile-only test step.
+The CI template MUST pin the OpenSpec CLI version when it installs OpenSpec, MUST NOT call `spec-rails`, and MUST NOT contain a Makefile-only test step. All stack-specific steps MUST be commented out.
 
 #### Scenario: Template is pinned and derived
 - **GIVEN** `templates/spec-rails-ci.yml`
 - **WHEN** it is inspected
-- **THEN** it installs `@fission-ai/openspec@<version>`, sets up uv before verify, computes `SKIP` via hook ids, and has no `make test` step
+- **THEN** any OpenSpec install is pinned `@fission-ai/openspec@<version>`, there is no `spec-rails` or `make test` step, and stack steps are comments
 
 ### Requirement: REQ-OSA-50 Agent Skill Footprint Docs
 Docs MUST state that `/opsx-*` commands and `openspec-*` skills are interchangeable, advise committing `.claude/`, `.agents/` and `.github/skills`, and advise keeping skills only for tools in use.
@@ -789,3 +774,55 @@ Agent orchestration guidelines and skills MUST enforce a zero-polling invariant:
 - **GIVEN** a directory containing `gradlew` and a `Makefile` with a `test:` target
 - **WHEN** `detectStack` executes
 - **THEN** it returns `"gradle"` and provides `testCommand: "make test"`
+
+### Requirement: REQ-OSA-55 Developer-Owned Quality Gates
+Generated `.pre-commit-config.yaml` hooks and `.github/workflows/spec-rails-ci.yml` MUST NOT invoke, install or otherwise depend on `spec-rails`. `spec-rails-ci.yml` MUST be a language-agnostic skeleton whose steps for unit tests, coverage and mutation are commented out and which performs no work until the developer edits it.
+
+#### Scenario: Generated files have no spec-rails dependency
+- **GIVEN** a repository with OpenSpec initialised and no spec-rails installed
+- **WHEN** `spec-rails init` runs
+- **THEN** `.pre-commit-config.yaml` and `.github/workflows/spec-rails-ci.yml` contain no `spec-rails` invocation
+
+#### Scenario: Skeleton is inert
+- **GIVEN** the generated `spec-rails-ci.yml`
+- **WHEN** it is inspected
+- **THEN** its test, coverage and mutation steps are comments and it contains no stack-specific command
+
+### Requirement: REQ-OSA-56 Gate Setup TODO
+`spec-rails init` MUST create `openspec/spec-rails/TODO.md` when absent, prompting the developer to configure and run coverage and mutation checks, and MUST NOT overwrite it when present.
+
+#### Scenario: TODO created once
+- **GIVEN** no `openspec/spec-rails/TODO.md`
+- **WHEN** `spec-rails init` runs
+- **THEN** the file exists and mentions coverage and mutation
+
+#### Scenario: Existing TODO preserved
+- **GIVEN** a developer-edited `openspec/spec-rails/TODO.md`
+- **WHEN** `spec-rails init` runs again
+- **THEN** its content is unchanged
+
+### Requirement: REQ-OSA-57 Stale Artifact Cleanup
+`spec-rails init` MUST remove stale artifacts from earlier versions: the `spec-rails-check` pre-commit hook, legacy `sh openspec/spec-rails/spec-rails-*` entries, a root `mutmut.ini`, `openspec/spec-rails/mutation/mutmut.ini`, and replace a stale `spec-rails-ci.yml` with the skeleton. Shipped docs (`rules/WORKFLOW.md` and `openspec/spec-rails/WORKFLOW.md`) MUST NOT reference `rails.conf`, "checks" or mutmut. Re-running `init` MUST produce no further changes.
+
+#### Scenario: Stale workflow replaced
+- **GIVEN** a `spec-rails-ci.yml` calling `sh openspec/spec-rails/spec-rails-verify`
+- **WHEN** `spec-rails init` runs
+- **THEN** the file is the skeleton and contains no such call
+
+#### Scenario: mutmut files removed
+- **GIVEN** a root `mutmut.ini`
+- **WHEN** `spec-rails init` runs
+- **THEN** it is deleted and no mutmut file is created
+
+#### Scenario: Idempotent upgrade
+- **GIVEN** a repository already upgraded
+- **WHEN** `spec-rails init` runs again
+- **THEN** no file changes
+
+### Requirement: REQ-OSA-58 Init Action Log
+`spec-rails init` MUST print one console line per removed, replaced, created or skipped artifact and a reminder to complete `openspec/spec-rails/TODO.md`.
+
+#### Scenario: Actions are logged
+- **GIVEN** a repository with a stale workflow and a root `mutmut.ini`
+- **WHEN** `spec-rails init` runs
+- **THEN** the output lists the removed `mutmut.ini`, the replaced workflow and the created `TODO.md`
