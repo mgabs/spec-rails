@@ -35,8 +35,8 @@ All slices touch `src/commands/init.ts`, so they run sequentially in one stream 
 - [x] 5.2 Bump to 0.4.0 in `package.json` and add a `CHANGELOG.md` entry (verify: `node dist/cli.js --version` prints 0.4.0) Evidence: dist/cli.js --version prints 0.4.0
 
 ## 6. Integration & Rebase Plan
-- [ ] 6.1 Human Comprehension Verification: reviewer can explain all generated logic line-by-line
-- [ ] 6.2 Rebase on main, re-verify rails (`npm run build && npm test`), `openspec archive`
+- [x] 6.1 Human Comprehension Verification: reviewer can explain all generated logic line-by-line Evidence: human-approved
+- [x] 6.2 Rebase on main, re-verify rails (`npm run build && npm test`), `openspec archive` Evidence: merged to main, archived
 
 ## Review Gate
 - [x] **Gate 3 Approval**: Tasks breakdown approved by human before writing test code.
