@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { detectStack, initProject, getStackMeta, findPresetsDir, generatePreCommitConfig, findAssetRoot, scaffoldDeveloperGuide } from "../../src/commands/init.js";
+import { detectStack, initProject, removeHookBlock, isStaleWorkflow, modernizePreCommitConfig, getStackMeta, findPresetsDir, generatePreCommitConfig, findAssetRoot, scaffoldDeveloperGuide } from "../../src/commands/init.js";
 import { loadConfigFile } from "../../src/config.js";
 
 describe("Stack Auto-Detection & Init Command", () => {
@@ -92,8 +92,6 @@ describe("Stack Auto-Detection & Init Command", () => {
     expect(getStackMeta("python")).toEqual({
       testCommand: "pytest",
       coverageCommand: "pytest --cov",
-      mutationCommand: "mutmut run",
-      presetFile: "mutmut.ini",
     });
     expect(getStackMeta("go")).toEqual({
       testCommand: "go test ./...",
@@ -194,7 +192,7 @@ describe("Stack Auto-Detection & Init Command", () => {
     expect(cfg.mutationCommand).toBe("npx stryker run");
   });
 
-  it("initializes a Python repository with config and mutmut preset", () => {
+  it("initializes a Python repository with config and no mutation preset (REQ-OSA-36)", () => {
     fs.mkdirSync(path.join(tempDir, "openspec"));
     fs.writeFileSync(path.join(tempDir, "pyproject.toml"), "");
     const result = initProject({
@@ -207,13 +205,14 @@ describe("Stack Auto-Detection & Init Command", () => {
     const configPath = path.join(tempDir, "spec-rails.config.json");
     const mutmutPath = path.join(tempDir, "mutmut.ini");
     expect(result.createdFiles).toContain(configPath);
-    expect(result.createdFiles).toContain(mutmutPath);
+    expect(result.createdFiles).not.toContain(mutmutPath);
+    expect(fs.existsSync(mutmutPath)).toBe(false);
 
     const cfg = loadConfigFile(configPath);
     expect(cfg.stack).toBe("python");
     expect(cfg.testCommand).toBe("pytest");
     expect(cfg.coverageCommand).toBe("pytest --cov");
-    expect(cfg.mutationCommand).toBe("mutmut run");
+    expect(cfg.mutationCommand).toBeUndefined();
   });
 
   it("initializes a Go repository with config and gremlins preset", () => {
@@ -358,7 +357,7 @@ describe("Stack Auto-Detection & Init Command", () => {
     expect(pyYaml).toContain("id: branch-protection");
     expect(pyYaml).toContain("entry: pytest");
     expect(pyYaml).not.toContain("make test");
-    expect(pyYaml).toContain("entry: npx --no-install spec-rails check");
+    expect(pyYaml).not.toContain("spec-rails check");
     expect(pyYaml).not.toContain("check-lgtm-directives");
     expect(pyYaml).not.toContain(".lgtm");
 
@@ -439,7 +438,8 @@ describe("Stack Auto-Detection & Init Command", () => {
     const updatedYaml = fs.readFileSync(preCommitPath, "utf-8");
     expect(updatedYaml).not.toContain("check-lgtm-directives");
     expect(updatedYaml).not.toContain("spec-rails-verify");
-    expect(updatedYaml).toContain("entry: npx --no-install spec-rails check");
+    expect(updatedYaml).not.toContain("spec-rails-check");
+    expect(updatedYaml).not.toContain("spec-rails check");
     expect(updatedYaml).toContain("id: branch-protection");
     expect(updatedYaml).toContain("id: detekt");
     expect(updatedYaml).toContain("./gradlew detekt");
@@ -462,5 +462,153 @@ describe("Stack Auto-Detection & Init Command", () => {
     if (fs.existsSync(rawHook)) {
       expect(fs.readFileSync(rawHook, "utf-8")).not.toContain("ERROR: Direct commits to '$branch' are forbidden");
     }
+  });
+  it("removeHookBlock preserves sibling keys and blank lines (REQ-OSA-46)", () => {
+    const yaml = `repos:
+  - repo: local
+    hooks:
+      - id: a
+        entry: >-
+          folded a
+        language: system
+
+      - id: spec-rails-check
+        entry: >-
+          npx --no-install spec-rails check
+        language: system
+        pass_filenames: false
+
+      - id: b
+        entry: b
+        language: system
+        pass_filenames: false
+`;
+    const out = removeHookBlock(yaml, "spec-rails-check");
+    expect(out).toBe(`repos:
+  - repo: local
+    hooks:
+      - id: a
+        entry: >-
+          folded a
+        language: system
+
+      - id: b
+        entry: b
+        language: system
+        pass_filenames: false
+`);
+    expect(removeHookBlock(yaml, "missing")).toBe(yaml);
+    expect(removeHookBlock("- id: x\n  entry: y", "x")).toBe("");
+  });
+
+  it("drops a local repo left with no hooks (REQ-OSA-46)", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
+    fs.writeFileSync(
+      path.join(tempDir, ".pre-commit-config.yaml"),
+      `repos:
+  - repo: https://example.com/x
+    rev: v1
+    hooks:
+      - id: x
+
+  - repo: local
+    hooks:
+      - id: spec-rails-check
+        entry: npx --no-install spec-rails check
+        language: system
+`,
+    );
+    initProject({ cwd: tempDir, stack: "ts" });
+    const out = fs.readFileSync(path.join(tempDir, ".pre-commit-config.yaml"), "utf-8");
+    expect(out).toContain("id: x");
+    expect(out).not.toContain("repo: local");
+    expect(out).not.toContain("hooks:\n\n");
+  });
+
+  it("detects stale workflows (REQ-OSA-57)", () => {
+    expect(isStaleWorkflow("run: sh openspec/spec-rails/spec-rails-verify")).toBe(true);
+    expect(isStaleWorkflow("run: npx --no-install spec-rails check --audit")).toBe(true);
+    expect(isStaleWorkflow("run: npm test")).toBe(false);
+  });
+
+  it("generates inert CI, TODO, removes stale files and is idempotent (REQ-OSA-55, REQ-OSA-56, REQ-OSA-57, REQ-OSA-58)", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec/spec-rails/mutation"), { recursive: true });
+    fs.mkdirSync(path.join(tempDir, ".github/workflows"), { recursive: true });
+    const wf = path.join(tempDir, ".github/workflows/spec-rails-ci.yml");
+    fs.writeFileSync(wf, "run: sh openspec/spec-rails/spec-rails-verify\n");
+    fs.writeFileSync(path.join(tempDir, "mutmut.ini"), "[mutmut]");
+    fs.writeFileSync(path.join(tempDir, "openspec/spec-rails/mutation/mutmut.ini"), "[mutmut]");
+
+    const first = initProject({ cwd: tempDir, stack: "python" });
+    expect(first.actions).toEqual(expect.arrayContaining([
+      "removed mutmut.ini",
+      "removed openspec/spec-rails/mutation/mutmut.ini",
+      "replaced .github/workflows/spec-rails-ci.yml",
+      "created openspec/spec-rails/TODO.md",
+    ]));
+    expect(fs.existsSync(path.join(tempDir, "mutmut.ini"))).toBe(false);
+    const ci = fs.readFileSync(wf, "utf-8");
+    expect(ci).not.toMatch(/spec-rails (check|verify)/);
+    expect(ci).toContain("# - name: Mutation testing");
+    const todo = path.join(tempDir, "openspec/spec-rails/TODO.md");
+    expect(fs.readFileSync(todo, "utf-8")).toMatch(/coverage/i);
+    expect(fs.readFileSync(todo, "utf-8")).toMatch(/mutation/i);
+
+    fs.writeFileSync(todo, "mine");
+    fs.appendFileSync(wf, "# dev edit\n");
+    const snapshot = (f: string) => fs.readFileSync(path.join(tempDir, f), "utf-8");
+    const before = [".pre-commit-config.yaml", ".github/workflows/spec-rails-ci.yml", "openspec/spec-rails/TODO.md"].map(snapshot);
+    const second = initProject({ cwd: tempDir, stack: "python", force: true });
+    expect(second.actions.join("\n")).not.toMatch(/replaced|removed/);
+    expect([".pre-commit-config.yaml", ".github/workflows/spec-rails-ci.yml", "openspec/spec-rails/TODO.md"].map(snapshot)).toEqual(before);
+  });
+
+  it("modernizePreCommitConfig drops only empty repos and keeps populated ones exactly (REQ-OSA-46)", () => {
+    const hook = "      - id: spec-rails-check\n        entry: npx --no-install spec-rails check\n";
+    const middle = `repos:\n  - repo: local\n    hooks:\n${hook}\n  - repo: https://example.com/x\n    rev: v1\n    hooks:\n      - id: x\n`;
+    expect(modernizePreCommitConfig(middle)).toBe(`repos:\n  - repo: https://example.com/x\n    rev: v1\n    hooks:\n      - id: x\n`);
+
+    const last = `repos:\n  - repo: https://example.com/x\n    hooks:\n      - id: x\n\n  - repo: local\n    hooks:\n${hook}`;
+    expect(modernizePreCommitConfig(last)).toBe(`repos:\n  - repo: https://example.com/x\n    hooks:\n      - id: x\n`);
+
+    const kept = `repos:\n  - repo: local\n    hooks:\n      - id: keep\n        entry: k\n`;
+    expect(modernizePreCommitConfig(kept)).toBe(kept);
+
+    const indented = `repos:\n- repo: local\n  hooks:\n  - id: spec-rails-check\n    entry: e\n- repo: https://example.com/x\n  hooks:\n  - id: x\n`;
+    expect(modernizePreCommitConfig(indented)).toBe(`repos:\n- repo: https://example.com/x\n  hooks:\n  - id: x\n`);
+  });
+
+  it("logs exact actions for a fresh and an upgraded repo (REQ-OSA-58)", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
+    const fresh = initProject({ cwd: tempDir, stack: "ts" });
+    expect(fresh.actions).toEqual(expect.arrayContaining([
+      "wrote .pre-commit-config.yaml",
+      "created .github/workflows/spec-rails-ci.yml",
+      "created openspec/spec-rails/TODO.md",
+      "TODO: complete openspec/spec-rails/TODO.md (coverage and mutation checks)",
+    ]));
+    fs.appendFileSync(path.join(tempDir, ".pre-commit-config.yaml"), "\n  - repo: local\n    hooks:\n      - id: spec-rails-check\n        entry: e\n");
+    const again = initProject({ cwd: tempDir, stack: "ts", force: true });
+    expect(again.actions).not.toContain("created .github/workflows/spec-rails-ci.yml");
+    const gi = fs.readFileSync(path.join(tempDir, ".gitignore"), "utf-8");
+    expect(gi).toContain(".worktrees/");
+  });
+
+  it("reports hook removal when modernizing an existing pre-commit file (REQ-OSA-58)", () => {
+    fs.mkdirSync(path.join(tempDir, "openspec"));
+    fs.writeFileSync(path.join(tempDir, ".pre-commit-config.yaml"), "repos:\n  - repo: local\n    hooks:\n      - id: spec-rails-check\n        entry: e\n      - id: keep\n        entry: k\n");
+    const res = initProject({ cwd: tempDir, stack: "ts" });
+    expect(res.actions).toContain("removed spec-rails hooks from .pre-commit-config.yaml");
+    const res2 = initProject({ cwd: tempDir, stack: "ts", force: true });
+    expect(res2.actions).toContain("wrote .pre-commit-config.yaml");
+  });
+
+  it("keeps a repo whose first hook was removed but still has hooks after a blank line (REQ-OSA-46)", () => {
+    const yaml = "repos:\n  - repo: local\n    hooks:\n      - id: spec-rails-check\n        entry: e\n\n      - id: keep\n        entry: k\n";
+    expect(modernizePreCommitConfig(yaml)).toBe("repos:\n  - repo: local\n    hooks:\n\n      - id: keep\n        entry: k\n");
+    const twoRepos = "repos:\n  - repo: local\n    hooks:\n      - id: spec-rails-check\n        entry: e\n  - repo: local\n    hooks:\n      - id: keep\n        entry: k\n";
+    expect(modernizePreCommitConfig(twoRepos)).toBe("repos:\n  - repo: local\n    hooks:\n      - id: keep\n        entry: k\n");
+    expect(removeHookBlock("a\n- id: x\n  entry: y\n- id: z", "x")).toBe("a\n- id: z");
+    expect(removeHookBlock("a\n\n- id: x\n  entry: y", "x")).toBe("a");
   });
 });

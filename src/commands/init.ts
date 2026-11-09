@@ -13,6 +13,7 @@ export interface InitOptions {
 export interface InitResult {
   detectedStack: Stack;
   createdFiles: string[];
+  actions: string[];
 }
 
 export function detectStack(targetDir: string): Stack {
@@ -62,8 +63,6 @@ export function getStackMeta(stack: Stack, targetDir?: string): StackMeta {
       return {
         testCommand: "pytest",
         coverageCommand: "pytest --cov",
-        mutationCommand: "mutmut run",
-        presetFile: "mutmut.ini",
       };
     case "go":
       return {
@@ -114,11 +113,16 @@ export function findAssetRoot(currentDir: string = path.dirname(fileURLToPath(im
 }
 
 export function pruneLegacyFiles(targetDir: string): string[] {
-  const openspecSpecRails = path.join(targetDir, "openspec/spec-rails");
-  const legacyFiles = ["spec-rails-check", "spec-rails-verify", "rails.conf"];
+  const legacyFiles = [
+    "openspec/spec-rails/spec-rails-check",
+    "openspec/spec-rails/spec-rails-verify",
+    "openspec/spec-rails/rails.conf",
+    "openspec/spec-rails/mutation/mutmut.ini",
+    "mutmut.ini",
+  ];
   const pruned: string[] = [];
   for (const file of legacyFiles) {
-    const fullPath = path.join(openspecSpecRails, file);
+    const fullPath = path.join(targetDir, file);
     if (fs.existsSync(fullPath)) {
       fs.rmSync(fullPath, { force: true });
       pruned.push(fullPath);
@@ -180,7 +184,7 @@ npx --no-install spec-rails verify
 
 ## Supported Stacks
 - **TypeScript / Node.js**: Vitest / Jest + Stryker
-- **Python**: Pytest + Mutmut
+- **Python**: Pytest
 - **Go**: go test + Gremlins
 - **Rust**: cargo test + cargo-mutants
 `;
@@ -208,27 +212,46 @@ export function findPresetsDir(currentDir: string = path.dirname(fileURLToPath(i
   return path.resolve(currentDir, "../templates/presets");
 }
 
+const indentOf = (line: string): number => line.length - line.trimStart().length;
+
 export function removeHookBlock(yaml: string, hookId: string): string {
-  const regex = new RegExp(`^[ \\t]*-[ \\t]+id:[ \\t]+${hookId}\\b[\\s\\S]*?(?=^[ \\t]*-[ \\t]+(?:id|repo):|\\Z)`, "m");
-  return yaml.replace(regex, "");
+  const lines = yaml.split("\n");
+  const start = lines.findIndex((l) => new RegExp(`^[ \\t]*-[ \\t]+id:[ \\t]+${hookId}\\b`).test(l));
+  if (start === -1) return yaml;
+  const marker = indentOf(lines[start]);
+  let end = start + 1;
+  while (end < lines.length && lines[end].trim() !== "" && indentOf(lines[end]) > marker) end++;
+  const from = start > 0 && lines[start - 1].trim() === "" ? start - 1 : start;
+  lines.splice(from, end - from);
+  return lines.join("\n");
+}
+
+function dropEmptyRepos(yaml: string): string {
+  const lines = yaml.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^[ \t]*hooks:[ \t]*$/.test(lines[i])) continue;
+    let next = i + 1;
+    while (next < lines.length && lines[next].trim() === "") next++;
+    const empty = next >= lines.length || (/^[ \t]*-[ \t]+repo:/.test(lines[next]) && indentOf(lines[next]) <= indentOf(lines[i]));
+    if (!empty) continue;
+    let repo = i;
+    while (repo > 0 && !/^[ \t]*-[ \t]+repo:/.test(lines[repo])) repo--;
+    lines.splice(repo, next - repo);
+    i = repo - 1;
+  }
+  return lines.join("\n");
 }
 
 export function modernizePreCommitConfig(content: string): string {
   let updated = content;
-
-  // 1. Remove legacy / unwanted hooks
-  updated = removeHookBlock(updated, "check-lgtm-directives");
-  updated = removeHookBlock(updated, "spec-rails-verify");
-
-  // 2. Modernize spec-rails-check entry
-  const checkBlockRegex = /(^[ \t]*-[ \t]+id:[ \t]+spec-rails-check\b[\s\S]*?^[ \t]*entry:)[ \t]*(?:>-|\|[+-]?)?(?:[^\n]*\n(?:[ \t]{8,}[^\n]*\n)*|[^\n]*)/m;
-  if (checkBlockRegex.test(updated)) {
-    updated = updated.replace(checkBlockRegex, `$1 npx --no-install spec-rails check`);
+  for (const id of ["check-lgtm-directives", "spec-rails-verify", "spec-rails-check"]) {
+    updated = removeHookBlock(updated, id);
   }
+  return dropEmptyRepos(updated);
+}
 
-  // 3. Clean up excessive blank lines
-  updated = updated.replace(/\n{3,}/g, "\n\n");
-  return updated;
+export function isStaleWorkflow(content: string): boolean {
+  return /spec-rails (check|verify)|openspec\/spec-rails\/spec-rails-/.test(content);
 }
 
 export function generatePreCommitConfig(stack: Stack, testCommand: string): string {
@@ -248,12 +271,6 @@ export function generatePreCommitConfig(stack: Stack, testCommand: string): stri
         name: spec-rails branch protection
         entry: >-
           sh -c 'branch=$(git branch --show-current 2>/dev/null || echo ""); if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then echo "ERROR: Direct commits to $branch are forbidden by Spec-Rails workflow." >&2; exit 1; fi'
-        language: system
-        pass_filenames: false
-
-      - id: spec-rails-check
-        name: spec-rails gate and lane check
-        entry: npx --no-install spec-rails check
         language: system
         pass_filenames: false
 
@@ -317,6 +334,7 @@ export function initProject(options: InitOptions = {}): InitResult {
 
   fs.writeFileSync(configPath, JSON.stringify(configPayload, null, 2) + "\n");
   const createdFiles: string[] = [configPath];
+  const actions: string[] = [`created ${path.relative(cwd, configPath)}`];
 
   // Copy preset file if available
   if (meta.presetFile) {
@@ -328,6 +346,7 @@ export function initProject(options: InitOptions = {}): InitResult {
       if (fs.existsSync(sourcePreset)) {
         fs.copyFileSync(sourcePreset, destPreset);
         createdFiles.push(destPreset);
+        actions.push(`created ${meta.presetFile}`);
       }
     }
   }
@@ -353,7 +372,9 @@ export function initProject(options: InitOptions = {}): InitResult {
   }
 
   // 3. Prune legacy v0.1 files and copy documentation, rules, & mutation templates
-  pruneLegacyFiles(cwd);
+  for (const pruned of pruneLegacyFiles(cwd)) {
+    actions.push(`removed ${path.relative(cwd, pruned)}`);
+  }
   const specRailsSrc = path.join(root, "openspec/spec-rails");
   const specRailsDest = path.join(openspecDir, "spec-rails");
   copyDirRecursive(specRailsSrc, specRailsDest);
@@ -379,14 +400,28 @@ export function initProject(options: InitOptions = {}): InitResult {
   const preCommitPath = path.join(cwd, ".pre-commit-config.yaml");
   if (!fs.existsSync(preCommitPath) || force) {
     fs.writeFileSync(preCommitPath, generatePreCommitConfig(detectedStack, meta.testCommand));
+    actions.push("wrote .pre-commit-config.yaml");
   } else {
     const existingPreCommit = fs.readFileSync(preCommitPath, "utf-8");
     const modernized = modernizePreCommitConfig(existingPreCommit);
     if (modernized !== existingPreCommit) {
       fs.writeFileSync(preCommitPath, modernized);
+      actions.push("removed spec-rails hooks from .pre-commit-config.yaml");
     }
   }
-    copyFileSafe(path.join(root, "templates/spec-rails-ci.yml"), path.join(cwd, ".github/workflows/spec-rails-ci.yml"), force);
+
+  const workflowPath = path.join(cwd, ".github/workflows/spec-rails-ci.yml");
+  const workflowExists = fs.existsSync(workflowPath);
+  if (!workflowExists || isStaleWorkflow(fs.readFileSync(workflowPath, "utf-8"))) {
+    copyFileSafe(path.join(root, "templates/spec-rails-ci.yml"), workflowPath, true);
+    actions.push(`${workflowExists ? "replaced" : "created"} .github/workflows/spec-rails-ci.yml`);
+  }
+
+  const todoPath = path.join(specRailsDest, "TODO.md");
+  if (copyFileSafe(path.join(root, "templates/TODO.md"), todoPath)) {
+    actions.push("created openspec/spec-rails/TODO.md");
+  }
+  actions.push("TODO: complete openspec/spec-rails/TODO.md (coverage and mutation checks)");
 
     // 7. Configure .gitignore for .worktrees/
     const gitignorePath = path.join(cwd, ".gitignore");
@@ -414,5 +449,6 @@ export function initProject(options: InitOptions = {}): InitResult {
   return {
     detectedStack,
     createdFiles,
+    actions,
   };
 }

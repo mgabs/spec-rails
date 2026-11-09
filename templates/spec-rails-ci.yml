@@ -1,4 +1,4 @@
-name: Spec-Rails Rails
+name: CI
 
 on:
   pull_request:
@@ -8,60 +8,27 @@ permissions:
   contents: read
 
 jobs:
-  verify-rails:
-    name: Verify Specs & Testing Rails
+  rails:
+    name: Quality gates
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: '22'
+      # Skeleton: uncomment and adapt each step for your stack, then see openspec/spec-rails/TODO.md.
 
-      - name: Prepare local Spec-Rails CLI
-        run: |
-          if [ -f package.json ] && grep -q '"name": "spec-rails"' package.json; then
-            npm ci
-            npm run build
-          fi
+      # - name: Set up toolchain
+      #   uses: <setup action for your language>
 
-      - name: Gate & Lane Check (with Spec Audit)
-        env:
-          BASE_REF: ${{ github.base_ref }}
-          HEAD_REF: ${{ github.head_ref }}
-        run: |
-          npm install -g @fission-ai/openspec@1.16.0
-          if [ -f package.json ] && grep -q '"name": "spec-rails"' package.json; then
-            node dist/cli.js check --audit
-          else
-            npx --no-install spec-rails check --audit
-          fi
+      # - name: Unit tests
+      #   run: <test command>
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      # - name: Coverage (>= 95%)
+      #   run: <coverage command>
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+      # - name: Mutation testing (>= 95% kill)
+      #   run: <mutation command>
 
-      - name: Verify Test Rails
-        run: |
-          if [ -f package.json ] && grep -q '"name": "spec-rails"' package.json; then
-            node dist/cli.js verify
-          else
-            npx --no-install spec-rails verify
-          fi
-
-      - name: Pre-Commit
-        run: |
-          # Skip hooks already covered by the check/verify steps above.
-          SKIP=$(grep -oE 'id: (branch-protection|build-cli|spec-rails-check|spec-rails-verify|test)$' .pre-commit-config.yaml | sed 's/id: //' | paste -sd, -)
-          export SKIP
-          pip install pre-commit
-          pre-commit run --all-files
+      - name: Placeholder
+        run: echo "No quality gates configured yet; see openspec/spec-rails/TODO.md"

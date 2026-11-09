@@ -17,12 +17,6 @@ repos:
         language: system
         pass_filenames: false
 
-      - id: spec-rails-check
-        name: spec-rails gate and lane check
-        entry: npx --no-install spec-rails check
-        language: system
-        pass_filenames: false
-
       # Project-specific linter and test hooks (auto-run when Makefile targets exist)
       - id: lint
         name: linter

@@ -87,14 +87,12 @@ describe("REQ-OSA-48 baseline", () => {
 // REQ-OSA-49 / REQ-OSA-50: template and docs
 describe("REQ-OSA-49 CI template", () => {
   const ci = fs.readFileSync(path.join(__dirname, "../../templates/spec-rails-ci.yml"), "utf-8");
-  it("pins openspec", () => {
-    expect(ci).toMatch(/@fission-ai\/openspec@\d+\.\d+\.\d+/);
-  });
-  it("sets up uv before verify, derives SKIP, no make test", () => {
-    expect(ci.indexOf("setup-uv")).toBeGreaterThan(-1);
-    expect(ci.indexOf("setup-uv")).toBeLessThan(ci.indexOf("spec-rails verify"));
-    expect(ci).toContain("SKIP=$(grep");
+  it("is an inert skeleton with no spec-rails or make test step (REQ-OSA-49, REQ-OSA-55)", () => {
+    expect(ci).not.toMatch(/spec-rails (check|verify)/);
     expect(ci).not.toContain("make test");
+    expect(ci).toContain("# - name: Unit tests");
+    expect(ci).toContain("# - name: Coverage");
+    expect(ci).toContain("# - name: Mutation testing");
   });
 });
 

@@ -80,7 +80,7 @@ Prerequisites: an existing `openspec init` project, OpenSpec ≥ 1.15.0, and Nod
 npx --no-install spec-rails init [target-repo]
 ```
 
-Scaffolds `spec-rails.config.json` with detected stack commands and thresholds, copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: spec-rails` in `openspec/config.yaml`, installs local hooks into `.pre-commit-config.yaml` (spec-rails gate check, branch protection), scaffolds developer guidance in `docs/spec-rails/`, copies mutation presets, agent rules (`openspec/spec-rails/`), and `.agents/skills/spec-rails/SKILL.md` automatically, and ignores `.worktrees/`. Re-running is a no-op. Gate and lane check: `npx --no-install spec-rails check`.
+Scaffolds `spec-rails.config.json` with detected stack commands and thresholds, copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: spec-rails` in `openspec/config.yaml`, installs local hooks into `.pre-commit-config.yaml` (branch protection and your stack's test command; no spec-rails dependency), scaffolds developer guidance in `docs/spec-rails/`, copies mutation presets (except Python), an inert `spec-rails-ci.yml` skeleton and `openspec/spec-rails/TODO.md` for you to set up coverage and mutation gates, removes stale artifacts from earlier versions, copies agent rules (`openspec/spec-rails/`), and `.agents/skills/spec-rails/SKILL.md` automatically, and ignores `.worktrees/`. Re-running is idempotent (it logs each removed, replaced or created file). Gate and lane check: `npx --no-install spec-rails check`.
 
 ### Documentation & Guides
 

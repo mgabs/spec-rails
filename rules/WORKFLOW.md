@@ -91,7 +91,7 @@ openspec/
 ├── changes/<id>-<slug>/         <-- Active change: research, proposal, specs/, design, tasks
 ├── changes/archive/             <-- Shipped or dropped changes
 ├── schemas/spec-rails/          <-- Installed schema and templates
-└── spec-rails/                  <-- WORKFLOW.md (this file), AGENTS.md, rails.conf, checks
+└── spec-rails/                  <-- WORKFLOW.md (this file), AGENTS.md, bug-report.md, mutation/, TODO.md
 docs/
 ├── ROADMAP.md                   <-- Waves, work items, dependency spine, exit criteria
 └── bug-reports/                 <-- Defect triage reports

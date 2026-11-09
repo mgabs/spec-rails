@@ -184,7 +184,7 @@ How to use the tooling by hand; the CI/CD Pipeline below shows when each command
 | `npm run lint` | Type check (`tsc --noEmit`) |
 | `npm test` | Vitest suite |
 | `npm run test:coverage` | Vitest with coverage (>= 95%) |
-| `npx --no-install spec-rails init [dir] [--stack <stack>]` | Install Spec-Rails into an OpenSpec project (requires `openspec init` first). Re-running upgrades an existing install in place: it prunes legacy v0.1 shell binaries and duplicate `rails.conf`, and modernizes `.pre-commit-config.yaml` hooks. Existing files are not overwritten, so it is otherwise idempotent. There is no separate `update` command |
+| `npx --no-install spec-rails init [dir] [--stack <stack>]` | Install Spec-Rails into an OpenSpec project (requires `openspec init` first). Re-running upgrades an existing install in place: it removes legacy v0.1 shell binaries, duplicate `rails.conf`, `mutmut.ini`, spec-rails hooks in `.pre-commit-config.yaml` and a stale `spec-rails-ci.yml` (replaced by an inert skeleton). Existing files are otherwise not overwritten, so it is idempotent. There is no separate `update` command |
 | `npx --no-install spec-rails check [--audit]` | Gate and lane check (`node dist/cli.js check` in this repo) |
 | `npx --no-install spec-rails audit [dir]` | Audit spec-to-code mapping against the base branch |
 | `npx --no-install spec-rails verify` | Test rails: Red-Green evidence, coverage, mutation (`node dist/cli.js verify` in this repo) |

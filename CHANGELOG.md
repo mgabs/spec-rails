@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - 2026-11-09
+
+### Changed
+- `spec-rails init` no longer makes target repos depend on spec-rails: generated and modernized `.pre-commit-config.yaml` and `.github/workflows/spec-rails-ci.yml` never call `spec-rails`. The CI template is now an inert, commented, language-agnostic skeleton, and `openspec/spec-rails/TODO.md` prompts you to set up coverage and mutation checks.
+- `init` logs each removed, replaced or created artifact.
+- This repository's own `spec-rails-ci.yml` is no longer a self-copy of the template.
+
+### Removed
+- mutmut presets and the root `mutmut.ini`; `init` deletes stale `mutmut.ini`, spec-rails hooks and stale CI workflows from earlier installs.
+
+### Fixed
+- Pre-commit modernization no longer deletes sibling keys (`language`, `pass_filenames`) or blank lines, which produced an invalid hook.
+
 ## [0.3.0] - 2026-11-09
 
 ### Added

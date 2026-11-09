@@ -152,7 +152,7 @@ When a feature contains orthogonal tasks (decoupled modules, distinct endpoints,
 
 ### 4.1 The Two-Layer Rail
 1. **Unit Red-Green-Refactor**: Fine-grained assertions on all code paths, edge cases, and boundary values based on Given/When/Then scenarios.
-2. **Mutation Testing**: Code mutating engines (e.g. `cargo-mutants`, `mutmut`, `stryker`) generate mutations (flipping conditionals, replacing arithmetic, deleting statements). Core logic must maintain a >= 95% mutation kill score; surviving mutants below threshold must be killed or deleted.
+2. **Mutation Testing**: Code mutating engines (e.g. `cargo-mutants`, `stryker`) generate mutations (flipping conditionals, replacing arithmetic, deleting statements). Core logic must maintain a >= 95% mutation kill score; surviving mutants below threshold must be killed or deleted.
 
 In CI, `npx spec-rails verify` verifies the rails: every `REQ-*`/`NFR-*` in an active change must appear in a test file, ticked Red/Green/Coverage/Mutation tasks must carry `Evidence: <note>`, and the `testCommand`, `coverageCommand` and `mutationCommand` configured in `spec-rails.config.json` must exit 0 and meet thresholds. It runs only in CI, never as a commit hook.
 

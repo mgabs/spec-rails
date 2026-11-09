@@ -19,8 +19,8 @@ export function createCli(): CAC {
         force: options.force,
       });
       console.log(`[spec-rails] Initialized repository for stack: ${res.detectedStack}`);
-      for (const file of res.createdFiles) {
-        console.log(`  + Created: ${file}`);
+      for (const action of res.actions) {
+        console.log(`  - ${action}`);
       }
     });
 
