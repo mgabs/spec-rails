@@ -3,6 +3,7 @@ import { initProject } from "./commands/init.js";
 import { runVerify } from "./commands/verify.js";
 import { runCheck } from "./commands/check.js";
 import { runAudit } from "./commands/audit.js";
+import pkg from "../package.json" with { type: "json" };
 
 export function createCli(): CAC {
   const cli = cac("spec-rails");
@@ -91,7 +92,7 @@ export function createCli(): CAC {
     });
 
   cli.help();
-  cli.version("0.2.0");
+  cli.version(pkg.version);
 
   return cli;
 }

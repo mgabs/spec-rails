@@ -32,6 +32,7 @@ For the operational handbook, see [WAY_OF_WORKING.md](WAY_OF_WORKING.md). Delive
 - Every project maintains active pre-commit hooks (`.pre-commit-config.yaml`).
 - Before any commit: inspect `git status` / `git diff`, run all linters, and execute all tests.
 - Never bypass hooks using `git commit --no-verify` or `-n`. If a check fails, resolve the defect before committing.
+- Build before test (`npm run build` produces `dist/cli.js`, which the CLI tests spawn); `pre-commit run --all-files` mirrors CI. Commands: [Command Reference](WAY_OF_WORKING.md#command-reference); flow: [CI/CD Pipeline](WAY_OF_WORKING.md#cicd-pipeline).
 
 ### 1.6 Where Things Live (and Why `docs/`)
 There is no `specs/` folder. Each artifact has one home, chosen by who owns it:

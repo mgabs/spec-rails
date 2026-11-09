@@ -96,9 +96,14 @@ Scaffolds `spec-rails.config.json` with detected stack commands and thresholds, 
 
 ### Running Tests
 ```bash
-npm test         # Native TypeScript Vitest suite (13 suites, 166 tests, < 1s)
-npm run lint     # TypeScript type check (tsc --noEmit)
+npm ci                          # install dependencies
+npm run build                   # bundle dist/cli.js (required before tests)
+npm run lint                    # TypeScript type check (tsc --noEmit)
+npm test                        # Vitest suite (13 suites, 173 tests)
+npm run test:coverage           # Vitest with coverage
+pre-commit run --all-files      # all local hooks (mirrors CI)
 ```
+`npm test` needs `dist/cli.js` because the CLI tests spawn the bundle. CI (`test.yml`) runs `npm ci`, build, lint, test; commit hooks run build, check, verify, lint, test. See [Command Reference](docs/WAY_OF_WORKING.md#command-reference) and [CI/CD Pipeline](docs/WAY_OF_WORKING.md#cicd-pipeline) in the Way of Working. Release history: [CHANGELOG.md](CHANGELOG.md).
 
 ### Verifying the Test Rails in CI
 The CI workflow runs `npx --no-install spec-rails verify` as a verification step (never a commit hook). It fails the PR when:

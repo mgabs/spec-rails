@@ -174,6 +174,34 @@ Every repository initialized with `spec-rails` contains active pre-commit and CI
 - Pre-commit hooks run automatically on every `git commit`.
 - **Zero-Bypass Policy**: `git commit --no-verify` or `-n` is strictly forbidden. If a check fails, resolve the defect.
 
+### Command Reference
+How to use the tooling by hand; the CI/CD Pipeline below shows when each command runs automatically.
+
+| Command | Purpose |
+| :--- | :--- |
+| `npm ci` | Install pinned dependencies |
+| `npm run build` | Bundle `dist/cli.js` with tsup (MUST precede tests: `tests/unit/cli.test.ts` spawns the bundle) |
+| `npm run lint` | Type check (`tsc --noEmit`) |
+| `npm test` | Vitest suite |
+| `npm run test:coverage` | Vitest with coverage (>= 95%) |
+| `npx --no-install spec-rails init [dir] [--stack <stack>]` | Install Spec-Rails into an OpenSpec project (requires `openspec init` first). Re-running upgrades an existing install in place: it prunes legacy v0.1 shell binaries and duplicate `rails.conf`, and modernizes `.pre-commit-config.yaml` hooks. Existing files are not overwritten, so it is otherwise idempotent. There is no separate `update` command |
+| `npx --no-install spec-rails check [--audit]` | Gate and lane check (`node dist/cli.js check` in this repo) |
+| `npx --no-install spec-rails audit [dir]` | Audit spec-to-code mapping against the base branch |
+| `npx --no-install spec-rails verify` | Test rails: Red-Green evidence, coverage, mutation (`node dist/cli.js verify` in this repo) |
+| `pre-commit run --all-files` | Run every local hook |
+
+### CI/CD Pipeline
+How the same checks run automatically, from commit to pull request.
+```
+git commit -> pre-commit: branch-protection -> build-cli -> spec-rails-check
+                          -> spec-rails-verify -> lint -> test
+PR            -> CI (test.yml):           npm ci -> build -> lint -> test
+              -> Rails (spec-rails-ci.yml): npm ci -> build -> check --audit
+                                            -> verify -> pre-commit (hooks above skipped)
+```
+- **Build before test**: `dist/cli.js` must exist before `npm test`, because `tests/unit/cli.test.ts` spawns the bundle. On a clean checkout the `--version`/`--help` tests otherwise fail with `Cannot find module dist/cli.js`.
+- **Mirror CI locally**: run `pre-commit run --all-files` before pushing to catch CI failures early.
+
 ### Mutation Testing Rails
 - **>= 95% Mutation Kill Score** on domain logic, eliminating tautological assertions while preventing equivalent mutant friction.
 - Stack-aware defaults configured in `spec-rails.config.json`.

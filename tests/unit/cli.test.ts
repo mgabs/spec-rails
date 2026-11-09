@@ -4,6 +4,7 @@ import * as path from "node:path";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import { createCli, runCli } from "../../src/cli.js";
+import pkg from "../../package.json" with { type: "json" };
 
 describe("CLI Binary Integration & Unit (REQ-OSA-32, REQ-OSA-45)", () => {
   const cliPath = path.resolve("dist/cli.js");
@@ -121,7 +122,7 @@ describe("CLI Binary Integration & Unit (REQ-OSA-32, REQ-OSA-45)", () => {
 
   it("prints version on --version in subprocess bundle", () => {
     const out = execFileSync(process.execPath, [cliPath, "--version"], { encoding: "utf-8" });
-    expect(out).toContain("0.2.0");
+    expect(out).toContain(pkg.version);
   });
 
   it("prints help on --help in subprocess bundle", () => {
