@@ -2,7 +2,7 @@
 
 > **Spec-Driven, Testing-Railed Development** — An engineering handbook for humans and autonomous AI agents.
 
-> **Where things live**: the gate-by-gate protocol ships with the addon as `openspec/spec-rails/WORKFLOW.md`; change artifacts live in `openspec/changes/<id>-<slug>/`; delivery status (`docs/ROADMAP.md`) and bug reports (`docs/bug-reports/`) live in `docs/`. See [Wiki §1.6](WIKI.md#16-where-things-live-and-why-docs).
+> **Where things live**: the gate-by-gate protocol ships with the addon as `openspec/spec-rails/WORKFLOW.md`; change artifacts live in `openspec/changes/<id>-<slug>/`; delivery status (`docs/ROADMAP.md`) and bug reports (`docs/bug-reports/`) live in `docs/`. See [Wiki §1.6](WIKI.md#16-where-things-live-and-why-docs). Agents follow the step-by-step runbooks in [agentic-how-tos/](agentic-how-tos/README.md) (copied into target repos as `docs/agentic-how-tos/` by `init`; re-run `npx spec-rails init` in existing repos to refresh them).
 
 ---
 
@@ -100,7 +100,7 @@ gitGraph
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Gate0: openspec new change
+    [*] --> Gate0: /opsx-propose (new change)
     Gate0 --> Gate1: Human Decision (Go)
     Gate0 --> Dropped: Human Decision (No-Go)
     Gate1 --> Gate2: Human Approval (Proposal)
@@ -123,7 +123,7 @@ stateDiagram-v2
 | **Gate 1** | `proposal.md` | Intent, Problem statement, Scope, Out-of-Scope (YAGNI), Metrics. | Human approves the bounded scope. |
 | **Gate 2** | `design.md` + `specs/` | Delta specs (`REQ-*`, `NFR-*`), domain models, boundaries, test strategy. | Human approves architecture and behavioral contracts. |
 | **Gate 3** | `tasks.md` | Dependency DAG, worktree stream allocation, slice breakdown. | Human approves task breakdown before code is written. |
-| **Gate 4** | `openspec archive` | Rebase on `main`, run `spec-rails verify`, promote delta specs. | Human signs off on PR merge. |
+| **Gate 4** | archive | Rebase on `main`, run your test, coverage and mutation commands, promote delta specs. | Human signs off on PR merge. |
 
 ---
 
@@ -184,27 +184,25 @@ How to use the tooling by hand; the CI/CD Pipeline below shows when each command
 | `npm run lint` | Type check (`tsc --noEmit`) |
 | `npm test` | Vitest suite |
 | `npm run test:coverage` | Vitest with coverage (>= 95%) |
-| `npx --no-install spec-rails init [dir] [--stack <stack>]` | Install Spec-Rails into an OpenSpec project (requires `openspec init` first). Re-running upgrades an existing install in place: it removes legacy v0.1 shell binaries, duplicate `rails.conf`, `mutmut.ini`, spec-rails hooks in `.pre-commit-config.yaml` and a stale `spec-rails-ci.yml` (replaced by an inert skeleton). Existing files are otherwise not overwritten, so it is idempotent. There is no separate `update` command |
-| `npx --no-install spec-rails check [--audit]` | Gate and lane check (`node dist/cli.js check` in this repo) |
-| `npx --no-install spec-rails audit [dir]` | Audit spec-to-code mapping against the base branch |
-| `npx --no-install spec-rails verify` | Test rails: Red-Green evidence, coverage, mutation (`node dist/cli.js verify` in this repo) |
+| `make lint` / `make test` / `make coverage` / `make mutation` | In a target repo: placeholder targets from the `Makefile` that `init` creates when absent; replace the echoes with your stack's commands. Pre-commit calls `lint` and `test` |
+| `npx spec-rails init [dir] [--tools <list>]` | The only command. Bootstraps `openspec/` through the pinned local `openspec init --tools <list>` when absent (default tools `agents`), then installs Spec-Rails and rewrites the generated workflow skills to be CLI-free. Idempotent: a second run changes nothing; legacy artifacts are removed and developer-edited hooks, CI and TODO are preserved. Needs `openspec` (version in `openspec-version`) only when `openspec/` is absent |
+| `openspec update` then `npx spec-rails init` | Upgrade OpenSpec in a target repo; `init` restores the CLI-free skill bodies |
+| `node scripts/upgrade-openspec.mjs <version>` | Maintainers only: refresh `vendor/openspec/<version>/`, print the skill diff to port into `skills/ports/` |
 | `pre-commit run --all-files` | Run every local hook |
 
 ### CI/CD Pipeline
 How the same checks run automatically, from commit to pull request.
 ```
-git commit -> pre-commit: branch-protection -> build-cli -> spec-rails-check
-                          -> spec-rails-verify -> lint -> test
+git commit -> pre-commit: branch-protection -> build-cli -> lint -> test
 PR            -> CI (test.yml):           npm ci -> build -> lint -> test
-              -> Rails (spec-rails-ci.yml): npm ci -> build -> check --audit
-                                            -> verify -> pre-commit (hooks above skipped)
+              -> Rails (spec-rails-ci.yml): npm ci -> build -> pre-commit run --all-files
 ```
 - **Build before test**: `dist/cli.js` must exist before `npm test`, because `tests/unit/cli.test.ts` spawns the bundle. On a clean checkout the `--version`/`--help` tests otherwise fail with `Cannot find module dist/cli.js`.
 - **Mirror CI locally**: run `pre-commit run --all-files` before pushing to catch CI failures early.
 
 ### Mutation Testing Rails
 - **>= 95% Mutation Kill Score** on domain logic, eliminating tautological assertions while preventing equivalent mutant friction.
-- Stack-aware defaults configured in `spec-rails.config.json`.
+- Configure the mutation tool for your stack in your own commands and CI (see `openspec/spec-rails/TODO.md`).
 
 ---
 

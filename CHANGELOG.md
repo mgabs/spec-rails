@@ -2,6 +2,37 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+## [0.6.0] - 2026-11-10
+
+### Added
+- `tests/unit/traceability.test.ts` fails when any `REQ-*`/`NFR-*` id in `openspec/specs/*/spec.md` is not named in `tests/unit/`; it replaces the removed `check` command. Added missing ids to tests plus docs-accuracy, layout and cleanup tests.
+- `init` prints a reminder to complete `openspec/spec-rails/TODO.md` when it creates it.
+- `init` writes a placeholder `Makefile` (`lint`, `test`, `coverage`, `mutation`; echo only) when none exists; generated `.pre-commit-config.yaml` calls `make lint` / `make test`, each hook only if the existing Makefile defines the target.
+- `init` copies `docs/agentic-how-tos/` into target repos (managed, refreshed on every run): detailed agent runbooks 01–05 (bootstrap, feature lifecycle Gates 0–4, parallel worktrees with bake-off, fast-track bugfix, agent configuration) and a `README.md` index. Existing repos get them by re-running `npx spec-rails init`.
+
+### Changed
+- Living spec `openspec-addon` aligned with the slim `init`-only CLI. It was edited directly; the gate workflow was not run for this. Removed REQ-OSA-21 (CI audit) and REQ-OSA-31 (`--store`); reworded NFR-OSA-4/5/6/7, REQ-OSA-12, 14, 22, 23, 24 (now: `noUnusedLocals`/`noUnusedParameters` in `tsconfig.json`), 30, 40, 45, 46, 56, 57 and 58 to match current behaviour; "Gate 6" is now Gate 4. 'No code without a spec' is no longer mechanically enforced; reviewers check it.
+- Package and plugin versions aligned at 0.6.0.
+- Human how-tos cross-reference the agentic runbooks and use `/opsx-propose` / `/opsx-archive` instead of the `openspec` CLI.
+
+### Fixed
+- Docs: removed stale references to `check`/`verify`/`audit` in the design note, the CI "audit" in the wiki, a nonexistent `mutation/` folder in `WORKFLOW.md`, and the claim that agents tick Review Gate boxes (humans do).
+
+## [0.5.0] - 2026-11-10
+
+### Changed (breaking)
+- `spec-rails` now has a single command, `init`. When `openspec/` is absent it bootstraps through the pinned local `openspec init --tools <list>` (`--tools`, default `agents`; version pinned in `openspec-version`, same major.minor required); otherwise no `openspec` CLI is needed.
+- `init` is idempotent without flags: a second run is byte-identical, developer-edited hooks, CI and TODO are preserved, symlinked targets are refused.
+- `init` overlays CLI-free bodies (`skills/ports/`) on the generated explore, propose, apply, archive, sync and update skills, commands and prompts of every agent layout; other generated workflows are left untouched and logged. After `openspec update`, re-run `init` to restore them.
+- Generated `.pre-commit-config.yaml` has branch protection and test hooks (made make-based in Unreleased).
+- Added `vendor/openspec/<version>/` snapshot and `scripts/upgrade-openspec.mjs` for maintainers.
+
+### Removed
+- Commands `check`, `verify`, `audit`; flags `--stack` and `--force`; stack detection, `spec-rails.config.json`, `rails.conf` and the mutation presets. `init` deletes these legacy files and `opsx-*` skills from earlier installs.
+- Bundled `zod` dependency.
+
 ## [0.4.0] - 2026-11-09
 
 ### Changed

@@ -1,7 +1,7 @@
 # openspec-addon Specification
 
 ## Purpose
-Defines how Spec-Rails layers on an OpenSpec project: the `spec-rails` schema, the idempotent installer, the gate and lane check, and the OpenSpec-native spec model.
+Defines how Spec-Rails layers on an OpenSpec project: the `spec-rails` schema, the idempotent installer, and the OpenSpec-native spec model.
 
 ## Requirements
 
@@ -67,10 +67,10 @@ Each delta requirement header MUST begin with its stable key: `### Requirement: 
 - **THEN** its header starts with the stable key `REQ-<DOMAIN>-<N>`
 
 ### Requirement: REQ-OSA-9 Archive
-Gate 6 MUST use `openspec archive` for spec sync and archival; Spec-Rails MUST NOT copy into or move within any spec directory itself.
+Gate 4 MUST use `openspec archive` for spec sync and archival; Spec-Rails MUST NOT copy into or move within any spec directory itself.
 
 #### Scenario: Archive uses OpenSpec
-- **WHEN** Gate 6 is executed on a completed change
+- **WHEN** Gate 4 is executed on a completed change
 - **THEN** specs are synced and archived by `openspec archive` with no Spec-Rails copy or move step
 
 ### Requirement: REQ-OSA-10 Change Naming
@@ -82,32 +82,43 @@ Feature changes MUST be named `<id>-<slug>` with the roadmap ID lowercased and d
 - **THEN** it is named `w3-1-<slug>`
 
 ### Requirement: REQ-OSA-11 Prerequisite
-The installer MUST fail with a non-zero exit and a message when the target has no `openspec/` directory, when `openspec` is not on `PATH`, or when its version is below the pinned minimum (`1.15.0`).
+`init` MUST require the `openspec` CLI (pinned major.minor) on `PATH` only when `openspec/` is absent, per REQ-POS-6; it MUST NOT require any other tool, and MUST NOT require `openspec` or `spec-rails` for day-to-day work after init. It MUST fail with a non-zero exit and a message, writing nothing, when the target directory does not exist or is not writable.
 
 #### Scenario: Missing prerequisite
-- **WHEN** the target has no `openspec/` directory, no `openspec` on PATH, or a version below 1.15.0
-- **THEN** the installer exits non-zero with a message and writes nothing
+- **WHEN** the target directory does not exist
+- **THEN** `init` exits non-zero with a message and writes nothing
+
+#### Scenario: Empty directory is valid
+- **GIVEN** an existing empty directory and the pinned `openspec` on PATH
+- **WHEN** `init` runs
+- **THEN** it exits 0 and the OpenSpec tree exists
 
 ### Requirement: REQ-OSA-12 Wiring
-On a valid target the installer MUST: copy the schema to `openspec/schemas/spec-rails/`; set `schema: spec-rails` in `openspec/config.yaml`; install the pre-commit config, CI workflow, mutation templates, branch-protection hook (supporting standard `.git/` directories and Git worktree `.git` files), Spec-Rails agent rules and `.agents/skills/spec-rails/SKILL.md`; refuse pre-planted symlinks inside the target; and ensure `.worktrees/` is in `.gitignore`.
+`init` MUST: bootstrap OpenSpec per REQ-POS-6 when `openspec/` is absent; copy the schema to `openspec/schemas/spec-rails/`; set `schema: spec-rails` in `openspec/config.yaml`; install `openspec/spec-rails/WORKFLOW.md`, `AGENTS.md` and `TODO.md`, the `.agents/skills/spec-rails/SKILL.md` skill, a placeholder `Makefile` (`lint`, `test`, `coverage`, `mutation`), a `.pre-commit-config.yaml` (standard hygiene hooks, branch protection and make-based `lint`/`test` hooks) and `.github/workflows/spec-rails-ci.yml` skeleton when absent; apply the skill overlay of REQ-POS-7; and ensure `.worktrees/` is in `.gitignore`. It MUST refuse pre-planted symlinks inside the target.
 
 #### Scenario: Fresh install
-- **GIVEN** an initialized OpenSpec target repository
-- **WHEN** the installer runs on the target
-- **THEN** schema, config, hook, CI, mutation templates, agent rules and `.agents/skills/spec-rails/SKILL.md` are present and `.worktrees/` is ignored
+- **GIVEN** an empty git repository and the pinned `openspec` on PATH
+- **WHEN** `init` runs
+- **THEN** the OpenSpec tree, schema, workflow docs, overlaid skills, `Makefile`, pre-commit config, CI skeleton and `.gitignore` entry exist
 
 ### Requirement: REQ-OSA-13 Idempotence
-A second installer run MUST leave all files byte-identical and exit 0.
+Running `init` any number of times MUST succeed with exit 0 and, after the first run, MUST leave every file byte-identical, without requiring `--force`, regardless of a legacy `spec-rails.config.json`, which MUST be removed on the first run.
 
 #### Scenario: Idempotent re-run
-- **WHEN** the installer runs a second time
-- **THEN** no file changes and exit 0
+- **GIVEN** a repository where `init` already ran
+- **WHEN** `init` runs again
+- **THEN** exit 0, no file changes, no error
+
+#### Scenario: Legacy config
+- **GIVEN** a repository with `spec-rails.config.json`
+- **WHEN** `init` runs
+- **THEN** exit 0 and the file is removed
 
 ### Requirement: REQ-OSA-14 Non-Destructive Config
-The installer MUST preserve existing `openspec/config.yaml` keys other than `schema`, and MUST NOT overwrite an existing user `.pre-commit-config.yaml`, `.github/workflows/spec-rails-ci.yml`, `openspec/spec-rails/mutation/*` or `openspec/spec-rails/rails.conf` unless `--force` is passed (for CI and mutation templates).
+`init` MUST preserve existing `openspec/config.yaml` keys other than `schema`, MUST NOT overwrite a developer-edited `Makefile`, `.github/workflows/spec-rails-ci.yml` or `openspec/spec-rails/TODO.md`, MUST only surgically remove legacy hooks from an existing `.pre-commit-config.yaml`, and MUST refresh only files it manages (schema, WORKFLOW.md, AGENTS.md, skills, `docs/agentic-how-tos/`) so a newer spec-rails upgrades them.
 
 #### Scenario: Config preservation
-- **WHEN** `config.yaml` has `context` and `rules` and user `.pre-commit-config.yaml` and `.github/workflows/spec-rails-ci.yml` exist
+- **WHEN** `config.yaml` has `context` and `rules` and developer-edited hook and CI files exist
 - **THEN** those keys and files are unchanged and `schema: spec-rails` is set
 
 ### Requirement: REQ-OSA-15 Update Survival
@@ -116,43 +127,6 @@ Spec-Rails skills and rules MUST NOT live in files regenerated by `openspec upda
 #### Scenario: Update survival
 - **WHEN** a completed install is inspected
 - **THEN** Spec-Rails rules and `.agents/skills/spec-rails/SKILL.md` live outside files regenerated by `openspec update`
-
-### Requirement: REQ-OSA-16 Gate Check
-`spec-rails check` MUST inspect active changes and enforce step-by-step human review pauses: Gate 0 (`research.md`) MUST be ticked before `proposal.md` can exist; Gate 1 (`proposal.md`) MUST be ticked before `specs/` or `design.md` can exist; Gate 2 (`design.md`) MUST be ticked before `tasks.md` can exist; Gate 3 (`tasks.md`) MUST be ticked before code diffs (`--audit`) or implementation tasks can be ticked. If any downstream artifact exists while an upstream Review Gate is unticked or missing, `spec-rails check` MUST exit non-zero naming the change and the blocked gate. It MUST NOT require or inspect a `## Review Gate` section within `spec.md`. It MUST run natively in TypeScript under Node.js >= 18 without requiring `jq` or external shell interpreters.
-
-#### Scenario: Unticked gate blocks
-- **GIVEN** an active change with an unticked Gate 1 box in `proposal.md` while a downstream artifact exists
-- **WHEN** `spec-rails check` runs
-- **THEN** it exits non-zero naming the change and the gate
-
-#### Scenario: Omitted upstream artifact blocks
-- **GIVEN** an active change where `proposal.md` exists while `research.md` is omitted or missing Review Gate
-- **WHEN** `spec-rails check` runs
-- **THEN** it exits non-zero naming Gate 0 (`research`), while delta specs under `specs/**/*.md` do not require a Review Gate section
-
-#### Scenario: Unticked Gate 2 blocks tasks
-- **GIVEN** an active change where `tasks.md` exists while `design.md` is unticked
-- **WHEN** `spec-rails check` runs
-- **THEN** it exits non-zero naming Gate 2 violation
-
-#### Scenario: Unticked Gate 3 blocks code diffs and implementation tasks
-- **GIVEN** an active change where code modifications exist or implementation tasks are ticked while Gate 3 in `tasks.md` is unticked
-- **WHEN** `spec-rails check` runs
-- **THEN** it exits non-zero naming Gate 3 violation
-
-### Requirement: REQ-OSA-17 Lane Check
-The check MUST fail commits made directly on `main`/`master`.
-
-#### Scenario: Direct commit on main
-- **WHEN** the current branch is `main` or `master`
-- **THEN** the check exits non-zero
-
-### Requirement: REQ-OSA-18 Status Source
-The gate check MUST determine artifact presence via `openspec status --json`, not by re-implementing the artifact graph.
-
-#### Scenario: Status from OpenSpec
-- **WHEN** the check runs with a stub `openspec`
-- **THEN** artifact presence comes from `openspec status --json` and `schema.yaml` is not parsed
 
 ### Requirement: REQ-OSA-19 Delta Rebase Discipline
 `openspec/spec-rails/WORKFLOW.md` MUST require each stream to rebase onto the feature branch and pass `openspec validate <change>` before merge.
@@ -169,25 +143,25 @@ Spec-Rails's repo MUST contain no `specs/` directory; `WORKFLOW.md`, `README`, `
 - **THEN** it has no `specs/` directory and the docs describe the `openspec/` and `docs/` layout
 
 ### Requirement: NFR-OSA-1 Dependencies
-The Spec-Rails CLI and verification tooling (`@openspec/spec-rails`) MUST run on Node.js (>= 18) with OpenSpec on `PATH`, packaged as a self-contained single-file executable (`dist/cli.js`) with zero runtime production dependencies: libraries it uses MUST be bundled at build time and listed under `devDependencies`. The installer and verification tools MUST NOT require external `jq` binaries or platform-specific shell utilities.
+`spec-rails` MUST run on Node.js (>= 18) as a self-contained single-file executable (`dist/cli.js`) with zero runtime production dependencies: libraries MUST be bundled at build time and listed under `devDependencies`. It MUST NOT require `jq` or platform-specific shell utilities, and `openspec` only as stated in REQ-POS-6.
 
 #### Scenario: Running without external jq
-- **GIVEN** an environment where `jq` is not installed
-- **WHEN** `spec-rails --version` or `spec-rails verify` runs
-- **THEN** it executes cleanly using native JSON parsing and exits 0
+- **GIVEN** an environment without `jq` and without `openspec`
+- **WHEN** `spec-rails --version` runs, or `spec-rails init` runs on a repo that already has `openspec/`
+- **THEN** it executes cleanly and exits 0
 
 #### Scenario: Single-file bundle execution
 - **WHEN** the bundled CLI executable (`dist/cli.js`) is invoked
 - **THEN** it runs without requiring `node_modules` to be installed in the target project
 
 #### Scenario: Bundled libraries are build-time only
-- **GIVEN** `tsup` bundles `zod`, `cac` and `fast-glob` into `dist/cli.js`
+- **GIVEN** `tsup` bundles its libraries into `dist/cli.js`
 - **WHEN** `package.json` is read
 - **THEN** none of them is listed under `dependencies`
 
 #### Scenario: Node prerequisite stated
 - **WHEN** the prerequisites are read in the protocol and installer documentation
-- **THEN** they name Node.js >= 18 and OpenSpec and do not list a shell trampoline as a requirement
+- **THEN** they name Node.js >= 18 and the pinned `openspec` needed only for first init, and do not list a shell trampoline
 
 ### Requirement: NFR-OSA-2 Installer Latency
 Install on a project with 0 changes MUST complete within 5 s excluding `openspec` startup.
@@ -196,22 +170,15 @@ Install on a project with 0 changes MUST complete within 5 s excluding `openspec
 - **WHEN** the installer runs on a project with 0 changes
 - **THEN** it completes within 5 s excluding `openspec` startup
 
-### Requirement: NFR-OSA-3 Gate Check Latency
-The gate check MUST complete within 3 s on a project with 20 active changes, excluding `openspec status` calls.
-
-#### Scenario: Check latency
-- **WHEN** the check runs with 20 active changes
-- **THEN** it completes within 3 s excluding `openspec status` calls
-
 ### Requirement: NFR-OSA-4 Portability
-Scripts MUST run on macOS and Linux default shells.
+The installer MUST run on macOS and Linux.
 
 #### Scenario: Portability
-- **WHEN** the suites run on macOS and Linux default shells
+- **WHEN** the suites run on macOS and Linux
 - **THEN** they pass
 
 ### Requirement: NFR-OSA-5 Rails
-Installer and check scripts MUST have ≥ 95% line and branch coverage under their test suite and, where a mutation tool is available for the stack, a mutation kill score of at least 95% (≥ 95%) on core logic, with every remaining surviving mutant justified in the PR (equivalent mutant or accepted risk). The workflow protocol, schema instructions, templates, and documentation MUST state the same thresholds and MUST NOT state any other mutation threshold.
+The installer MUST have ≥ 95% line and branch coverage under their test suite and, where a mutation tool is available for the stack, a mutation kill score of at least 95% (≥ 95%) on core logic, with every remaining surviving mutant justified in the PR (equivalent mutant or accepted risk). The workflow protocol, schema instructions, templates, and documentation MUST state the same thresholds and MUST NOT state any other mutation threshold.
 
 #### Scenario: Rails
 - **WHEN** the test and mutation suites run
@@ -228,40 +195,21 @@ Installer and check scripts MUST have ≥ 95% line and branch coverage under the
 
 ---
 
-### Requirement: REQ-OSA-21 CI Audit Layout
-The CI spec-to-code audit in this repository's own `.github/workflows/spec-rails-ci.yml` MUST treat a PR as spec-backed when it changes any file under an active `openspec/changes/<id>/` (excluding `openspec/changes/archive/`), `openspec/specs/` or `docs/bug-reports/`, MUST treat edits to `openspec/spec-rails/` and `.github/` as audited code changes, MUST bind branch refs via `env:`, and MUST NOT reference `specs/`. Chore-lane branches remain exempt.
-
-#### Scenario: OpenSpec change passes audit
-- **WHEN** a PR changes code and a file under `openspec/changes/<id>/`
-- **THEN** the audit step exits 0
-
-#### Scenario: Bug report passes audit
-- **WHEN** a fix PR changes code and a file under `docs/bug-reports/`
-- **THEN** the audit step exits 0
-
-#### Scenario: Code without spec fails audit
-- **WHEN** a non-chore PR changes code and no file under `openspec/changes/<id>/`, `openspec/specs/` or `docs/bug-reports/`
-- **THEN** the audit step exits 1 and lists the modified files
-
-#### Scenario: Legacy specs path fails audit
-- **WHEN** a non-chore PR changes code and a file under `specs/`
-- **THEN** the audit step exits 1
-
 ### Requirement: REQ-OSA-22 Self-Copy Sync
 The repo's installed self-copies (`openspec/schemas/spec-rails/`, `openspec/spec-rails/`, `.agents/skills/spec-rails/SKILL.md`), excluding project-configured `rails.conf`, MUST stay byte-identical to their sources in `schemas/`, `bin/`, `rules/`, `skills/` and `templates/`, and test execution (`npm test`) MUST fail when they differ. This repository's `.github/workflows/spec-rails-ci.yml` is project-owned and is not a copy of the CI template.
 
 #### Scenario: Drift detected
 - **WHEN** a source file is changed without updating its installed copy
-- **THEN** `make test` fails naming the differing file
+- **THEN** `npm test` fails naming the differing file
 
 #### Scenario: In sync
 - **WHEN** all self-copies match their sources
 - **THEN** the sync test passes
 
-### Requirement: NFR-OSA-6 Sync Check Latency
+### Requirement: NFR-OSA-6 Sync Test Latency
 The self-copy sync test MUST complete within 2 seconds.
 
-#### Scenario: Sync check budget
+#### Scenario: Sync test budget
 - **WHEN** the sync test runs
 - **THEN** it completes within 2 seconds
 
@@ -270,104 +218,29 @@ README, `docs/` and `skills/` MUST NOT instruct manual copying of schema templat
 
 #### Scenario: Broken link detected
 - **WHEN** a doc links to a missing file
-- **THEN** `make test-lint` fails naming the doc and the link
+- **THEN** `npm test` fails naming the doc and the link
 
 #### Scenario: No manual template copy
 - **WHEN** README, `docs/` and `skills/` are searched for `cp openspec/schemas/spec-rails/templates`
 - **THEN** no match is found
 
-### Requirement: REQ-OSA-24 No Unused Helpers
-Every function defined in `bin/` scripts and `tests/` shell files MUST be referenced at least once outside its own definition, and `make test-lint` MUST fail naming any that is not.
+### Requirement: REQ-OSA-24 No Unused Code
+Unused local code MUST NOT compile: `tsconfig.json` MUST enable `noUnusedLocals` and `noUnusedParameters`, and `npm run lint` MUST fail on any unused local, import or parameter.
 
 #### Scenario: Unused helper detected
-- **WHEN** a shell function is defined and never called
-- **THEN** `make test-lint` fails naming the file and function
+- **WHEN** a local function is defined and never called
+- **THEN** `npm run lint` fails naming the file and function
 
 #### Scenario: All helpers used
-- **WHEN** every defined function is called
-- **THEN** the check passes
+- **WHEN** every local is used
+- **THEN** `npm run lint` passes
 
 ### Requirement: NFR-OSA-7 Lint Latency
-The docs-link and unused-helper checks MUST complete within 2 seconds combined.
+The docs-link test and the self-copy test MUST complete within 2 seconds combined.
 
 #### Scenario: Lint budget
-- **WHEN** both checks run
+- **WHEN** both tests run
 - **THEN** they complete within 2 seconds
-
-### Requirement: REQ-OSA-25 Fresh-Repo End-to-End
-In a fresh git repo initialized with real `openspec` and wired with `spec-rails`, the system MUST resolve schema `spec-rails`, order artifacts `research → proposal → specs → design → tasks`, block commits behind unticked Review Gates, pass once ticked, and pass `openspec validate`. A gate counts as passed once its box is ticked in the working tree, without requiring a separate commit of the tick. Missing `openspec` or `jq` MUST report `SKIP`, not a pass.
-
-#### Scenario: Schema resolved and artifact order
-- **WHEN** `openspec new change demo` and `openspec status --change demo --json` run in the wired repo
-- **THEN** the schema name is `spec-rails` and the artifact ids appear in the order research, proposal, specs, design, tasks
-
-#### Scenario: Unticked gate blocks commit
-- **WHEN** `research.md` has an unticked Gate 0 box and `proposal.md` is staged and committed
-- **THEN** the pre-commit hook exits non-zero and names the unticked gate
-
-#### Scenario: Ticked gate allows commit
-- **WHEN** the Gate 0 box is ticked in `research.md` and `proposal.md` is committed together with it in one commit
-- **THEN** the commit on a non-main branch succeeds
-
-#### Scenario: Tool missing
-- **WHEN** `openspec` or `jq` is not on PATH
-- **THEN** the test prints a skip message and exits 0 without claiming a pass
-
-#### Scenario: No residue
-- **WHEN** the test finishes or fails
-- **THEN** its temp directory is removed and no file outside it has changed
-
-### Requirement: NFR-OSA-8 End-to-End Budget
-The fresh-repo end-to-end test MUST complete within 20 seconds on a developer machine and MUST NOT access the network.
-
-#### Scenario: Budget check
-- **WHEN** `make test-e2e` runs
-- **THEN** it completes within 20 seconds with no network access
-
-### Requirement: REQ-OSA-26 Requirement-to-Test Traceability
-`spec-rails-verify` MUST read every `REQ-*` and `NFR-*` key (including multi-part hyphenated domains) declared under `## ADDED Requirements` or `## MODIFIED Requirements` in all delta specs (`specs/**/*.md` at any nesting depth) of each active change (excluding `archive/`) and MUST fail, listing each key, when a key does not appear as a full token in any file under `RAILS_TEST_DIRS` (default `tests`), or when `RAILS_TEST_DIRS` is empty.
-
-#### Scenario: Covered key passes
-- **WHEN** an active delta spec declares `REQ-X-1` and a `.feature` file under `tests/` contains `@REQ-X-1`
-- **THEN** the verifier reports the key as covered and exits 0
-
-#### Scenario: Prefix collision rejected
-- **WHEN** an active delta spec declares `REQ-X-1` and `tests/` contains only `@REQ-X-10`
-- **THEN** the verifier exits non-zero and prints `REQ-X-1`
-
-#### Scenario: Uncovered key fails
-- **WHEN** a declared key appears in no test file
-- **THEN** the verifier exits non-zero and prints that key
-
-#### Scenario: No active changes
-- **WHEN** there are no active changes
-- **THEN** the verifier skips traceability and exits 0
-
-### Requirement: REQ-OSA-27 Task Evidence
-For each active change, every ticked (`- [x]` or `- [X]`) task line in `tasks.md` that mentions Red, Green, Coverage or Mutation as a whole word MUST contain non-placeholder `Evidence:` followed by non-empty text, and the shipped `tasks.md` template MUST NOT self-match `Evidence:`. `spec-rails-verify` MUST fail and name the task otherwise. Unticked tasks MUST be ignored.
-
-#### Scenario: Ticked without evidence
-- **WHEN** a ticked task says "Red unit tests fail" and has no `Evidence:` text
-- **THEN** the verifier exits non-zero and names the task
-
-#### Scenario: Ticked with evidence
-- **WHEN** the ticked task ends with `Evidence: make test -> 3 failed`
-- **THEN** the verifier passes that task
-
-#### Scenario: Unticked task ignored
-- **WHEN** the task is `- [ ]` with no evidence
-- **THEN** the verifier does not report it
-
-### Requirement: NFR-OSA-9 Verifier Is Stack-Agnostic
-`spec-rails-verify` MUST be POSIX `sh`, MUST NOT invoke any language-specific tool itself, MUST NOT overwrite an existing `rails.conf`, and MUST finish its own checks (excluding configured commands) within 5 seconds on this repository.
-
-#### Scenario: Existing config preserved
-- **WHEN** the installer runs on a project whose `rails.conf` was edited
-- **THEN** the file is unchanged
-
-#### Scenario: Own-check budget
-- **WHEN** `spec-rails-verify` runs with no commands configured
-- **THEN** it completes within 5 seconds
 
 ### Requirement: REQ-OSA-29 Shipped Protocol
 The installer MUST copy `rules/WORKFLOW.md` to `openspec/spec-rails/WORKFLOW.md` in the target project, and the installed `AGENTS.md` MUST reference that path.
@@ -389,18 +262,10 @@ Delivery status MUST live in `docs/ROADMAP.md` (template `templates/roadmap.md`)
 
 #### Scenario: Edge case - adopter with legacy layout
 - **WHEN** an adopter still keeps bug reports in `specs/bug-reports/`
-- **THEN** the CI audit does not treat them as spec-backing and the PR must add `docs/bug-reports/` or an `openspec/changes/` entry
-
-### Requirement: REQ-OSA-31 Store and Path Resolution
-`spec-rails-check` and `spec-rails-verify` MUST accept `--store <id>` (and `OPENSPEC_STORE`) and resolve change roots and existing artifact paths from `openspec status --json` (`.changeRoot`, `.artifactPaths`) when available, falling back to repo-local `openspec/changes/<change>` otherwise, while keeping `openspec` `stderr` warnings separate from JSON `stdout`.
-
-#### Scenario: External store change root
-- **GIVEN** an OpenSpec change located in an external store (`changeRoot` outside `./openspec/changes/`)
-- **WHEN** `spec-rails-check --store <id>` runs
-- **THEN** it reads gate states from `.changeRoot` and forwards `--store <id>` to `openspec`
+- **THEN** reviewers expect them under `docs/bug-reports/`
 
 ### Requirement: REQ-OSA-32 Installer CLI Flags and Symlink Resolution
-`spec-rails init` MUST support `--stack`, `--force`, `--help`, and `--version`, and MUST resolve canonical filesystem paths using Node.js realpath APIs. It MUST fail fast with an actionable error if the target directory does not contain an `openspec/` directory. When `openspec/` is present, it MUST scaffold `spec-rails.config.json` without an external `$schema` URL, copy schemas from `openspec/schemas/spec-rails/`, copy agent rules from `openspec/spec-rails/` (excluding `rails.conf`), copy skills into `.agents/skills/spec-rails/`, configure `openspec/config.yaml`, scaffold developer documentation in `docs/spec-rails/GUIDE.md`, `COMMANDS.md`, and `RAILS.md`, and prune any legacy `openspec/spec-rails/spec-rails-check`, `openspec/spec-rails/spec-rails-verify`, and `openspec/spec-rails/rails.conf` files.
+`spec-rails` MUST expose only the `init [dir] [--tools <list>]` command with `--help` and `--version`; it MUST resolve canonical filesystem paths using Node.js realpath APIs and MUST NOT accept `--stack` or `--force`. `init` MUST scaffold developer documentation in `docs/spec-rails/GUIDE.md`, `COMMANDS.md` and `RAILS.md`, and prune legacy `openspec/spec-rails/spec-rails-check`, `spec-rails-verify`, `rails.conf` and `spec-rails.config.json` files.
 
 #### Scenario: Symlinked binary and CLI version
 - **GIVEN** `spec-rails` invoked via `spec-rails --version` or `spec-rails <target>`
@@ -410,17 +275,21 @@ Delivery status MUST live in `docs/ROADMAP.md` (template `templates/roadmap.md`)
 #### Scenario: Missing openspec directory fails fast
 - **GIVEN** a target directory where `openspec/` does not exist
 - **WHEN** `spec-rails init` runs
-- **THEN** it exits non-zero with an error message instructing the user to run `openspec init` first
+- **THEN** it exits non-zero when `openspec` is also unavailable, otherwise it bootstraps `openspec/` through REQ-POS-6
 
 #### Scenario: Scaffolds target developer guide
-- **GIVEN** a target directory where `openspec/` is present
+- **GIVEN** a target directory
 - **WHEN** `spec-rails init` runs
 - **THEN** it creates `docs/spec-rails/GUIDE.md`, `docs/spec-rails/COMMANDS.md`, and `docs/spec-rails/RAILS.md`
 
 #### Scenario: Pruning legacy shell scripts and duplicate config
-- **GIVEN** an existing repository containing legacy `openspec/spec-rails/spec-rails-check`, `spec-rails-verify`, or `rails.conf`
+- **GIVEN** an existing repository containing legacy `openspec/spec-rails/spec-rails-check`, `spec-rails-verify`, `rails.conf` or `spec-rails.config.json`
 - **WHEN** `spec-rails init` runs
-- **THEN** it removes those legacy files from the target directory and does not seed `rails.conf`
+- **THEN** it removes those legacy files and does not seed them
+
+#### Scenario: Only init exists
+- **WHEN** `spec-rails --help` runs
+- **THEN** only `init` is listed and `check`, `verify` and `audit` are unknown commands
 
 ### Requirement: REQ-OSA-33 Contract Scaffolding Rail
 Before delegating slice implementation to code generation, shared types, domain interfaces, schemas, and empty function/method signatures MUST be committed on the feature branch or stream to establish rigid boundaries; coding agents MUST only generate logic within the scaffolded contracts without inventing new abstractions or altering signatures.
@@ -431,12 +300,12 @@ Before delegating slice implementation to code generation, shared types, domain 
 - **THEN** contracts, types, and function signatures are already committed and the agent fills method bodies without altering signatures
 
 ### Requirement: REQ-OSA-34 Comprehension Verification Gate
-At Gate 6 and during code review, the human reviewer MUST verify complete line-by-line understanding of all AI-generated code; any implementation or generated abstraction that the reviewer cannot explain MUST be deleted and reverted rather than merged.
+At Gate 4 and during code review, the human reviewer MUST verify complete line-by-line understanding of all AI-generated code; any implementation or generated abstraction that the reviewer cannot explain MUST be deleted and reverted rather than merged.
 
 #### Scenario: Uncomprehended code deleted
 - **GIVEN** an AI-generated implementation that passes automated tests
 - **WHEN** the human reviewer cannot explain how or why the implementation functions
-- **THEN** the code is deleted and reverted before Gate 6 sign-off
+- **THEN** the code is deleted and reverted before Gate 4 sign-off
 
 ### Requirement: REQ-OSA-35 Optional Parallel Bake-Off
 The multi-agent workflow documentation MUST define an optional candidate bake-off pattern where competing subagents or prompts implement the same slice in parallel Git worktrees (`.worktrees/<id>-cand-a`, `.worktrees/<id>-cand-b`), evaluated on test pass, mutation score, and minimal diff complexity; candidate bake-offs MUST be documented as strictly optional rather than mandatory.
@@ -446,75 +315,8 @@ The multi-agent workflow documentation MUST define an optional candidate bake-of
 - **WHEN** a team chooses to run a parallel candidate bake-off
 - **THEN** competing worktrees are evaluated on rails and diff simplicity, the winner is merged with `--ff-only`, and losers are pruned without blocking teams that choose standard single-stream execution
 
-### Requirement: REQ-OSA-36 Multi-Language Presets and Auto-Detection
-`spec-rails init` MUST accept `--stack=[auto|ts|python|go|rust]`. When set to `auto` (or omitted), it MUST inspect the target repository root for package manifests (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`) and automatically select the corresponding language stack. It MUST scaffold `spec-rails.config.json` with stack-appropriate test commands, test globs and coverage commands, and copy calibrated mutation configs from `templates/presets/` except for Python, for which no mutation config is copied.
-
-#### Scenario: Auto-detect TypeScript project
-- **GIVEN** a repository containing `package.json`
-- **WHEN** `spec-rails init` runs
-- **THEN** it selects the `ts` preset, creates `spec-rails.config.json` configured for npm/vitest, and copies `stryker.config.json` calibrated to 95% break threshold
-
-#### Scenario: Auto-detect Python project
-- **GIVEN** a repository containing `pyproject.toml`
-- **WHEN** `spec-rails init` runs
-- **THEN** it selects the `python` preset, configures `pytest`, and copies no mutation config
-
-#### Scenario: Auto-detect Go project
-- **GIVEN** a repository containing `go.mod`
-- **WHEN** `spec-rails init` runs
-- **THEN** it selects the `go` preset and configures `go test` and `gremlins`
-
-#### Scenario: Auto-detect Rust project
-- **GIVEN** a repository containing `Cargo.toml`
-- **WHEN** `spec-rails init` runs
-- **THEN** it selects the `rust` preset and configures `cargo test` and `cargo-mutants`
-
-### Requirement: REQ-OSA-37 Canonical Path Sandboxing
-Path validation in Spec-Rails MUST resolve target and worktree paths to canonical paths using `fs.realpathSync` rather than rejecting symlinks outright. It MUST verify that resolved project paths reside within the authorized repository boundaries while explicitly permitting symlinks resolving to standard external package stores (e.g. pnpm virtual store) and Git worktree parent metadata.
-
-#### Scenario: pnpm symlinked repository
-- **GIVEN** a repository with pnpm symlinked dependencies
-- **WHEN** `spec-rails verify` or `spec-rails init` runs
-- **THEN** it resolves paths cleanly and does not abort due to symlinks
-
-#### Scenario: Directory traversal attack blocked
-- **GIVEN** a target path attempting to escape repository boundaries via symlink traversal
-- **WHEN** path canonicalization executes
-- **THEN** it aborts with an authorization boundary error
-
-### Requirement: REQ-OSA-38 Configurable Test Glob Discovery
-`spec-rails verify` MUST read `testGlobs` from `spec-rails.config.json` (falling back to stack-specific defaults) and discover test files across multiple directories and co-located files (e.g., `src/**/*.test.ts`, `*_test.go`, `tests/**`).
-
-#### Scenario: Co-located Go test discovery
-- **GIVEN** a Go project with tests located next to source files (`*_test.go`)
-- **WHEN** `spec-rails verify` executes test discovery
-- **THEN** it identifies all matching test files without requiring a dedicated `tests/` directory
-
-### Requirement: REQ-OSA-39 Structured Tokenized Evidence Rail
-`spec-rails verify` MUST inspect `tasks.md` for evidence notes formatted as `Evidence: <note>`. Every ticked (`- [x]` or `- [X]`) implementation task line mentioning Red, Green, Coverage, or Mutation MUST include a non-empty `Evidence:` note. Free-text evidence notes MUST be accepted. If structured tokens are provided, verification MUST assert that `EXIT` is 0, `COVERAGE` is >= 95%, and `MUTATION` is >= 95%. Under strict verification (`strict: true`), any missing, unparseable, or substandard evidence line MUST fail verification with a non-zero exit code.
-
-#### Scenario: Valid evidence token verified
-- **GIVEN** `tasks.md` containing `Evidence: [CMD: npm test] [EXIT: 0] [COVERAGE: 96%] [MUTATION: 95%]`
-- **WHEN** `spec-rails verify` runs
-- **THEN** the slice verification passes
-
-#### Scenario: Substandard coverage rejected
-- **GIVEN** `tasks.md` containing `Evidence: [CMD: npm test] [EXIT: 0] [COVERAGE: 92%] [MUTATION: 95%]`
-- **WHEN** `spec-rails verify` runs
-- **THEN** verification fails with an error stating coverage does not meet the 95% threshold
-
-#### Scenario: Valid free-text evidence accepted
-- **GIVEN** `tasks.md` containing `- [x] 1.1 Red: tests fail as expected. Evidence: vitest run failed with 2 errors`
-- **WHEN** `spec-rails verify` runs
-- **THEN** the task evidence check passes
-
-#### Scenario: Missing evidence on ticked rail task rejected
-- **GIVEN** `tasks.md` containing `- [x] 1.1 Red: tests fail as expected` without an `Evidence:` note
-- **WHEN** `spec-rails verify` runs
-- **THEN** verification fails naming the missing evidence violation
-
 ### Requirement: REQ-OSA-40 Commit Cadence
-`rules/WORKFLOW.md`, the `spec-rails` schema instructions and the lifecycle how-to MUST state that commits SHOULD happen once after planning (research through tasks), once after the code (one commit per code slice is fine when there are multiple slices), and once after `openspec archive`, name the exceptions (green slice commits per Rule 4, rebases and stream merges, bugfix and chore lanes), and MUST NOT instruct committing each Review Gate tick before the next artifact. The cadence MUST NOT be enforced by `spec-rails-check`, hooks or CI.
+`rules/WORKFLOW.md`, the `spec-rails` schema instructions and the lifecycle how-to MUST state that commits SHOULD happen once after planning (research through tasks), once after the code (one commit per code slice is fine when there are multiple slices), and once after `openspec archive`, name the exceptions (green slice commits per Rule 4, rebases and stream merges, bugfix and chore lanes), and MUST NOT instruct committing each Review Gate tick before the next artifact. The cadence MUST NOT be enforced by tooling, hooks or CI; reviewers check it.
 
 #### Scenario: Cadence documented consistently
 - **WHEN** the protocol, schema instructions and lifecycle how-to are read
@@ -528,17 +330,13 @@ Path validation in Spec-Rails MUST resolve target and worktree paths to canonica
 - **WHEN** a change has several code slices
 - **THEN** the docs state that one commit per slice is acceptable, each green per Rule 4
 
-#### Scenario: Batched planning passes the check
+#### Scenario: Batched planning is accepted
 - **WHEN** all five planning artifacts exist with their gates ticked and are committed in one commit
-- **THEN** `spec-rails-check` exits 0
-
-#### Scenario: Assumption ASM-GEN-3 working-tree check
-- **WHEN** a gate is ticked in the working tree but not yet committed
-- **THEN** `spec-rails-check` evaluates the ticked state and does not inspect git history
+- **THEN** the human reviewer accepts the batch and no tool rejects it
 
 #### Scenario: Edge case, mid-stage commit is allowed
 - **WHEN** a developer commits after a single artifact on a feature branch with a ticked upstream gate
-- **THEN** the hook does not reject the commit for cadence
+- **THEN** no hook rejects the commit for cadence
 
 ### Requirement: REQ-OSA-41 Schema and Template Alignment
 The system MUST include `- **GIVEN**` steps in the spec delta template (`templates/spec.md`), MUST instruct in `schema.yaml` that formal requirement identifiers (`REQ-*` / `NFR-*`) are assigned at Gate 2 rather than in proposals, and MUST instruct that `## MODIFIED Requirements` and `## REMOVED Requirements` repeat legacy unprefixed headers verbatim when modifying or removing requirements that lack the `Requirement:` prefix.
@@ -558,65 +356,26 @@ The system MUST include `- **GIVEN**` steps in the spec delta template (`templat
 - **WHEN** instructions for `## MODIFIED Requirements` and `## REMOVED Requirements` are inspected
 - **THEN** they explicitly state that legacy headers lacking the `Requirement:` prefix must be repeated verbatim to preserve OpenSpec exact header matching
 
-### Requirement: REQ-OSA-42 Native TypeScript Gate and DAG Checker
-`spec-rails check` MUST evaluate Review Gate checkbox states (`- [x]`), verify transitive ancestor DAG dependencies from schema definitions, verify that no implementation tasks in `tasks.md` are marked complete before Gate 4 passes, and report actionable gate violation messages without using `jq` or shell scripts.
-
-#### Scenario: Transitive ancestor gate check
-- **GIVEN** an active change where `design.md` exists but `research.md` is unticked
-- **WHEN** `spec-rails check` executes
-- **THEN** it flags the unticked ancestor gate violation
-
-#### Scenario: Early task completion rejected
-- **GIVEN** an active change where Gate 4 is unticked but an implementation task in `tasks.md` is ticked
-- **WHEN** `spec-rails check` executes
-- **THEN** it exits non-zero and reports early implementation task completion
-
-### Requirement: REQ-OSA-43 Integrated Spec-to-Code Audit
-`spec-rails check --audit` (or `spec-rails audit`) MUST inspect git changesets against a target base branch (defaulting to `main`), assert that code changes outside `openspec/` and `docs/` have corresponding `openspec/changes/` or `docs/bug-reports/` entries, and exempt `chore/*` branches from spec-to-code mapping requirements.
-
-#### Scenario: Unmapped code changes rejected
-- **GIVEN** a feature branch modifying source files without an active `openspec/changes/` entry
-- **WHEN** spec-to-code audit runs
-- **THEN** it exits non-zero and lists the unmapped source files
-
-#### Scenario: Chore branch exempted from audit
-- **GIVEN** a branch named `chore/update-dependencies` modifying source or config files
-- **WHEN** spec-to-code audit runs
-- **THEN** it exits 0 with a message stating the chore lane is exempt
-
-### Requirement: REQ-OSA-44 Config JSON and Legacy Rails.conf Deprecation
-The system MUST read configuration from `spec-rails.config.json`, validating schema structures with `zod`, and MUST provide backward-compatible fallback parsing for legacy `rails.conf` files when `spec-rails.config.json` is absent.
-
-#### Scenario: Read JSON configuration
-- **GIVEN** a repository with `spec-rails.config.json` defining test and rail commands
-- **WHEN** `spec-rails verify` or `spec-rails check` executes
-- **THEN** it uses the commands and thresholds defined in the JSON configuration
-
-#### Scenario: Fallback to legacy rails.conf
-- **GIVEN** a repository lacking `spec-rails.config.json` but containing `openspec/spec-rails/rails.conf`
-- **WHEN** `spec-rails verify` executes
-- **THEN** it parses legacy key-value pairs and logs a deprecation notice recommending migration to JSON
-
 ### Requirement: REQ-OSA-45 Elimination of Shell Binaries and jq Dependency
 The system MUST NOT distribute executable shell scripts in `bin/` and MUST NOT require `jq` on `PATH`; all CLI capabilities MUST execute via the compiled TypeScript entry point (`dist/cli.js`), callable via `npx spec-rails` or local binary linking.
 
 #### Scenario: Execution without jq installed
 - **GIVEN** an environment where `jq` is absent from `PATH`
-- **WHEN** `spec-rails check` and `spec-rails verify` run
-- **THEN** both commands execute and parse JSON natively without error
+- **WHEN** `spec-rails init` runs
+- **THEN** it executes without error and the bundle contains no `jq` invocation
 
 ### Requirement: REQ-OSA-46 Pre-Commit Framework Standard
-`spec-rails init` MUST NOT write standalone shell scripts directly to `.git/hooks/pre-commit`. When `.pre-commit-config.yaml` is absent, it MUST scaffold it with local hooks for branch protection on `main`/`master` and test hooks configured for the detected stack (e.g. `npm test`, `pytest`, `cargo test`, `go test`, `./gradlew test`), and MUST NOT include any `spec-rails` hook. When it already exists, it MUST surgically modernize it in-place by removing the `spec-rails-check`, `check-lgtm-directives` and `spec-rails-verify` hooks while preserving every other hook, key and blank line byte-for-byte. It MUST NOT regenerate or overwrite an existing `.pre-commit-config.yaml`, even with `--force`. It MUST NOT include external review-tool hooks. When a git repository is present and `pre-commit` is on `PATH`, it MUST run `pre-commit install` and ensure no `.git/hooks/pre-commit.legacy` file remains.
+`init` MUST NOT write standalone shell scripts to `.git/hooks/pre-commit`. When `.pre-commit-config.yaml` is absent it MUST scaffold it with the standard `pre-commit-hooks` hygiene hooks, a local branch-protection hook for `main`/`master`, and `make lint` / `make test` hooks, each included only when the existing `Makefile` defines that target (a missing `Makefile` is created with all targets); it MUST NOT detect a stack and MUST NOT include any `spec-rails` or `openspec` command. When it exists it MUST surgically remove legacy `spec-rails-check`, `check-lgtm-directives` and `spec-rails-verify` hooks, preserving every other hook, key and blank line, and MUST NOT otherwise overwrite it. When a git repository and `pre-commit` are present it MUST run `pre-commit install` and ensure no `.git/hooks/pre-commit.legacy` remains.
 
 #### Scenario: Installer does not write raw git hook
 - **GIVEN** a git repository initialized with `git init`
 - **WHEN** `spec-rails init` runs
 - **THEN** it does not write a standalone non-framework shell script to `.git/hooks/pre-commit` and leaves no `.legacy` hook file
 
-#### Scenario: Stack-aware test hook generation
-- **GIVEN** a repository detected with stack `python`
+#### Scenario: Make-based lint and test hooks
+- **GIVEN** any repository
 - **WHEN** `spec-rails init` scaffolds `.pre-commit-config.yaml`
-- **THEN** the test hook runs `pytest` rather than `make test`
+- **THEN** the lint and test hooks call `make lint` and `make test`, not a stack-specific command, and a hook is omitted when an existing `Makefile` lacks its target
 
 #### Scenario: Branch protection hook in pre-commit
 - **GIVEN** `.pre-commit-config.yaml` generated by `spec-rails init`
@@ -624,78 +383,27 @@ The system MUST NOT distribute executable shell scripts in `bin/` and MUST NOT r
 - **THEN** it defines a local branch protection hook that fails on direct commits to `main` and `master`
 
 #### Scenario: Surgical upgrade of existing pre-commit configuration
-- **GIVEN** an existing `.pre-commit-config.yaml` with a `spec-rails-check` hook (single-line or folded `entry:`) followed by other hooks with `language:` and `pass_filenames:` keys
+- **GIVEN** an existing `.pre-commit-config.yaml` with a `spec-rails-check` hook followed by other hooks
 - **WHEN** `spec-rails init` runs
-- **THEN** the whole `spec-rails-check` hook, and `check-lgtm-directives`/`spec-rails-verify` hooks, are removed, every other hook keeps all its keys and surrounding blank lines, and the file passes `pre-commit validate-config`
+- **THEN** the legacy hooks are removed, every other hook keeps all its keys and surrounding blank lines, and the file passes `pre-commit validate-config`
 
 #### Scenario: No-install flag on hook execution
 - **GIVEN** `.pre-commit-config.yaml` generated or modernized by `spec-rails init`
 - **WHEN** inspected
-- **THEN** it contains no `spec-rails` command, no `npx` invocation of spec-rails, and no LGTM directives
+- **THEN** it contains no `spec-rails` or `openspec` command and no LGTM directives
 
-### Requirement: REQ-OSA-47 Strict Rails Execution
-`spec-rails verify` MUST execute configured test, coverage, and mutation commands and fail on a non-zero exit, an empty required command, a coverage score below `coverageMinScore`, or a mutation run where output lacks a numeric percentage score or reports a score below `mutationMinScore`. Command output MUST be shown on failure. Rail command executions MUST be bounded by an enforced execution timeout, failing verification if a command hangs or exceeds the timeout limit. For docs-only or spec-only changesets, the mutation rail MUST be skipped with an informational pass and the empty-test-files error MUST NOT apply.
-
-#### Scenario: Failing command fails verify
-- **GIVEN** a configured test command that exits non-zero
-- **WHEN** `spec-rails verify` runs
-- **THEN** verification fails and includes the command output
-
-#### Scenario: Score below threshold fails
-- **GIVEN** a coverage command that prints a score below `coverageMinScore`
-- **WHEN** `spec-rails verify` runs
-- **THEN** verification fails naming the coverage threshold
-
-#### Scenario: Mutation command reports failure
-- **GIVEN** a configured mutation command that exits non-zero because its threshold is missed
-- **WHEN** `spec-rails verify` runs
-- **THEN** verification fails and includes the command output
-
-#### Scenario: Successful mutation command output is not scored
-- **GIVEN** a configured mutation command that exits zero and reports a valid score at or above `mutationMinScore`
-- **WHEN** `spec-rails verify` runs
-- **THEN** mutation verification passes
-
-#### Scenario: Mutation output missing score fails
-- **GIVEN** a configured mutation command that exits zero but reports no numeric percentage score
-- **WHEN** `spec-rails verify` runs
-- **THEN** verification fails reporting that the mutation score is missing
-
-#### Scenario: Mutation score below threshold fails
-- **GIVEN** a configured mutation command that exits zero but reports a score below `mutationMinScore`
-- **WHEN** `spec-rails verify` runs
-- **THEN** verification fails reporting that the mutation score is below the configured threshold
-
-#### Scenario: Command execution timeout
-- **GIVEN** a rail command that exceeds the maximum execution timeout
-- **WHEN** `spec-rails verify` runs
-- **THEN** verification fails reporting a command timeout
-
-#### Scenario: Docs-only changeset skips mutation
-- **GIVEN** a changeset touching only markdown or `openspec/` files
-- **WHEN** `spec-rails verify` runs
-- **THEN** the mutation command is not executed and verification does not fail on it
-
-### Requirement: REQ-OSA-48 Gate Check Baseline
-`spec-rails check` MUST skip gate violations for change names listed in `openspec/spec-rails/baseline.txt`, and `spec-rails check --baseline` MUST write that file listing every change currently violating gates. Changes not listed MUST still gate.
-
-#### Scenario: Baselined change is grandfathered
-- **GIVEN** a change listed in the baseline file that lacks `## Review Gate`
-- **WHEN** `spec-rails check` runs
-- **THEN** no violation is reported for it
-
-#### Scenario: Unlisted change still gates
-- **GIVEN** a violating change absent from the baseline file
-- **WHEN** `spec-rails check` runs
-- **THEN** its violation is reported
+#### Scenario: Placeholder Makefile
+- **GIVEN** no `Makefile`
+- **WHEN** `init` runs
+- **THEN** the `Makefile` has echo-only `lint`, `test`, `coverage` and `mutation` targets and an existing `Makefile` is left unchanged
 
 ### Requirement: REQ-OSA-49 CI Template Hygiene
-The CI template MUST pin the OpenSpec CLI version when it installs OpenSpec, MUST NOT call `spec-rails`, and MUST NOT contain a Makefile-only test step. All stack-specific steps MUST be commented out.
+The CI template MUST NOT call `spec-rails` or `openspec`, MUST NOT install either, and MUST NOT contain a Makefile-only test step. All stack-specific steps MUST be commented out.
 
 #### Scenario: Template is pinned and derived
 - **GIVEN** `templates/spec-rails-ci.yml`
 - **WHEN** it is inspected
-- **THEN** any OpenSpec install is pinned `@fission-ai/openspec@<version>`, there is no `spec-rails` or `make test` step, and stack steps are comments
+- **THEN** it contains no `spec-rails` or `openspec` invocation or install step, no `make test` step, and stack steps are comments
 
 ### Requirement: REQ-OSA-50 Agent Skill Footprint Docs
 Docs MUST state that `/opsx-*` commands and `openspec-*` skills are interchangeable, advise committing `.claude/`, `.agents/` and `.github/skills`, and advise keeping skills only for tools in use.
@@ -704,24 +412,6 @@ Docs MUST state that `/opsx-*` commands and `openspec-*` skills are interchangea
 - **GIVEN** `docs/how-tos/05-configure-ai-agents.md`
 - **WHEN** it is read
 - **THEN** it documents both name forms and the commit-skills guidance
-
-### Requirement: REQ-OSA-49 Artifact Hygiene and Delta Requirement Key Validation
-`spec-rails check` MUST validate formatting hygiene across all change markdown files and verify that every requirement header in delta `specs/**/*.md` defines an explicit `REQ-<DOM>-<N>` or `NFR-<DOM>-<N>` identifier key.
-
-#### Scenario: Trailing whitespace rejected
-- **GIVEN** an active change artifact containing trailing whitespace on any line
-- **WHEN** `spec-rails check` runs
-- **THEN** it exits non-zero reporting the file and line number
-
-#### Scenario: Missing EOF newline rejected
-- **GIVEN** an active change artifact lacking a trailing newline at EOF
-- **WHEN** `spec-rails check` runs
-- **THEN** it exits non-zero reporting missing EOF newline
-
-#### Scenario: Unkeyed delta requirement rejected
-- **GIVEN** a delta `spec.md` with requirement header `### Requirement: Some Unkeyed Behavior`
-- **WHEN** `spec-rails check` runs
-- **THEN** it exits non-zero reporting missing REQ-*/NFR-* key
 
 ### Requirement: REQ-OSA-51 Worktree Intermediate Commit Rails
 In multi-agent and parallel development workflows, intermediate atomic commits within isolated Git worktrees (`.worktrees/<id>-<stream>`) MAY bypass local commit hooks (`git commit --no-verify`) to facilitate fine-grained test-driven development (such as committing failing Red tests); however, stream merges into the base feature branch, feature merges into `main`, and Gate 4 verification MUST strictly enforce all pre-commit hooks and testing rails with zero bypass.
@@ -762,19 +452,6 @@ Agent orchestration guidelines and skills MUST enforce a zero-polling invariant:
 - **WHEN** the background task completes
 - **THEN** the agent resumes execution upon receiving the system message notification
 
-### Requirement: REQ-OSA-54 Gradle and Kotlin Stack Auto-Detection
-`detectStack` MUST recognize Gradle and Kotlin projects when `build.gradle.kts`, `build.gradle`, or `gradlew` is present in the target directory. It MUST return stack `"gradle"` and configure `testCommand` defaulting to `./gradlew test`, or `make test` if a root `Makefile` containing `^test:` exists.
-
-#### Scenario: Gradle stack detection via build.gradle.kts
-- **GIVEN** a directory containing `build.gradle.kts`
-- **WHEN** `detectStack` executes
-- **THEN** it returns `"gradle"` and provides `testCommand: "./gradlew test"`
-
-#### Scenario: Gradle stack with existing Makefile test target
-- **GIVEN** a directory containing `gradlew` and a `Makefile` with a `test:` target
-- **WHEN** `detectStack` executes
-- **THEN** it returns `"gradle"` and provides `testCommand: "make test"`
-
 ### Requirement: REQ-OSA-55 Developer-Owned Quality Gates
 Generated `.pre-commit-config.yaml` hooks and `.github/workflows/spec-rails-ci.yml` MUST NOT invoke, install or otherwise depend on `spec-rails`. `spec-rails-ci.yml` MUST be a language-agnostic skeleton whose steps for unit tests, coverage and mutation are commented out and which performs no work until the developer edits it.
 
@@ -789,7 +466,7 @@ Generated `.pre-commit-config.yaml` hooks and `.github/workflows/spec-rails-ci.y
 - **THEN** its test, coverage and mutation steps are comments and it contains no stack-specific command
 
 ### Requirement: REQ-OSA-56 Gate Setup TODO
-`spec-rails init` MUST create `openspec/spec-rails/TODO.md` when absent, prompting the developer to configure and run coverage and mutation checks, and MUST NOT overwrite it when present.
+`spec-rails init` MUST create `openspec/spec-rails/TODO.md` when absent, prompting the developer to replace the placeholder `Makefile` targets and to configure and enforce coverage and mutation testing, and MUST NOT overwrite it when present.
 
 #### Scenario: TODO created once
 - **GIVEN** no `openspec/spec-rails/TODO.md`
@@ -802,7 +479,7 @@ Generated `.pre-commit-config.yaml` hooks and `.github/workflows/spec-rails-ci.y
 - **THEN** its content is unchanged
 
 ### Requirement: REQ-OSA-57 Stale Artifact Cleanup
-`spec-rails init` MUST remove stale artifacts from earlier versions: the `spec-rails-check` pre-commit hook, legacy `sh openspec/spec-rails/spec-rails-*` entries, a root `mutmut.ini`, `openspec/spec-rails/mutation/mutmut.ini`, and replace a stale `spec-rails-ci.yml` with the skeleton. Shipped docs (`rules/WORKFLOW.md` and `openspec/spec-rails/WORKFLOW.md`) MUST NOT reference `rails.conf`, "checks" or mutmut. Re-running `init` MUST produce no further changes.
+`spec-rails init` MUST remove stale artifacts from earlier versions: the `spec-rails-check`, `spec-rails-verify` and `check-lgtm-directives` pre-commit hooks; the legacy files `spec-rails.config.json`, `rails.conf`, `mutmut.ini`, `openspec/spec-rails/rails.conf`, `openspec/spec-rails/spec-rails-check`, `openspec/spec-rails/spec-rails-verify`, `openspec/spec-rails/mutation/` and `docs/spec-rails/WORKFLOW.md`; and `opsx-*` entries under `.github/skills/`; and replace a `spec-rails-ci.yml` that invokes `spec-rails`, `openspec` or `openspec/spec-rails/spec-rails-*` with the skeleton. Shipped docs (`rules/WORKFLOW.md` and `openspec/spec-rails/WORKFLOW.md`) MUST NOT reference `rails.conf`, "checks" or mutmut. Re-running `init` MUST produce no further changes.
 
 #### Scenario: Stale workflow replaced
 - **GIVEN** a `spec-rails-ci.yml` calling `sh openspec/spec-rails/spec-rails-verify`
@@ -820,9 +497,9 @@ Generated `.pre-commit-config.yaml` hooks and `.github/workflows/spec-rails-ci.y
 - **THEN** no file changes
 
 ### Requirement: REQ-OSA-58 Init Action Log
-`spec-rails init` MUST print one console line per removed, replaced, created or skipped artifact and a reminder to complete `openspec/spec-rails/TODO.md`.
+`spec-rails init` MUST print one console line per removed, updated or created artifact (and per skipped overlay target that still needs the `openspec` CLI), `already up to date` when nothing changed, and a reminder to complete `openspec/spec-rails/TODO.md` when it was created.
 
 #### Scenario: Actions are logged
 - **GIVEN** a repository with a stale workflow and a root `mutmut.ini`
 - **WHEN** `spec-rails init` runs
-- **THEN** the output lists the removed `mutmut.ini`, the replaced workflow and the created `TODO.md`
+- **THEN** the output lists the removed `mutmut.ini`, the updated workflow, the created `TODO.md` and the reminder to complete it

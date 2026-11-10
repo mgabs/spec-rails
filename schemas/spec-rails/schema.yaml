@@ -114,6 +114,6 @@ apply:
     5. Mutation: >= 95% kill score on the slice's modules; fix survivors with an assertion, dead-code deletion, or a restructure.
     Human Review Gate checkboxes MUST NOT be ticked by `/opsx-apply` agents.
     Never delete or weaken assertions, skip failing tests, or touch files outside the slice.
-    When ticking a Red, Green, Coverage or Mutation task, end its line with `Evidence: <command and result>`; CI (`spec-rails-verify`) rejects ticked tasks without it.
+    When ticking a Red, Green, Coverage or Mutation task, end its line with `Evidence: <command and result>`; reviewers reject ticked tasks without it.
     Commit at stage boundaries, not per gate tick: after planning, after the code (one commit per slice is fine when there are several), and after `openspec archive`; Rule 4 green commits and rebases are exceptions.
     Pause if you hit blockers or need clarification.

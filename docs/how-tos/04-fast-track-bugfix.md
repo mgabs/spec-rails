@@ -1,6 +1,6 @@
 # How-To: Fast-Track Bugfix Protocol (Zero-Contamination)
 
-When a regression, runtime panic, or dogfood defect is discovered, this guide details how to resolve it with zero branch contamination.
+When a regression, runtime panic, or dogfood defect is discovered, this guide details how to resolve it with zero branch contamination. Agent runbook: [agentic-how-tos/04](../agentic-how-tos/04-fast-track-bugfix.md).
 
 ---
 
@@ -60,7 +60,7 @@ cd .worktrees/fix-token-expiry
 2. Run the full test suite to guarantee zero regressions.
 3. Check mutation resistance if applicable.
 4. If the defect came from or affects living specs or docs, fix them in this branch.
-5. Commit the bug report, regression test, and fix together (so CI spec-to-code audit sees `docs/bug-reports/` in the PR).
+5. Commit the bug report, regression test, and fix together (so the PR carries `docs/bug-reports/`).
 
 ---
 

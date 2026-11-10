@@ -1,6 +1,6 @@
 {
   "name": "spec-rails",
-  "version": "0.4.0",
+  "version": "0.6.0",
   "description": "Spec-Driven, Testing-Railed Development Engine for OpenSpec",
   "type": "module",
   "bin": {
@@ -11,7 +11,9 @@
     "templates",
     "schemas",
     "rules",
-    "skills"
+    "skills",
+    "docs/agentic-how-tos",
+    "openspec-version"
   ],
   "scripts": {
     "build": "tsup",
@@ -28,8 +30,7 @@
     "fast-glob": "^3.3.2",
     "tsup": "^8.3.5",
     "typescript": "^6.0.3",
-    "vitest": "^5.1.0",
-    "zod": "^4.6.7"
+    "vitest": "^5.1.0"
   },
   "overrides": {
     "@stryker-mutator/core": {

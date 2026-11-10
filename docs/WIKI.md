@@ -2,7 +2,7 @@
 
 Spec-Rails (Spec-Driven, Testing-Railed Development) is an engineering and AI-agent orchestration framework designed to eliminate hallucinated scope, stale documentation, untested regressions, and branch contamination in autonomous and pair-programming development.
 
-For the operational handbook, see [WAY_OF_WORKING.md](WAY_OF_WORKING.md). Delivery status: [ROADMAP.md](ROADMAP.md); design note: [DESIGN.md](DESIGN.md).
+For the operational handbook, see [WAY_OF_WORKING.md](WAY_OF_WORKING.md). Delivery status: [ROADMAP.md](ROADMAP.md); design note: [DESIGN.md](DESIGN.md). Agent-facing detailed runbooks (what `init` copies into target repos as `docs/agentic-how-tos/`): [index](agentic-how-tos/README.md) — [01 bootstrap](agentic-how-tos/01-bootstrap-new-project.md), [02 feature lifecycle](agentic-how-tos/02-drive-feature-lifecycle.md), [03 worktrees & bake-off](agentic-how-tos/03-parallel-worktrees-multi-agent.md), [04 bugfix](agentic-how-tos/04-fast-track-bugfix.md), [05 configure agents](agentic-how-tos/05-configure-ai-agents.md).
 
 ---
 
@@ -41,9 +41,10 @@ There is no `specs/` folder. Each artifact has one home, chosen by who owns it:
 | :--- | :--- | :--- |
 | Capability specs, changes, archive | `openspec/specs/`, `openspec/changes/` | OpenSpec owns them; identical to upstream OpenSpec, so the CLI works unchanged. |
 | Schema and templates | `openspec/schemas/spec-rails/` | The artifact graph is OpenSpec's extension point. |
-| Protocol (`WORKFLOW.md`), `AGENTS.md`, checks | `openspec/spec-rails/` | Same text for every adopter, ships with the addon and survives `openspec update`. |
+| Protocol (`WORKFLOW.md`), `AGENTS.md`, bug-report template, `TODO.md` | `openspec/spec-rails/` | Same text for every adopter, ships with the addon and survives `openspec update`. |
+| Developer guide (`docs/spec-rails/`) and agent runbooks (`docs/agentic-how-tos/`) | target repo `docs/` | Copied by `init` and refreshed on every run (managed); re-run `npx spec-rails init` to get updates. |
 | Delivery status (`ROADMAP.md`) | `docs/` | Per-project data that spans changes; upstream OpenSpec has no roadmap concept, so it does not belong in `openspec/`. |
-| Bug reports (`bug-reports/`) | `docs/` | Per-project triage records with no OpenSpec equivalent; a docs path is also what the CI audit accepts as spec-backing for fix PRs. |
+| Bug reports (`bug-reports/`) | `docs/` | Per-project triage records with no OpenSpec equivalent; each fix commits its report together with the regression test and fix. |
 
 Why `docs/` rather than `specs/`: `specs/` was easily confused with `openspec/specs/` (living specs), and it mixed the addon's protocol with project data. `docs/` is the conventional place humans look for project records, needs no new top-level folder, and keeps `openspec/` pure.
 
@@ -74,7 +75,7 @@ openspec/
 4. A bugfix that alters a living requirement edits `openspec/specs/` directly in the same branch (B3), with no delta.
 
 **Conventions**
-- **Change naming:** roadmap IDs normalize dots to hyphens (`W1.2` → `w1-2-<slug>`, branch `feat/w1-2-<slug>`) so `openspec new change` (`[a-z0-9-]+` only) accepts them.
+- **Change naming:** roadmap IDs normalize dots to hyphens (`W1.2` → `w1-2-<slug>`, branch `feat/w1-2-<slug>`) so change names stay within `[a-z0-9-]+`, which OpenSpec accepts.
 - **Capability path:** the folder name under `specs/` (for example `identity/user-auth`). A modified capability uses the exact existing path.
 - **Requirement header:** `### Requirement: REQ-<DOMAIN>-<N> <Name>` (or `NFR-<DOMAIN>-<N>` for budgets). Keys are never reused; deprecated ones keep their exact header in `## MODIFIED Requirements` and place `**[DEPRECATED by <change>]**` at the start of the requirement body.
 - **Wording and scenarios:** requirement text uses MUST or SHALL. Scenarios use exactly four hashtags (`#### Scenario:`) with GIVEN, WHEN, and THEN.
@@ -154,7 +155,7 @@ When a feature contains orthogonal tasks (decoupled modules, distinct endpoints,
 1. **Unit Red-Green-Refactor**: Fine-grained assertions on all code paths, edge cases, and boundary values based on Given/When/Then scenarios.
 2. **Mutation Testing**: Code mutating engines (e.g. `cargo-mutants`, `stryker`) generate mutations (flipping conditionals, replacing arithmetic, deleting statements). Core logic must maintain a >= 95% mutation kill score; surviving mutants below threshold must be killed or deleted.
 
-In CI, `npx spec-rails verify` verifies the rails: every `REQ-*`/`NFR-*` in an active change must appear in a test file, ticked Red/Green/Coverage/Mutation tasks must carry `Evidence: <note>`, and the `testCommand`, `coverageCommand` and `mutationCommand` configured in `spec-rails.config.json` must exit 0 and meet thresholds. It runs only in CI, never as a commit hook.
+Spec-Rails ships no verifier: `init` writes a placeholder `Makefile` (only if absent) whose `lint`, `test`, `coverage` and `mutation` targets just echo what to implement; replace them with your stack's real commands, which the generated pre-commit hooks (`make lint`, `make test`, each only if the target exists) and your CI call (`openspec/spec-rails/TODO.md` lists the steps). Reviewers confirm that every `REQ-*`/`NFR-*` in an active change appears in a test file and that ticked Red/Green/Coverage/Mutation tasks carry `Evidence: <note>`.
 
 ### 4.2 Surviving Mutant Protocol
 When a mutant survives:

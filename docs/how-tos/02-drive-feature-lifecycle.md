@@ -1,6 +1,6 @@
 # How-To: Drive a Feature Through Gates 0–4
 
-This guide demonstrates end-to-end execution of a feature under the Spec-Rails lifecycle.
+This guide demonstrates end-to-end execution of a feature under the Spec-Rails lifecycle. Agent runbook with exact artifacts and evidence rules: [agentic-how-tos/02](../agentic-how-tos/02-drive-feature-lifecycle.md).
 
 ---
 
@@ -12,20 +12,15 @@ Never work on `main`. Normalize roadmap IDs to lowercase hyphens (`W1.1` → `w1
 git checkout -b feat/w1-1-user-authentication
 ```
 
-Scaffold the change with OpenSpec (`openspec new change` accepts `[a-z0-9-]+` only — no dots):
+Scaffold the change with `/opsx-propose` (CLI-free after `init`; names use `[a-z0-9-]+` only, no dots). It creates `openspec/changes/w1-1-user-authentication/`; the artifact order and instructions come from `openspec/schemas/spec-rails/schema.yaml`.
 
-```bash
-openspec new change w1-1-user-authentication
-openspec status --change w1-1-user-authentication
-```
-
-Draft planning artifacts one by one (`openspec instructions <artifact> --change w1-1-user-authentication`), pausing after each gate for explicit human review and checkbox approval before drafting the next artifact (never generate all planning artifacts in one unreviewed pass). Run `/opsx-apply` and `/opsx-archive` only after Gate 3 is ticked by a human.
+Draft planning artifacts one by one, pausing after each gate for explicit human review and checkbox approval before drafting the next artifact (never generate all planning artifacts in one unreviewed pass). Run `/opsx-apply` and `/opsx-archive` only after Gate 3 is ticked by a human.
 
 ---
 
 ## Step 2: Gate 0 — Research & Technical Tradeoffs
 
-1. Generate `research.md` (`openspec instructions research --change w1-1-user-authentication`).
+1. Generate `research.md`.
 2. Document:
    - **Ground Truth**: Verified constraints in existing codebase and docs.
    - **2–3 Options**: Concrete candidate architectures (e.g. standard library vs minimal custom vs alternative).
@@ -37,7 +32,7 @@ Draft planning artifacts one by one (`openspec instructions <artifact> --change 
 
 ## Step 3: Gate 1 — Feature Proposal
 
-1. Generate `proposal.md` (`openspec instructions proposal --change w1-1-user-authentication`).
+1. Generate `proposal.md`.
 2. Fill in:
    - **Intent**: High-level capability summary.
    - **Scope**: Explicit In-Scope list and Out-of-Scope (YAGNI) list based on the chosen Gate 0 option.
@@ -53,7 +48,7 @@ Draft planning artifacts one by one (`openspec instructions <artifact> --change 
    - **Functional Requirements**: `REQ-AUTH-1`, `REQ-AUTH-2`, etc.
    - **Non-Functional Requirements & Budgets**: `NFR-AUTH-1` (e.g. latency $< 2\text{ms}$).
    - **Given / When / Then Scenarios**: Behavioral test contracts.
-2. Generate `design.md` (`openspec instructions design --change w1-1-user-authentication`):
+2. Generate `design.md`:
    - Domain models, state machines, and interface contracts.
    - Boundary rules: Pure core logic isolated from I/O and network shell.
    - Concurrency, allocation, or performance invariants.
@@ -64,7 +59,7 @@ Draft planning artifacts one by one (`openspec instructions <artifact> --change 
 
 ## Step 5: Gate 3 — Task Breakdown & Worktree DAG
 
-1. Generate `tasks.md` (`openspec instructions tasks --change w1-1-user-authentication`).
+1. Generate `tasks.md`.
 2. Structure the DAG into vertical slices and identify orthogonal streams suitable for parallel worktrees.
 3. **Gate 3 Review**: Human approval required before writing test code or spawning slice worktrees.
 
@@ -89,15 +84,12 @@ For each vertical slice:
 ## Step 7: Gate 4 — Verify, Archive & Merge
 
 1. Merge stream worktrees (rebase + re-verify each, then `--ff-only`) and prune them.
-2. Rebase onto `main`, then run the full test suite and mutation verification:
-   ```bash
-   npx spec-rails verify
-   ```
+2. Rebase onto `main`, then run your full test, coverage and mutation commands.
 3. Tick completed slice items and the final integration task in `tasks.md` (with `Evidence:` notes on Red/Green/Coverage/Mutation items), then validate:
    ```bash
-   openspec validate w1-1-user-authentication
+   openspec validate w1-1-user-authentication   # optional, only if the openspec CLI is installed
    ```
-4. Sync and archive in one step (via `openspec archive` or `/opsx-archive`), commit, and merge:
+4. Sync and archive in one step (`/opsx-archive`, or `openspec archive` if the CLI is installed), commit, and merge:
    ```bash
    openspec archive w1-1-user-authentication --yes
    git add -A

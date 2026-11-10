@@ -1,6 +1,6 @@
 # How-To: Parallel Worktrees & Multi-Agent Streams
 
-When a feature contains orthogonal tasks with zero mutual dependencies, Spec-Rails isolates execution across Git worktrees to prevent branch contamination and enable parallel subagent execution.
+When a feature contains orthogonal tasks with zero mutual dependencies, Spec-Rails isolates execution across Git worktrees to prevent branch contamination and enable parallel subagent execution. Agent runbook with failure modes and the candidate bake-off: [agentic-how-tos/03](../agentic-how-tos/03-parallel-worktrees-multi-agent.md).
 
 ---
 

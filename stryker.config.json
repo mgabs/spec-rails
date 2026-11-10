@@ -1,11 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/api/schema/stryker-schema.json",
   "mutate": [
-    "src/config.ts",
-    "src/utils/paths.ts",
-    "src/utils/evidence.ts",
-    "src/commands/init.ts",
-    "src/commands/verify.ts"
+    "src/cli.ts",
+    "src/commands/init.ts"
   ],
   "mutator": {
     "excludedMutations": ["Regex"]

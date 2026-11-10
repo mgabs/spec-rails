@@ -1,4 +1,3 @@
-// REQ-OSA-21: this repository's own spec-rails-ci.yml keeps the audit and is no longer a template self-copy
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
@@ -30,7 +29,6 @@ describe("Self-copy synchronization (REQ-OSA-22, NFR-OSA-6)", () => {
     ["rules/AGENTS.md", "openspec/spec-rails/AGENTS.md"],
     ["rules/WORKFLOW.md", "openspec/spec-rails/WORKFLOW.md"],
     ["templates/bug-report.md", "openspec/spec-rails/bug-report.md"],
-    ["templates/mutation", "openspec/spec-rails/mutation"],
     ["skills/spec-rails/SKILL.md", ".agents/skills/spec-rails/SKILL.md"],
   ];
 

@@ -41,9 +41,8 @@ describe("Spec-Rails Workflow Lifecycle (REQ-OSA-1, REQ-OSA-3, REQ-OSA-9, REQ-OS
 
   it("Scenario 1: Bootstraps an OpenSpec repository with Spec-Rails wiring", () => {
     fs.mkdirSync(path.join(testDir, "openspec"), { recursive: true });
-    const result = initProject({ cwd: testDir, stack: "ts" });
-    expect(result.detectedStack).toBe("ts");
-    expect(result.createdFiles.length).toBeGreaterThan(0);
+    const result = initProject({ cwd: testDir });
+    expect(result.actions.length).toBeGreaterThan(0);
 
     expect(fs.existsSync(path.join(testDir, "openspec/schemas/spec-rails/schema.yaml"))).toBe(true);
     expect(fs.existsSync(path.join(testDir, "openspec/spec-rails/AGENTS.md"))).toBe(true);

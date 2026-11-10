@@ -2,6 +2,8 @@
 
 Baseline: `main` · Status: `⬜ Planned` · `🚀 In Progress` · `✅ Shipped`
 
+> Waves 5–7 below record history. Since 0.5.0 (Wave 8) the CLI has a single command, `init`; the `check`, `verify` and `audit` commands, stack detection and the related config files were removed.
+
 ---
 
 ## 1. Completed Foundation (Waves 1–5 Summary)
@@ -17,7 +19,7 @@ Baseline: `main` · Status: `⬜ Planned` · `🚀 In Progress` · `✅ Shipped`
 Dropped, do not re-propose:
 - `spec-rails scaffold-check` (AST inspection of contract scaffolding; the Red rail already proves unfulfilled contracts).
 - `spec-rails lint` (duplicates `openspec validate --strict` and schema constraints).
-- Language-specific runner wrappers in core CLI (projects configure their own test/coverage/mutation commands in `spec-rails.config.json`).
+- Language-specific runner wrappers in core CLI (projects configure their own test/coverage/mutation commands in your own `Makefile`, hooks and CI).
 - Mandatory `templates/roadmap.md` and `chore/roadmap-<id>` ceremony (OpenSpec tracks changes natively via `openspec list` and `openspec/changes/archive/`).
 
 ---
@@ -57,3 +59,12 @@ Refocus Spec-Rails as a thin, pure Spec Quality Gate and Testing-Railed workflow
 | :--- | :--- | :--- | :--- | :--- |
 | **W7.1** | Init Upgrade Hygiene & Gradle Detection | W6.3 | ✅ Shipped | Surgically modernize existing `.pre-commit-config.yaml` in-place (updating `spec-rails-check` to `npx --no-install spec-rails check`, removing legacy `check-lgtm-directives` and `spec-rails-verify`); auto-detect Gradle/Kotlin projects (`build.gradle.kts`, `build.gradle`, `gradlew`) to configure stack `"gradle"` and `testCommand` defaulting to `./gradlew test` (or `make test` if `Makefile` contains `test:`); auto-prune legacy v0.1 binaries (`openspec/spec-rails/spec-rails-check` and `spec-rails-verify`) and duplicate `rails.conf`; disambiguate developer guide to `docs/spec-rails/GUIDE.md`. |
 
+---
+
+## 5. Wave 8: Slim `init`-Only CLI
+
+| ID | Item | Depends on | Status | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **W8.1** | Single-command CLI (0.5.0) | W7.1 | ✅ Shipped | `init` is the only command; bootstraps OpenSpec through the pinned local `openspec init` only when `openspec/` is absent; overlays CLI-free `skills/ports/` bodies on the explore/propose/apply/archive/sync/update skills; idempotent (second run byte-identical); removes legacy artifacts. |
+| **W8.2** | Placeholder `Makefile` and make-based hooks | W8.1 | ✅ Shipped (0.6.0) | `init` creates an echo-only `Makefile` (`lint`, `test`, `coverage`, `mutation`) only if absent; generated pre-commit calls `make lint` / `make test`, each hook only when the existing Makefile defines the target. |
+| **W8.3** | Agentic how-tos copied to targets | W8.1 | ✅ Shipped (0.6.0) | `docs/agentic-how-tos/` is a managed tree refreshed on every `init`; detailed runbooks 01–05 plus an index (bootstrap, feature lifecycle, parallel worktrees and bake-off, bugfix, agent configuration); existing repos get them by re-running `npx spec-rails init`; copy and idempotence covered by tests. |

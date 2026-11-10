@@ -8,8 +8,8 @@ permissions:
   contents: read
 
 jobs:
-  verify-rails:
-    name: Verify Specs & Testing Rails
+  rails:
+    name: Testing Rails
     runs-on: ubuntu-latest
 
     steps:
@@ -30,38 +30,7 @@ jobs:
             npm run build
           fi
 
-      - name: Gate & Lane Check (with Spec Audit)
-        env:
-          BASE_REF: ${{ github.base_ref }}
-          HEAD_REF: ${{ github.head_ref }}
-        run: |
-          npm install -g @fission-ai/openspec@1.16.0
-          if [ -f package.json ] && grep -q '"name": "spec-rails"' package.json; then
-            node dist/cli.js check --audit
-          else
-            npx --no-install spec-rails check --audit
-          fi
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Verify Test Rails
-        run: |
-          if [ -f package.json ] && grep -q '"name": "spec-rails"' package.json; then
-            node dist/cli.js verify
-          else
-            npx --no-install spec-rails verify
-          fi
-
       - name: Pre-Commit
         run: |
-          # Skip hooks already covered by the check/verify steps above.
-          SKIP=$(grep -oE 'id: (branch-protection|build-cli|spec-rails-check|spec-rails-verify|test)$' .pre-commit-config.yaml | sed 's/id: //' | paste -sd, -)
-          export SKIP
           pip install pre-commit
           pre-commit run --all-files

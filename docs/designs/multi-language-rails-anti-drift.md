@@ -1,6 +1,6 @@
 # Design Draft: Multi-Language Rails & Anti-Drift Engine
 
-* **Status:** Finalized
+* **Status:** Finalized, partly superseded in 0.5.0 (slim-init-only): only `init` remains; `check`, `verify`, `audit`, `--stack`, presets and `spec-rails.config.json` described below were removed. Kept as design history.
 * **Author:** Mohammed M
 * **Date:** 2026-11-03
 

@@ -7,7 +7,7 @@ export default defineConfig({
   target: "node18",
   clean: true,
   bundle: true,
-  noExternal: ["zod", "cac", "fast-glob"],
+  noExternal: ["cac"],
   drop: ["debugger"],
   pure: ["console.debug"],
   banner: {

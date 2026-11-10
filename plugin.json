@@ -1,7 +1,7 @@
 {
   "name": "spec-rails",
-  "version": "1.0.0",
-  "description": "Spec-Driven, Testing-Railed workflow addon for OpenSpec",
+  "version": "0.6.0",
+  "description": "Spec-Driven, Testing-Railed workflow addon for OpenSpec (single `init` command)",
   "skills": [
     "skills/spec-rails"
   ]

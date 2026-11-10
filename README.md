@@ -29,8 +29,8 @@ flowchart LR
   - **Gate 1 (Proposal)**: Pinpoints intent, measurable success metrics, and strict Out-of-Scope (YAGNI) boundaries.
   - **Gate 2 (Architecture & Specs)**: Formalizes uniquely keyed requirements (`REQ-*`, `NFR-*`), Given/When/Then scenarios, boundary rules (Pure Core vs. I/O Shell), and latency/allocation budgets.
   - **Gate 3 (Tasks DAG)**: Maps dependencies and partitions orthogonal tasks into parallel worktree streams.
-  - **Gate 4 (Verify & Archive)**: Enforces testing rails, verifies requirement traceability, promotes delta specs, and archives via `openspec archive`.
-- Drive changes with `openspec new change`, `openspec instructions <artifact>`, or the `/opsx-*` commands (equivalently the `openspec-*` skills; see [docs/how-tos/05-configure-ai-agents.md](docs/how-tos/05-configure-ai-agents.md)).
+  - **Gate 4 (Verify & Archive)**: Enforces testing rails (your own test, coverage and mutation commands), verifies requirement traceability by hand, promotes delta specs, and archives under `openspec/changes/archive/`.
+- Drive changes with the `/opsx-*` commands or the equivalent `openspec-*` skills; after `spec-rails init` they are CLI-free file-based workflows (see [docs/how-tos/05-configure-ai-agents.md](docs/how-tos/05-configure-ai-agents.md)).
 
 ### 2. Testing Rails: Red-Green, >= 95% Mutation Kill
 - Tests are not written after the fact as documentation. They are rails that guide the code.
@@ -57,15 +57,19 @@ Why this shape: the protocol and rules ship with the addon (`openspec/spec-rails
 
 ```text
 spec-rails/
-├── src/                      # TypeScript CLI implementation (init, check, verify, audit)
+├── src/                      # TypeScript CLI implementation (`init` only)
 ├── dist/cli.js               # Bundled CLI binary (Node >= 18)
 ├── schemas/spec-rails/       # OpenSpec schema + artifact templates
-├── templates/                # spec-rails-ci.yml, bug-report.md, presets, pre-commit config
+├── templates/                # spec-rails-ci.yml, bug-report.md, TODO.md, Makefile (placeholder targets)
 ├── rules/                    # AGENTS.md (always-on guardrails), WORKFLOW.md (canonical protocol)
 ├── skills/spec-rails/SKILL.md# Agent skill runbook
 ├── openspec/                 # This repo's own OpenSpec layout (specs, changes, installed schema)
+├── skills/ports/             # CLI-free ports of the OpenSpec workflow skills
+├── vendor/openspec/<ver>/    # pristine upstream skills for the pinned version (maintainers)
+├── openspec-version          # the single OpenSpec pin
+├── scripts/                  # upgrade-openspec.mjs (maintainers)
 ├── .agents/, .github/        # OpenSpec-generated skills, prompts; CI workflows
-├── docs/                     # ROADMAP (delivery status), DESIGN, WAY_OF_WORKING, WIKI, bug-reports/, how-tos/01–05
+├── docs/                     # ROADMAP (delivery status), DESIGN, WAY_OF_WORKING, WIKI, how-tos/01–05 (human), agentic-how-tos/ (agent runbooks copied to targets by init)
 ├── tests/                    # Unit, schema, lint, and verification suites
 └── plugin.json               # Agent plugin manifest
 ```
@@ -74,13 +78,21 @@ spec-rails/
 
 ## Quick Start
 
-### Install on an OpenSpec Project
-Prerequisites: an existing `openspec init` project, OpenSpec ≥ 1.15.0, and Node.js ≥ 18.
+### Install on a Project
+Prerequisites: Node.js ≥ 18. The pinned `openspec` CLI (version in [`openspec-version`](openspec-version), same major.minor) is needed **only** when the target has no `openspec/` yet; after that, neither `openspec` nor `spec-rails` is needed for day-to-day work.
 ```bash
-npx --no-install spec-rails init [target-repo]
+npx spec-rails init [target-repo] [--tools agents,github-copilot,claude]
 ```
 
-Scaffolds `spec-rails.config.json` with detected stack commands and thresholds, copies the `spec-rails` schema to `openspec/schemas/spec-rails/`, sets `schema: spec-rails` in `openspec/config.yaml`, installs local hooks into `.pre-commit-config.yaml` (branch protection and your stack's test command; no spec-rails dependency), scaffolds developer guidance in `docs/spec-rails/`, copies mutation presets (except Python), an inert `spec-rails-ci.yml` skeleton and `openspec/spec-rails/TODO.md` for you to set up coverage and mutation gates, removes stale artifacts from earlier versions, copies agent rules (`openspec/spec-rails/`), and `.agents/skills/spec-rails/SKILL.md` automatically, and ignores `.worktrees/`. Re-running is idempotent (it logs each removed, replaced or created file). Gate and lane check: `npx --no-install spec-rails check`.
+`init` is the only command. When `openspec/` is absent it runs `openspec init --tools <list>` (default `agents`) so OpenSpec generates every per-agent artifact. On every run it then:
+- copies the `spec-rails` schema to `openspec/schemas/spec-rails/` and sets `schema: spec-rails` in `openspec/config.yaml`;
+- rewrites the generated `explore`, `propose`, `apply`, `archive`, `sync` and `update` skills/commands/prompts (any agent layout) to the CLI-free bodies in `skills/ports/`; other generated workflows are left untouched and logged as still requiring the `openspec` CLI;
+- writes `.pre-commit-config.yaml` (branch protection plus `lint`/`test` hooks that call `make lint`/`make test`, each added only if your existing Makefile defines that target), a placeholder `Makefile` (created only if absent; its `lint`, `test`, `coverage`, `mutation` targets just echo what to implement), a `spec-rails-ci.yml` skeleton (commented step placeholders plus a no-op `Placeholder` step to replace), `openspec/spec-rails/TODO.md`, developer docs in `docs/spec-rails/`, agent runbooks in `docs/agentic-how-tos/` (managed: `README.md` index plus `01`–`05`, refreshed on every run), agent rules and `.agents/skills/spec-rails/SKILL.md`, and ignores `.worktrees/`;
+- removes legacy artifacts left by earlier versions (config, rails and mutmut files, old gate hooks, `opsx-*` skills).
+
+Re-running is idempotent. Existing repos pick up new or updated agent runbooks by re-running `npx spec-rails init`: nothing changes once converged, and developer-edited hooks, CI and TODO are preserved. Each change is logged on one line.
+
+**Upgrading OpenSpec**: in a target repo run `openspec update` then `spec-rails init` (the overlay restores the CLI-free bodies). Maintainers run `node scripts/upgrade-openspec.mjs <version>` and port the printed diff into `skills/ports/`.
 
 ### Documentation & Guides
 
@@ -88,30 +100,23 @@ Scaffolds `spec-rails.config.json` with detected stack commands and thresholds, 
 - **Delivery Status**: [docs/ROADMAP.md](docs/ROADMAP.md); **Design Note**: [docs/DESIGN.md](docs/DESIGN.md)
 - **Architecture & Methodology Wiki**: [docs/WIKI.md](docs/WIKI.md)
 - **Way of Working Handbook**: [docs/WAY_OF_WORKING.md](docs/WAY_OF_WORKING.md)
-- **How-To 1**: [Bootstrap a New Project](docs/how-tos/01-bootstrap-new-project.md)
+- **How-To 1**: [Bootstrap a New Project](docs/how-tos/01-bootstrap-new-project.md) (human guides below each have an agentic runbook counterpart)
 - **How-To 2**: [Drive Feature Lifecycle (Gates 0–4)](docs/how-tos/02-drive-feature-lifecycle.md)
 - **How-To 3**: [Parallel Worktrees & Multi-Agent Streams](docs/how-tos/03-parallel-worktrees-multi-agent.md)
 - **How-To 4**: [Fast-Track Bugfix Protocol](docs/how-tos/04-fast-track-bugfix.md)
 - **How-To 5**: [Configure AI Agents](docs/how-tos/05-configure-ai-agents.md)
+- **Agentic How-Tos** (detailed agent runbooks; copied into target repos as `docs/agentic-how-tos/`): [Index](docs/agentic-how-tos/README.md) · [01 Bootstrap](docs/agentic-how-tos/01-bootstrap-new-project.md) · [02 Feature Lifecycle](docs/agentic-how-tos/02-drive-feature-lifecycle.md) · [03 Parallel Worktrees & Bake-Off](docs/agentic-how-tos/03-parallel-worktrees-multi-agent.md) · [04 Fast-Track Bugfix](docs/agentic-how-tos/04-fast-track-bugfix.md) · [05 Configure AI Agents](docs/agentic-how-tos/05-configure-ai-agents.md)
 
 ### Running Tests
 ```bash
 npm ci                          # install dependencies
 npm run build                   # bundle dist/cli.js (required before tests)
 npm run lint                    # TypeScript type check (tsc --noEmit)
-npm test                        # Vitest suite (13 suites, 173 tests)
+npm test                        # Vitest suite
 npm run test:coverage           # Vitest with coverage
 pre-commit run --all-files      # all local hooks (mirrors CI)
 ```
-`npm test` needs `dist/cli.js` because the CLI tests spawn the bundle. CI (`test.yml`) runs `npm ci`, build, lint, test; commit hooks run build, check, verify, lint, test. See [Command Reference](docs/WAY_OF_WORKING.md#command-reference) and [CI/CD Pipeline](docs/WAY_OF_WORKING.md#cicd-pipeline) in the Way of Working. Release history: [CHANGELOG.md](CHANGELOG.md).
+`npm test` needs `dist/cli.js` because the CLI tests spawn the bundle. CI (`test.yml`) runs `npm ci`, build, lint, test; commit hooks run build, lint, test. See [Command Reference](docs/WAY_OF_WORKING.md#command-reference) and [CI/CD Pipeline](docs/WAY_OF_WORKING.md#cicd-pipeline) in the Way of Working. Release history: [CHANGELOG.md](CHANGELOG.md).
 
-### Verifying the Test Rails in CI
-The CI workflow runs `npx --no-install spec-rails verify` as a verification step (never a commit hook). It fails the PR when:
-- A `REQ-*`/`NFR-*` key in an active change appears in no discovered test file matching `testGlobs`.
-- A ticked Red/Green/Coverage/Mutation task lacks `Evidence: <note>`.
-- Any configured command (`testCommand`, `coverageCommand`, `mutationCommand`) exits non-zero.
-- The coverage score falls below `coverageMinScore` (default: 95%).
-- The mutation command output lacks a numeric percentage score or falls below `mutationMinScore` (default: 95%).
-- Any rail command execution exceeds the process execution timeout (default: 10 minutes).
-
-The commands are configured in `spec-rails.config.json`, so any language or stack works. For docs-only or spec-only changesets, the mutation rail is skipped with an informational pass.
+### Test Rails
+Spec-Rails does not run your quality gates. `init` writes a placeholder `Makefile` (only if absent) whose `lint`, `test`, `coverage` and `mutation` targets echo what to implement; pre-commit calls `make lint`/`make test`. Wire unit tests, coverage (>= 95%) and mutation testing (>= 95% kill) for your stack into your own commands, pre-commit hooks and CI; `openspec/spec-rails/TODO.md` lists the steps. Traceability (every `REQ-*`/`NFR-*` appears in a test) and `Evidence:` on ticked tasks are reviewed by humans and agents following the workflow.

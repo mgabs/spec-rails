@@ -1,6 +1,6 @@
 # How-To: Configure AI Agents with Spec-Rails
 
-This guide explains how to install and enable Spec-Rails for Antigravity (AGY), Claude Code, and Cursor.
+This guide explains how to install and enable Spec-Rails for Antigravity (AGY), Claude Code, and Cursor. Agent runbook: [agentic-how-tos/05](../agentic-how-tos/05-configure-ai-agents.md).
 
 ---
 
@@ -28,9 +28,9 @@ cp openspec/spec-rails/AGENTS.md .agents/rules/spec-rails.md
 Commit `.agents/` and `openspec/spec-rails/` so the entire team's agents follow Spec-Rails rules.
 
 ### OpenSpec CLI & `/opsx-*` Command Discipline
-- Create changes with `openspec new change <id>-<slug>` (normalizing work item dots to hyphens: `W1.2` → `w1-2-<slug>`).
-- For planning, run `openspec instructions <artifact> --change <id>-<slug>` step-by-step, pausing after each gate for explicit human review and checkbox approval before drafting the next artifact.
-- Run `/opsx-apply` and `/opsx-archive` (`openspec archive <id>-<slug> --yes`) only after Gate 3 is ticked by a human. Agents never self-tick human Review Gate boxes.
+- Create changes with `/opsx-propose` as `<id>-<slug>` (normalizing work item dots to hyphens: `W1.2` → `w1-2-<slug>`).
+- For planning, draft one artifact at a time from `openspec/schemas/spec-rails/schema.yaml`, pausing after each gate for explicit human review and checkbox approval before drafting the next artifact.
+- Run `/opsx-apply` and `/opsx-archive`  only after Gate 3 is ticked by a human. Agents never self-tick human Review Gate boxes.
 
 ---
 

@@ -78,7 +78,7 @@ Never merge a branch whose rails were verified only against a stale base.
 4. Merge per Rule 2, then delete the branch.
 
 ### Rule 6: Commit Cadence
-- Commit at stage boundaries rather than per gate tick: once after planning (research through tasks), once after the code (one commit per slice is fine when there are several), and once after `openspec archive`. Exceptions: green slice commits (Rule 4), rebases and stream merges, and the bugfix and chore lanes. This is guidance; `spec-rails-check` reads the working tree and does not enforce it.
+- Commit at stage boundaries rather than per gate tick: once after planning (research through tasks), once after the code (one commit per slice is fine when there are several), and once after `openspec archive`. Exceptions: green slice commits (Rule 4), rebases and stream merges, and the bugfix and chore lanes. This is guidance and is not mechanically enforced.
 
 ---
 
@@ -91,14 +91,14 @@ openspec/
 ├── changes/<id>-<slug>/         <-- Active change: research, proposal, specs/, design, tasks
 ├── changes/archive/             <-- Shipped or dropped changes
 ├── schemas/spec-rails/          <-- Installed schema and templates
-└── spec-rails/                  <-- WORKFLOW.md (this file), AGENTS.md, bug-report.md, mutation/, TODO.md
+└── spec-rails/                  <-- WORKFLOW.md (this file), AGENTS.md, bug-report.md, TODO.md
 docs/
 ├── ROADMAP.md                   <-- Waves, work items, dependency spine, exit criteria
 └── bug-reports/                 <-- Defect triage reports
 ```
 
 ### Gate Approval Evidence
-A gate passes only when the agent, after explicit human approval, ticks the artifact's **Review Gate** checkbox in the working tree. An unticked box means the gate has not passed, whatever was said in chat. Agents MUST draft planning artifacts step-by-step, pausing after each gate for human review rather than generating all artifacts in one unreviewed pass.
+A gate passes only when a human ticks the artifact's **Review Gate** checkbox in the working tree; agents never tick it. An unticked box means the gate has not passed, whatever was said in chat. Agents MUST draft planning artifacts step-by-step, pausing after each gate for human review rather than generating all artifacts in one unreviewed pass.
 
 ```mermaid
 flowchart TD
@@ -275,10 +275,10 @@ All steps on the feature branch unless stated otherwise:
 
 ## 7. OpenSpec Layout & Enforcement
 
-Spec-Rails is an addon on an OpenSpec project (`npx spec-rails init`, requires OpenSpec ≥ 1.15.0 and Node.js ≥ 18). OpenSpec owns the artifact graph, specs and archive; Spec-Rails supplies the `spec-rails` schema (`research → proposal → specs → design → tasks`), gates, lanes and testing rails.
+Spec-Rails is an addon on an OpenSpec project (`npx spec-rails init`, requires Node.js ≥ 18; the pinned `openspec` CLI is needed only to bootstrap a project without `openspec/`). OpenSpec owns the artifact graph, specs and archive; Spec-Rails supplies the `spec-rails` schema (`research → proposal → specs → design → tasks`), gates, lanes and testing rails.
 
 - **Layout**: changes live in `openspec/changes/<id>-<slug>/`, capabilities in `openspec/specs/<capability>/spec.md`, finished changes in `openspec/changes/archive/`. Bug reports live in `docs/bug-reports/`; this protocol ships as `openspec/spec-rails/WORKFLOW.md`.
-- **Gates**: artifact templates end with an unticked `## Review Gate` box. A human ticks it before subsequent planning artifacts or implementation tasks are created. `spec-rails check` (pre-commit and CI) fails commits on `main`/`master` and enforces gate sign-off before code changes.
+- **Gates**: artifact templates end with an unticked `## Review Gate` box. A human ticks it before subsequent planning artifacts or implementation tasks are created. The `branch-protection` pre-commit hook blocks commits on `main`/`master`; humans and agents enforce gate sign-off before code changes.
 - **Streams**: after rebasing a stream onto the feature branch, run `openspec validate <change>` in addition to the test suite.
 - **Requirement IDs**: `REQ-*`/`NFR-*` live in the change's delta specs and are synced into `openspec/specs/` by `openspec archive`; Gate 4 adds only the rails (tests, mutation, `openspec validate`) around that command.
 - **Parallel streams, delta specs, and `tasks.md`**: shared capability delta specs are locked at Gate 2 on the feature branch before spawning parallel slice worktrees (Rule 3.1); if streams must edit a shared delta spec, apply Rule 3.7 (strictly additive) with distinct `REQ-*` IDs. Update `tasks.md` slice checkboxes on the parent feature branch when integrating streams (or confine edits to each stream's own slice section) to avoid rebase collisions.
