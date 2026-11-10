@@ -2,7 +2,7 @@
 
 Spec-Rails (Spec-Driven, Testing-Railed Development) is an engineering and AI-agent orchestration framework designed to eliminate hallucinated scope, stale documentation, untested regressions, and branch contamination in autonomous and pair-programming development.
 
-For the operational handbook, see [WAY_OF_WORKING.md](WAY_OF_WORKING.md). Delivery status: [ROADMAP.md](ROADMAP.md); design note: [DESIGN.md](DESIGN.md). Agent-facing detailed runbooks (what `init` copies into target repos as `docs/agentic-how-tos/`): [index](agentic-how-tos/README.md) — [01 bootstrap](agentic-how-tos/01-bootstrap-new-project.md), [02 feature lifecycle](agentic-how-tos/02-drive-feature-lifecycle.md), [03 worktrees & bake-off](agentic-how-tos/03-parallel-worktrees-multi-agent.md), [04 bugfix](agentic-how-tos/04-fast-track-bugfix.md), [05 configure agents](agentic-how-tos/05-configure-ai-agents.md).
+For the operational handbook, see [WAY_OF_WORKING.md](WAY_OF_WORKING.md). Delivery status: [ROADMAP.md](ROADMAP.md). Agent-facing detailed runbooks (what `init` copies into target repos as `docs/agentic-how-tos/`): [index](agentic-how-tos/README.md) — [01 bootstrap](agentic-how-tos/01-bootstrap-new-project.md), [02 feature lifecycle](agentic-how-tos/02-drive-feature-lifecycle.md), [03 worktrees & bake-off](agentic-how-tos/03-parallel-worktrees-multi-agent.md), [04 bugfix](agentic-how-tos/04-fast-track-bugfix.md), [05 configure agents](agentic-how-tos/05-configure-ai-agents.md).
 
 ---
 
@@ -42,7 +42,8 @@ There is no `specs/` folder. Each artifact has one home, chosen by who owns it:
 | Capability specs, changes, archive | `openspec/specs/`, `openspec/changes/` | OpenSpec owns them; identical to upstream OpenSpec, so the CLI works unchanged. |
 | Schema and templates | `openspec/schemas/spec-rails/` | The artifact graph is OpenSpec's extension point. |
 | Protocol (`WORKFLOW.md`), `AGENTS.md`, bug-report template, `TODO.md` | `openspec/spec-rails/` | Same text for every adopter, ships with the addon and survives `openspec update`. |
-| Developer guide (`docs/spec-rails/`) and agent runbooks (`docs/agentic-how-tos/`) | target repo `docs/` | Copied by `init` and refreshed on every run (managed); re-run `npx spec-rails init` to get updates. |
+| Root `AGENTS.md` | repo root | `init` creates it or maintains only its `<!-- spec-rails:start/end -->` block, which points agents to the guardrails above; your other text is untouched. |
+| Agent runbooks (`docs/agentic-how-tos/`) | target repo `docs/` | Copied by `init` and refreshed on every run (managed); re-run `npx spec-rails init` to get updates. |
 | Delivery status (`ROADMAP.md`) | `docs/` | Per-project data that spans changes; upstream OpenSpec has no roadmap concept, so it does not belong in `openspec/`. |
 | Bug reports (`bug-reports/`) | `docs/` | Per-project triage records with no OpenSpec equivalent; each fix commits its report together with the regression test and fix. |
 

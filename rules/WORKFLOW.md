@@ -1,5 +1,9 @@
 # Spec-Driven, Testing-Railed Development (Spec-Rails) Workflow
 
+## Precedence
+
+**Precedence**: if these rules conflict with the repository's own rules (root `AGENTS.md`, `CLAUDE.md`, tool rules), the stricter rule wins. If it is unclear which is stricter, or following one breaks the other, stop and ask the human, who decides. Never resolve a conflict silently.
+
 ## 1. Lanes, Branching & Worktrees
 
 ### Rule 0: Pick the Right Lane
@@ -16,7 +20,7 @@ Every change travels through exactly one lane. Pick it before touching anything.
 - If a chore turns out to change behavior, stop and restart in the Feature or Bugfix lane.
 
 ### Rule 1: Never Commit on `main`
-- **NEVER** commit directly to `main` / `master`. Every commit lands through a lane branch merged with `--ff-only`.
+- **NEVER** commit directly to `main` / `master`. Every commit lands through a lane branch merged with `--ff-only`, or through a pull request when your team merges that way (push the rebased, verified branch and open the PR instead of merging locally).
 - All research, proposal, specs, design, tasks, and slice work commits to the feature branch.
 
 ### Rule 2: Rebase & Re-Verify Before Every Merge
@@ -66,10 +70,9 @@ Never merge a branch whose rails were verified only against a stale base.
   1. Inspect `git status` and `git diff`.
   2. Run all linters and formatters (`pre-commit run --all-files` or equivalent).
   3. Run the full unit and integration suite.
-- **Tiered Commit Policy (Worktrees vs. Integration Branches)**:
-  - **Zero bypass on Integration**: `git commit --no-verify` / `-n` is strictly forbidden on `main`, on feature branch integration commits, and during stream branch merges. Every merge into a base branch must pass all pre-commit hooks and testing rails.
-  - **Intermediate Worktree Commits**: Inside isolated stream worktrees (`.worktrees/<id>-<stream>`), developers and agents MAY pass `--no-verify` on atomic intermediate commits (e.g. committing a failing Red test step or partial slice WIP) to enable fine-grained commit history without getting blocked by whole-project pre-commit suites mid-slice. Full pre-commit hooks MUST pass before the stream is rebased and merged into the base branch.
-- **Red is never merged alone**: While intermediate Red commits are permitted in isolated stream branches, Red tests must be accompanied by their Green implementation before merging into the base feature branch or `main`. The tip of every integrated branch is always green.
+- **Commit Policy**:
+  - **Zero bypass**: `git commit --no-verify` / `-n` is strictly forbidden everywhere, including stream worktrees. Every commit and merge must pass all pre-commit hooks and testing rails; commit a Red test together with its Green code instead of bypassing hooks.
+- **Red is never merged alone**: Red tests must be accompanied by their Green implementation before merging into the base feature branch or `main`. The tip of every integrated branch is always green.
 
 ### Rule 5: Chore Lane
 1. `git checkout -b chore/<slug>` from the target branch.
@@ -78,7 +81,7 @@ Never merge a branch whose rails were verified only against a stale base.
 4. Merge per Rule 2, then delete the branch.
 
 ### Rule 6: Commit Cadence
-- Commit at stage boundaries rather than per gate tick: once after planning (research through tasks), once after the code (one commit per slice is fine when there are several), and once after `openspec archive`. Exceptions: green slice commits (Rule 4), rebases and stream merges, and the bugfix and chore lanes. This is guidance and is not mechanically enforced.
+- Commit at stage boundaries rather than per gate tick: once after planning (research through tasks), once after the code (one commit per slice is fine when there are several), and once after `openspec archive`. Exceptions: the contract scaffolding commit (task 3.0), green slice commits (Rule 4), rebases and stream merges, and the bugfix and chore lanes. This is guidance and is not mechanically enforced.
 
 ---
 
@@ -93,8 +96,7 @@ openspec/
 ├── schemas/spec-rails/          <-- Installed schema and templates
 └── spec-rails/                  <-- WORKFLOW.md (this file), AGENTS.md, bug-report.md, TODO.md
 docs/
-├── ROADMAP.md                   <-- Waves, work items, dependency spine, exit criteria
-└── bug-reports/                 <-- Defect triage reports
+└── bug-reports/                 <-- Defect triage reports (created by the first bugfix)
 ```
 
 ### Gate Approval Evidence
@@ -189,7 +191,7 @@ flowchart TD
 
 ### Gate B1: Bug Report & Triage
 - Spawn an isolated worktree first so the bug report belongs to the fix branch/PR:
-  `git worktree add .worktrees/fix-<slug> -b fix/<slug> main && cd .worktrees/fix-<slug>`
+  `git worktree add .worktrees/fix-<slug> -b fix/<slug> main`; then work with `git -C .worktrees/fix-<slug> <cmd>` (never `cd`)
 - **Artifact**: `docs/bug-reports/<date>-<slug>.md`
 - **Mandatory Sections**: Status & Metadata, Summary, Steps to Reproduce, Expected vs Actual, Root Cause Analysis, Remediation Plan.
 - **Gate**: Human approval before code changes.
@@ -261,7 +263,7 @@ All steps on the feature branch unless stated otherwise:
 4. Full-project mutation suite: $\ge 95\%$ kill score on core logic.
 5. **Human Comprehension Verification**: Reviewer verifies complete line-by-line understanding of all generated code; delete ununderstood code.
 6. Tick every completed slice item and the final integration task in `tasks.md` (with `Evidence:` notes on Red/Green/Coverage/Mutation items).
-7. Run `openspec validate <id>-<slug>` (also required after every stream rebase).
+7. Run `openspec validate <id>-<slug>` (also required after every stream rebase; if the OpenSpec CLI is unavailable, re-read the delta specs against the schema by hand).
 8. Sync and archive in one step:
    ```bash
    openspec archive <id>-<slug> --yes

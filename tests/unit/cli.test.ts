@@ -30,7 +30,7 @@ describe("CLI Binary Integration & Unit (REQ-OSA-32)", () => {
       const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
       try {
         createCli().parse(["node", "spec-rails", "init", dir]);
-        expect(logSpy).toHaveBeenCalledWith("[spec-rails] created docs/spec-rails/GUIDE.md");
+        expect(logSpy).toHaveBeenCalledWith("[spec-rails] created openspec/spec-rails/WORKFLOW.md");
         expect(logSpy).toHaveBeenCalledWith("[spec-rails] created openspec/spec-rails/TODO.md");
         expect(logSpy).toHaveBeenCalledWith("[spec-rails] next: complete openspec/spec-rails/TODO.md to set up your quality gates");
         logSpy.mockClear();
@@ -58,7 +58,7 @@ describe("CLI Binary Integration & Unit (REQ-OSA-32)", () => {
       const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
       try {
         createCli().parse(["node", "spec-rails", "init"]);
-        expect(fs.existsSync(path.join(dir, "docs/spec-rails/GUIDE.md"))).toBe(true);
+        expect(fs.existsSync(path.join(dir, "openspec/spec-rails/WORKFLOW.md"))).toBe(true);
       } finally {
         cwdSpy.mockRestore();
         logSpy.mockRestore();

@@ -1,7 +1,7 @@
 # Agentic How-To 01: Bootstrap Spec-Rails in a Project
 
 ## Purpose
-Install or refresh Spec-Rails in a repository so the gated workflow, CLI-free `/opsx-*` skills, pre-commit hooks, CI skeleton and these runbooks are present. Also the procedure for repos that already ran an older spec-rails.
+Install or refresh Spec-Rails in a repository so the gated workflow, CLI-free `openspec-*` skills, pre-commit hooks, CI skeleton and these runbooks are present. Also the procedure for repos that already ran an older spec-rails.
 
 ## Preconditions
 - Node.js >= 18 and a git repository (`git rev-parse --show-toplevel` succeeds).
@@ -31,7 +31,6 @@ Install or refresh Spec-Rails in a repository so the gated workflow, CLI-free `/
    openspec/config.yaml                  schema: spec-rails (other keys preserved)
    openspec/schemas/spec-rails/          schema + artifact templates
    openspec/spec-rails/                  WORKFLOW.md, AGENTS.md, bug-report.md, TODO.md
-   docs/spec-rails/                      GUIDE.md, COMMANDS.md, RAILS.md
    docs/agentic-how-tos/                 these runbooks (managed, refreshed every run)
    ```
    Generated explore/propose/apply/archive/sync/update skills, commands and prompts (any agent layout) now carry CLI-free bodies.
@@ -62,7 +61,7 @@ Install or refresh Spec-Rails in a repository so the gated workflow, CLI-free `/
    If the pre-commit `branch-protection` hook blocks you, you are committing on `main`; go back to step 1.
 
 ## Re-running and upgrading
-- `npx spec-rails init` again is idempotent: a converged repo reports only `skipped`. It refreshes managed files (schema, WORKFLOW/AGENTS, skill, `docs/spec-rails/*`, `docs/agentic-how-tos/*`) and never overwrites your Makefile, TODO, CI or edited hooks.
+- `npx spec-rails init` again is idempotent: a converged repo reports only `skipped`. It refreshes managed files (schema, WORKFLOW/AGENTS, skill, `docs/agentic-how-tos/*`) and never overwrites your Makefile, TODO, CI or edited hooks.
 - To pick up new runbooks or rules from a newer spec-rails: update the package, re-run `npx spec-rails init`, review `git diff`, commit on a `chore/` branch.
 - Upgrading OpenSpec: run `openspec update`, then `npx spec-rails init` to restore the CLI-free skill bodies. Skipping `init` leaves skills that need the CLI.
 - Legacy files from older installs (old config/rails/mutation files, old gate hooks, `opsx-*` skills under `.github/skills`) are deleted by `init` and logged as `removed`.
@@ -86,7 +85,7 @@ Install or refresh Spec-Rails in a repository so the gated workflow, CLI-free `/
 ## Hard rules for agents
 - [ ] Do the bootstrap on a `chore/` branch, never on `main`/`master`.
 - [ ] Do not hand-create `openspec/`; let `openspec init` (via `init`) create it.
-- [ ] Do not edit managed files (`openspec/spec-rails/*`, `openspec/schemas/spec-rails/*`, `docs/spec-rails/*`, `docs/agentic-how-tos/*`, `.agents/skills/spec-rails/SKILL.md`); the next `init` overwrites them.
+- [ ] Do not edit managed files (`openspec/spec-rails/*`, `openspec/schemas/spec-rails/*`, `docs/agentic-how-tos/*`, `.agents/skills/spec-rails/SKILL.md`); the next `init` overwrites them.
 - [ ] Do not leave the echo-only `Makefile` targets, CI `Placeholder` step or TODO.md unreported: tell the human which quality gates are still placeholders.
 - [ ] Never bypass hooks with `--no-verify`.
 - [ ] Next: [02 Drive a feature](02-drive-feature-lifecycle.md), [05 Configure agents](05-configure-ai-agents.md).

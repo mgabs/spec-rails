@@ -113,6 +113,16 @@ describe("planOverlay (REQ-POS-7, REQ-POS-8)", () => {
     expect(actions.find((a) => a.path === ".foo/commands/explore.md")).toBeUndefined();
   });
 
+  it("replaces the generated description with the port's, keeping the quote style", () => {
+    const files = {
+      ".agents/skills/openspec-explore/SKILL.md": "---\nname: openspec-explore\ndescription: old words\n---\nold\n",
+      ".github/prompts/opsx-explore.prompt.md": '---\ndescription: "old words"\n---\nold\n',
+    };
+    const out = applyActions(files, planOverlay(files, { explore: "---\nworkflow: explore\ndescription: gated draft\n---\nnew\n" }));
+    expect(out[".agents/skills/openspec-explore/SKILL.md"]).toContain("description: gated draft\n");
+    expect(out[".github/prompts/opsx-explore.prompt.md"]).toContain('description: "gated draft"\n');
+  });
+
   it("works with a port lacking a trailing newline and skips missing ports", () => {
     const files = { ".agents/skills/openspec-explore/SKILL.md": "---\nname: openspec-explore\n---\nold\n", ".agents/skills/openspec-apply-change/SKILL.md": "---\nname: openspec-apply-change\n---\nold\n" };
     const out = applyActions(files, planOverlay(files, { explore: "---\nworkflow: explore\n---\nnew" }));

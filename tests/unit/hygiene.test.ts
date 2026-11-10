@@ -83,7 +83,6 @@ describe("Repository hygiene and documentation linting (REQ-OSA-23, REQ-OSA-24, 
         cwd: root,
         absolute: true,
         onlyFiles: true,
-        ignore: ["docs/designs/**"],
       }),
     ];
 
@@ -100,12 +99,12 @@ describe("Repository hygiene and documentation linting (REQ-OSA-23, REQ-OSA-24, 
     }
   });
 
-  it("codifies worktree intermediate commit rails (REQ-OSA-51)", () => {
+  it("forbids --no-verify everywhere including worktrees (REQ-OSA-51)", () => {
     const workflowFile = path.join(root, "rules/WORKFLOW.md");
     expect(fs.existsSync(workflowFile)).toBe(true);
     const content = fs.readFileSync(workflowFile, "utf-8");
-    expect(content).toMatch(/--no-verify/);
-    expect(content).toMatch(/intermediate/i);
+    expect(content).toMatch(/--no-verify.*strictly forbidden everywhere/);
+    expect(content).not.toMatch(/MAY pass `--no-verify`/);
   });
 
   it("mandates declarative command shapes over cd chains (REQ-OSA-52)", () => {

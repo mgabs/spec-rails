@@ -76,15 +76,13 @@ describe("init", () => {
         "openspec/spec-rails/WORKFLOW.md",
         "openspec/spec-rails/AGENTS.md",
         ".agents/skills/spec-rails/SKILL.md",
-        "docs/spec-rails/GUIDE.md",
-        "docs/spec-rails/COMMANDS.md",
-        "docs/spec-rails/RAILS.md",
         ...agenticFiles.map((f) => `docs/agentic-how-tos/${f}`),
         ".pre-commit-config.yaml",
         ".github/workflows/spec-rails-ci.yml",
         "openspec/spec-rails/TODO.md",
         "Makefile",
         ".gitignore",
+        "AGENTS.md",
       ]) {
         expect(fs.existsSync(p(f)), f).toBe(true);
       }
@@ -176,7 +174,7 @@ describe("init", () => {
       } finally {
         spy.mockRestore();
       }
-      expect(fs.existsSync(p("docs/spec-rails/GUIDE.md"))).toBe(true);
+      expect(fs.existsSync(p("openspec/spec-rails/WORKFLOW.md"))).toBe(true);
     });
   });
 
@@ -195,10 +193,10 @@ describe("init", () => {
     it("refreshes drifted managed files (REQ-OSA-13)", () => {
       fs.mkdirSync(p("openspec"));
       initProject({ cwd: dir });
-      fs.writeFileSync(p("docs/spec-rails/GUIDE.md"), "drift");
+      fs.writeFileSync(p("openspec/spec-rails/WORKFLOW.md"), "drift");
       const res = initProject({ cwd: dir });
-      expect(res.actions).toContainEqual({ kind: "updated", path: "docs/spec-rails/GUIDE.md" });
-      expect(read("docs/spec-rails/GUIDE.md")).toContain("Spec-Rails Workflow Guide");
+      expect(res.actions).toContainEqual({ kind: "updated", path: "openspec/spec-rails/WORKFLOW.md" });
+      expect(read("openspec/spec-rails/WORKFLOW.md")).not.toBe("drift");
     });
 
     it("removes legacy artifacts without migrating them (REQ-OSA-13, REQ-OSA-32)", () => {
@@ -216,11 +214,14 @@ describe("init", () => {
         "openspec/spec-rails/mutation/mutmut.ini",
         ".github/skills/opsx-apply/SKILL.md",
         "docs/spec-rails/WORKFLOW.md",
+        "docs/spec-rails/GUIDE.md",
+        "docs/spec-rails/COMMANDS.md",
+        "docs/spec-rails/RAILS.md",
       ]) {
         fs.writeFileSync(p(f), "x");
       }
       const res = initProject({ cwd: dir });
-      for (const f of ["spec-rails.config.json", "rails.conf", "mutmut.ini", "openspec/spec-rails/rails.conf", "openspec/spec-rails/spec-rails-check", "openspec/spec-rails/spec-rails-verify", "openspec/spec-rails/mutation", ".github/skills/opsx-apply", "docs/spec-rails/WORKFLOW.md"]) {
+      for (const f of ["spec-rails.config.json", "rails.conf", "mutmut.ini", "openspec/spec-rails/rails.conf", "openspec/spec-rails/spec-rails-check", "openspec/spec-rails/spec-rails-verify", "openspec/spec-rails/mutation", ".github/skills/opsx-apply", "docs/spec-rails/WORKFLOW.md", "docs/spec-rails/GUIDE.md", "docs/spec-rails/COMMANDS.md", "docs/spec-rails/RAILS.md"]) {
         expect(fs.existsSync(p(f)), f).toBe(false);
         expect(res.actions).toContainEqual({ kind: "removed", path: f });
       }
@@ -293,6 +294,25 @@ describe("init", () => {
       initProject({ cwd: dir });
       expect(read("openspec/config.yaml")).toBe("schema: spec-rails\n");
       expect(read(".gitignore")).toBe(".worktrees/\n");
+    });
+
+    it("manages only the marked block in the root AGENTS.md (REQ-OSA-59)", () => {
+      fs.mkdirSync(p("openspec"));
+      fs.writeFileSync(p("AGENTS.md"), "# Mine\n\nkeep me\n");
+      initProject({ cwd: dir });
+      const first = read("AGENTS.md");
+      expect(first.startsWith("# Mine\n\nkeep me\n\n<!-- spec-rails:start -->")).toBe(true);
+      expect(first).toContain("openspec/spec-rails/AGENTS.md");
+      fs.writeFileSync(p("AGENTS.md"), first.replace("Never edit", "STALE") + "tail\n");
+      initProject({ cwd: dir });
+      const second = read("AGENTS.md");
+      expect(second).toContain("Never edit");
+      expect(second).not.toContain("STALE");
+      expect(second.endsWith("tail\n")).toBe(true);
+      expect(second.match(/spec-rails:start/g)).toHaveLength(1);
+      fs.rmSync(p("AGENTS.md"));
+      initProject({ cwd: dir });
+      expect(read("AGENTS.md")).toMatch(/^<!-- spec-rails:start -->/);
     });
 
     it("removes .git/hooks/pre-commit.legacy (REQ-OSA-46)", () => {

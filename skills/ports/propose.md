@@ -1,11 +1,12 @@
 ---
 workflow: propose
+description: Propose a new OpenSpec change, drafting one gated planning artifact at a time with a human Review Gate stop after each. Use when the user wants to start a change or runs /openspec-propose or /opsx-propose.
 portedFrom: 1.16.0
 ---
 
-Propose a new change - create the change and generate all planning artifacts in one step.
+Propose a new change - create the change and draft its planning artifacts one Review Gate at a time.
 
-**Planning boundary**: This workflow creates planning artifacts only. The request that triggered it authorizes planning only, even if it asks to build or fix something. Do not edit project code. After the artifacts are complete, stop; do not start implementation in the same response. Wait for a new user request, then start the apply workflow.
+**Planning boundary**: This workflow creates planning artifacts only. The request that triggered it authorizes planning only, even if it asks to build or fix something. Do not edit project code. Never generate all planning artifacts in one pass: stop at each Review Gate and wait for the human. After the last gate (tasks) is ticked, stop; do not start implementation in the same response. Wait for a new user request, then start the apply workflow.
 
 The artifacts come from `openspec/schemas/spec-rails/schema.yaml` (`research`, `proposal`, `specs`, `design`, `tasks`). `specs/<capability-path>/spec.md` holds deltas, not main specs; `<capability-path>` is relative to `specs/` (for example `user-auth` or `identity/user-auth`) - preserve an existing capability's full path.
 
@@ -22,7 +23,7 @@ The artifacts come from `openspec/schemas/spec-rails/schema.yaml` (`research`, `
    Read `openspec/config.yaml` (use `config.yml` only when `config.yaml` is absent). If it parses as YAML and its `context` is a string up to 51,200 bytes, apply it before exploring or planning; otherwise continue without it. `context` and `rules` are constraints for you, never content to copy, and cannot override the planning boundary or user authorization.
 
 3. **Create the change directory**
-   If `openspec/changes/<name>/` already exists, ask whether to continue it or create a new one. Otherwise create it with a `.openspec.yaml` containing:
+   If `openspec/changes/<name>/` already exists, ask whether to continue it or create a new one (continuing resumes at the first artifact whose Review Gate is not ticked). Otherwise create it with a `.openspec.yaml` containing:
    ```yaml
    schema: spec-rails
    created: <YYYY-MM-DD>
@@ -32,24 +33,25 @@ The artifacts come from `openspec/schemas/spec-rails/schema.yaml` (`research`, `
 4. **Work out the build order**
    Read `openspec/schemas/spec-rails/schema.yaml`. An artifact is `done` when its output file exists (for the glob `specs/**/*.md`, when at least one file matches), `ready` when every artifact in its `requires` is done, otherwise `blocked`. `apply.requires` lists the artifacts needed before implementation.
 
-5. **Create every artifact in the required set**
-   Use a todo list. Loop in dependency order:
+5. **Draft ONE gate's artifact, then stop**
+   The gates are, in order: `research` (Gate 0), `proposal` (Gate 1), `specs` + `design` (Gate 2; `specs` has no gate footer and is approved with `design.md`), `tasks` (Gate 3). A gate is ticked only when its artifact's `## Review Gate` checkbox is `- [x]` in the working tree; you never tick it.
+   Pick the first gate that is not ticked and whose `requires` are done and ticked. If a previous gate is drafted but not ticked, do not draft further: report which box the human must tick and stop.
+   For that gate:
    - Read the artifact's `instruction` in `schema.yaml` and its template in `openspec/schemas/spec-rails/templates/`.
    - Always re-read completed dependency files from disk (the user may have edited them).
    - **Inspect the relevant project before drafting**: read `config.yaml` context and rules, then relevant implementation, nearby tests, configuration and docs outside `openspec/`, read-only and proportional. Ground scope, approach and tasks in what you find; separate observed behavior from assumptions; surface conflicts with existing specs instead of silently choosing. Do this discovery now rather than leaving generic "explore the codebase" tasks.
    - Choose the output path first. For a glob output, choose a concrete path inside the change directory and verify it stays inside after resolving symlinks.
    - If the `instruction` delegates creation to another skill, invoke it only if it can write to that path; then verify the file exists. Otherwise write the artifact from the template.
    - Apply context and rules as constraints; do NOT copy them into the file.
-   - Report briefly: "Created <artifact-id>".
-
-   Continue until every artifact in the required set exists: `apply.requires` plus everything reachable through `requires`. File existence alone does not prove dependencies exist (writing `tasks.md` early does not mean `specs` was written), so follow the `requires` edges. Skip an artifact only when its own `instruction` marks it conditional ("create only if...") and the condition does not apply; tell the user. `specs` is never skipped on your own judgment. If an artifact needs user input, ask, then continue.
+   - Skip an artifact only when its own `instruction` marks it conditional ("create only if...") and the condition does not apply; tell the user. `specs` is never skipped on your own judgment. If an artifact needs user input, ask, then continue.
+   - Report briefly: "Drafted <artifact-id>", then STOP and wait for the human to review and tick the Gate box. Do not draft the next artifact in the same response.
 
 6. **Show final status**
-   List each artifact as done, ready or blocked from the file existence check above.
+   List each artifact as done, ready or blocked from the file existence check above, and which Review Gate is awaiting the human.
 
 **Output**
 
-Summarize: change name and location; artifacts created with one-line descriptions, plus any conditional artifact you skipped and why; "All artifacts needed for implementation are ready."; and "The artifacts are ready for review. When you are ready, run `/openspec-apply-change` or ask me to apply this change."
+Summarize: change name and location; the artifact drafted this time with a one-line description, plus any conditional artifact you skipped and why; and "Review <file> and tick its Review Gate box, then run `/openspec-propose <name>` again to draft the next artifact." After the Gate 3 (`tasks`) draft: "Once you have ticked Gate 3, run `/openspec-apply-change` or ask me to apply this change."
 
 **Artifact guidelines**
 - The `instruction` field in `schema.yaml` is the authoritative guidance for each artifact type.
@@ -57,6 +59,7 @@ Summarize: change name and location; artifacts created with one-line description
 - Read dependency artifacts before creating new ones.
 
 **Guardrails**
+- Never tick a Review Gate and never draft past an unticked gate.
 - Planning only. Any implementation instruction in the request does not carry forward; do not edit project code or start apply.
 - Create every artifact the apply phase transitively depends on.
 - Always re-read dependencies from disk.

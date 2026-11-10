@@ -64,7 +64,17 @@ export const OWNED = {
   preCommit: ".pre-commit-config.yaml",
   ci: ".github/workflows/spec-rails-ci.yml",
   gitignore: ".gitignore",
+  agents: "AGENTS.md",
 } as const;
+export const AGENTS_BLOCK_START = "<!-- spec-rails:start -->";
+export const AGENTS_BLOCK_END = "<!-- spec-rails:end -->";
+export const AGENTS_BLOCK = `${AGENTS_BLOCK_START}
+## Spec-Rails
+
+Before any work, read \`openspec/spec-rails/AGENTS.md\` (always-on guardrails) and \`openspec/spec-rails/WORKFLOW.md\` (protocol).
+Never edit on \`main\`/\`master\`; never tick a human Review Gate.
+${AGENTS_BLOCK_END}
+`;
 export const LEGACY_PATHS: readonly string[] = [
   "spec-rails.config.json",
   "rails.conf",
@@ -74,6 +84,9 @@ export const LEGACY_PATHS: readonly string[] = [
   "openspec/spec-rails/spec-rails-verify",
   "openspec/spec-rails/mutation",
   "docs/spec-rails/WORKFLOW.md",
+  "docs/spec-rails/GUIDE.md",
+  "docs/spec-rails/COMMANDS.md",
+  "docs/spec-rails/RAILS.md",
 ];
 export const LEGACY_SKILL_DIR = ".github/skills";
 export const LEGACY_SKILL_PREFIX = "opsx-";
@@ -89,52 +102,6 @@ export function findAssetRoot(currentDir: string = path.dirname(fileURLToPath(im
     return distRoot;
   }
   return devRoot;
-}
-
-export function developerGuideDocs(): Record<string, string> {
-  const guide = `# Spec-Rails Workflow Guide
-
-## Lanes
-- **Feature Lane (\`feat/<id>-<slug>\`)**: Gated feature progression (Gates 0 → 4).
-- **Bugfix Lane (\`fix/<slug>\`)**: Zero-contamination bug isolation with red test reproduction (Gates B1 → B3).
-- **Chore Lane (\`chore/<slug>\`)**: Zero behavior change tasks (docs, maintenance).
-
-## Sequential Gate Enforcement
-- **Gate 0**: Research & Options Matrix
-- **Gate 1**: Proposal & Intent
-- **Gate 2**: Architecture Design & Living Spec Delta
-- **Gate 3**: Tasks DAG Breakdown & Red-Green-Refactor Plan
-- **Gate 4**: Verification & Evidence Check
-- **Gate 5 / 6**: Stream Merges & Final Delivery
-
-Direct commits to \`main\` or \`master\` are strictly blocked by branch protection.
-`;
-
-  const commands = `# Spec-Rails CLI Commands
-
-## Commands
-
-### \`spec-rails init\`
-Set up Spec-Rails in a repository. When \`openspec/\` is absent it first runs the pinned local \`openspec init\`; re-running is safe and changes nothing once the repository is converged.
-\`\`\`bash
-spec-rails init [dir] [--tools <list>]
-\`\`\`
-- \`--tools\`: comma-separated tool list forwarded to \`openspec init --tools\` (default \`agents\`).
-`;
-
-  const rails = `# Spec-Rails Testing Rails
-
-## Minimum Thresholds
-- **Coverage**: $\\ge 95%$ line / branch coverage.
-- **Mutation Kill Score**: $\\ge 95%$ mutation score.
-
-Wire the tools of your stack into your own test command, pre-commit hooks and CI; see \`openspec/spec-rails/TODO.md\`.
-`;
-  return {
-    "docs/spec-rails/GUIDE.md": guide,
-    "docs/spec-rails/COMMANDS.md": commands,
-    "docs/spec-rails/RAILS.md": rails,
-  };
 }
 
 const indentOf = (line: string): number => line.length - line.trimStart().length;
@@ -251,7 +218,19 @@ export function planInit(existing: Snapshot, assets: Assets): Plan {
   write(OWNED.todo, assets.todo, true);
   write(OWNED.makefile, assets.makefile, true);
   write(OWNED.gitignore, addWorktreesIgnore(have[OWNED.gitignore] ?? ""));
+  write(OWNED.agents, upsertAgentsBlock(have[OWNED.agents] ?? ""));
   return { actions, writes, removals };
+}
+
+// Replaces the marked block in place, or appends it; text outside the markers is never touched.
+export function upsertAgentsBlock(content: string): string {
+  const start = content.indexOf(AGENTS_BLOCK_START);
+  const end = content.indexOf(AGENTS_BLOCK_END, start + 1);
+  if (start !== -1 && end !== -1) {
+    return content.slice(0, start) + AGENTS_BLOCK.trimEnd() + content.slice(end + AGENTS_BLOCK_END.length);
+  }
+  if (content.trim() === "") return AGENTS_BLOCK;
+  return `${content.trimEnd()}\n\n${AGENTS_BLOCK}`;
 }
 
 export const OVERLAY_NAMES: Record<string, string> = {
@@ -317,7 +296,10 @@ export function planOverlay(files: Record<string, string>, ports: Record<string,
     }
     const { head } = splitFrontmatter(files[rel]);
     const portBody = splitFrontmatter(port).body.replace(/^\s+/, "").replace(/\s*$/, "\n");
-    const cleaned = head.replace(DROPPED_FRONTMATTER, "");
+    const description = /^description:[ \t]*(.+?)[ \t]*$/m.exec(splitFrontmatter(port).head)?.[1];
+    const cleaned = head
+      .replace(DROPPED_FRONTMATTER, "")
+      .replace(/^description:([ \t]*)("?).*$/m, (line, sp, q) => (description === undefined ? line : `description:${sp}${q ? JSON.stringify(description) : description}`));
     const content = cleaned === "" ? portBody : `${cleaned}\n${portBody}`;
     actions.push(content === files[rel] ? { kind: "skipped", path: rel } : { kind: "updated", path: rel, content });
   }
@@ -408,7 +390,7 @@ function readTree(dir: string, prefix = ""): Record<string, string> {
 
 const readText = (file: string): string => fs.readFileSync(file, "utf-8");
 
-function loadAssets(root: string): Assets {
+export function loadAssets(root: string): Assets {
   const managed: Record<string, string> = {};
   for (const { src, dest } of MANAGED_SOURCES) {
     const full = path.join(root, src);
@@ -418,7 +400,6 @@ function loadAssets(root: string): Assets {
       managed[dest] = readText(full);
     }
   }
-  Object.assign(managed, developerGuideDocs());
   return {
     managed,
     todo: readText(path.join(root, "templates/TODO.md")),

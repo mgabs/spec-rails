@@ -1,6 +1,6 @@
 {
   "name": "spec-rails",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Spec-Driven, Testing-Railed Development Engine for OpenSpec",
   "type": "module",
   "bin": {
@@ -19,7 +19,8 @@
     "build": "tsup",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "sync:self": "node scripts/sync-self.mjs"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^10.1.1",

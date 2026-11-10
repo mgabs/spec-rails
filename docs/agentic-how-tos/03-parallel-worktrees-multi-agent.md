@@ -1,7 +1,7 @@
 # Agentic How-To 03: Parallel Worktrees, Streams & Candidate Bake-Off
 
 ## Purpose
-Run independent slices of one feature in parallel, each subagent in its own Git worktree and branch, then integrate them without contamination. Includes the optional candidate bake-off for high-uncertainty slices. Gate rules are in `openspec/spec-rails/WORKFLOW.md` (Rule 3); summaries in `docs/spec-rails/GUIDE.md`.
+Run independent slices of one feature in parallel, each subagent in its own Git worktree and branch, then integrate them without contamination. Includes the optional candidate bake-off for high-uncertainty slices. Gate rules are in `openspec/spec-rails/WORKFLOW.md` (Rule 3).
 
 ## Preconditions
 - Gate 3 is **ticked by a human** in `tasks.md`, and its Streams & Worktrees table partitions orthogonal work with no shared files.
@@ -17,7 +17,7 @@ Run independent slices of one feature in parallel, each subagent in its own Git 
 - Do not touch files owned by another stream; shared contracts are locked at Gate 2.
 - Use declarative command shapes, never `cd <dir> && <cmd>`: `git -C .worktrees/<id>-<stream> <cmd>`, `npm --prefix .worktrees/<id>-<stream> <cmd>`, `cargo --manifest-path .worktrees/<id>-<stream>/Cargo.toml <cmd>`, `make -C .worktrees/<id>-<stream> <target>`.
 - Zero polling: dispatch long-running work (tests, mutation) and end the turn; wait for the reactive wakeup instead of looping on status or logs.
-- Tiered commits: inside a stream worktree, intermediate atomic commits MAY use `--no-verify`. Before any stream merge, feature merge or PR, hooks and the full rails run with zero bypass.
+- Never `--no-verify`, even in a stream worktree; hooks and the full rails run on every commit and merge.
 
 ## 2. Dispatch
 
@@ -28,7 +28,7 @@ git worktree list
 ```
 Expected: the list shows the repo root plus both worktrees on their stream branches.
 
-Point each subagent's workspace at its worktree path (in Antigravity / AGY, `Workspace: 'share'` or the worktree path). Give each: its slice from `tasks.md`, the relevant delta specs, the locked contracts, and the rails thresholds: coverage >= 95%, mutation kill >= 95%. Then end your turn; do not poll.
+Point each subagent's workspace at its worktree path (or its workspace setting, if your tool has one). Give each: its slice from `tasks.md`, the relevant delta specs, the locked contracts, and the rails thresholds: coverage >= 95%, mutation kill >= 95%. Then end your turn; do not poll.
 
 ## 3. Integrate
 
@@ -44,7 +44,7 @@ git branch -d feat/w1-2/storage
 git worktree prune
 ```
 
-Rebase each later stream onto the updated feature branch before merging it, resolve conflicts additively, and re-run its rails. If the CLI is installed, `openspec validate <change> --strict` after each rebase; otherwise re-read the delta specs against the schema. Finally tick the integration items in `tasks.md` with `Evidence:` and continue with Gate 4 in [02](02-drive-feature-lifecycle.md).
+Rebase each later stream onto the updated feature branch before merging it, resolve conflicts additively, and re-run its rails. Run `openspec validate <change> --strict` after each rebase; if the OpenSpec CLI is unavailable, re-read the delta specs against the schema by hand. Finally tick the integration items in `tasks.md` with `Evidence:` and continue with Gate 4 in [02](02-drive-feature-lifecycle.md).
 
 Verify: `git worktree list` shows only the repo root; `git branch --list 'feat/w1-2/*'` is empty.
 
@@ -63,7 +63,7 @@ Verify: `git worktree list` shows only the repo root; `git branch --list 'feat/w
 - [ ] One agent per worktree; stay inside it; never touch another stream's files.
 - [ ] Never tick a Review Gate box.
 - [ ] Rebase, re-run rails, `--ff-only`, then remove worktree, delete branch, `git worktree prune`, after every merge.
-- [ ] `--no-verify` only for intermediate commits inside a stream worktree, never for merges.
+- [ ] Never `--no-verify`.
 - [ ] No polling loops; fire and halt.
 
 ---
@@ -72,8 +72,6 @@ Verify: `git worktree list` shows only the repo root; `git branch --list 'feat/w
 
 For high-uncertainty or algorithmic slices, run competing candidates in parallel worktrees instead of one stream. Standard features and chores skip this.
 
-> [!TIP]
-> **Suggested Watch**: [Lead Architect Reveals His Rules for Coding Agents (Beyond Coding #272)](https://www.youtube.com/watch?v=mkN4uRZYPfs) — Carlos Kelkboom on scoping AI coding agents, contract scaffolding, and parallel worktrees.
 
 ### 1. Spawn Candidate Worktrees
 ```bash

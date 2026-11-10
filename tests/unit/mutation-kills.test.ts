@@ -11,7 +11,6 @@ import {
   scanOverlayCandidates,
   bootstrapOpenspec,
   findAssetRoot,
-  developerGuideDocs,
   type Runner,
   type Assets,
 } from "../../src/commands/init.js";
@@ -86,12 +85,6 @@ describe("findAssetRoot", () => {
 });
 
 describe("generated docs and planInit edge cases", () => {
-  it("developer docs carry their content", () => {
-    const docs = developerGuideDocs();
-    expect(docs["docs/spec-rails/COMMANDS.md"]).toContain("spec-rails init [dir] [--tools <list>]");
-    expect(docs["docs/spec-rails/RAILS.md"]).toContain("Mutation Kill Score");
-  });
-
   it("keeps a spec-rails schema line with trailing spaces and whitespace-only .gitignore", () => {
     const plan = planInit({ files: { "openspec/config.yaml": "schema: spec-rails  \nx: 1\n", ".gitignore": "  \n" }, legacy: [] }, assets);
     expect(plan.writes["openspec/config.yaml"]).toBeUndefined();

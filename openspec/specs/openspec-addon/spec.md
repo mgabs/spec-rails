@@ -214,7 +214,7 @@ The self-copy sync test MUST complete within 2 seconds.
 - **THEN** it completes within 2 seconds
 
 ### Requirement: REQ-OSA-23 Docs Accuracy
-README, `docs/` and `skills/` MUST NOT instruct manual copying of schema templates into a change, MUST describe change creation through `openspec new change` and artifact generation through `openspec instructions` or `/opsx-*`, and every relative markdown link in them MUST resolve to an existing file.
+README, `docs/` and `skills/` MUST NOT instruct manual copying of schema templates into a change, MUST describe change creation through `openspec new change` and artifact generation through `openspec instructions` or the `openspec-*` skills, and every relative markdown link in them MUST resolve to an existing file.
 
 #### Scenario: Broken link detected
 - **WHEN** a doc links to a missing file
@@ -265,7 +265,7 @@ Delivery status MUST live in `docs/ROADMAP.md` (template `templates/roadmap.md`)
 - **THEN** reviewers expect them under `docs/bug-reports/`
 
 ### Requirement: REQ-OSA-32 Installer CLI Flags and Symlink Resolution
-`spec-rails` MUST expose only the `init [dir] [--tools <list>]` command with `--help` and `--version`; it MUST resolve canonical filesystem paths using Node.js realpath APIs and MUST NOT accept `--stack` or `--force`. `init` MUST scaffold developer documentation in `docs/spec-rails/GUIDE.md`, `COMMANDS.md` and `RAILS.md`, and prune legacy `openspec/spec-rails/spec-rails-check`, `spec-rails-verify`, `rails.conf` and `spec-rails.config.json` files.
+`spec-rails` MUST expose only the `init [dir] [--tools <list>]` command with `--help` and `--version`; it MUST resolve canonical filesystem paths using Node.js realpath APIs and MUST NOT accept `--stack` or `--force`. `init` MUST prune legacy `openspec/spec-rails/spec-rails-check`, `spec-rails-verify`, `rails.conf` and `spec-rails.config.json` files.
 
 #### Scenario: Symlinked binary and CLI version
 - **GIVEN** `spec-rails` invoked via `spec-rails --version` or `spec-rails <target>`
@@ -276,11 +276,6 @@ Delivery status MUST live in `docs/ROADMAP.md` (template `templates/roadmap.md`)
 - **GIVEN** a target directory where `openspec/` does not exist
 - **WHEN** `spec-rails init` runs
 - **THEN** it exits non-zero when `openspec` is also unavailable, otherwise it bootstraps `openspec/` through REQ-POS-6
-
-#### Scenario: Scaffolds target developer guide
-- **GIVEN** a target directory
-- **WHEN** `spec-rails init` runs
-- **THEN** it creates `docs/spec-rails/GUIDE.md`, `docs/spec-rails/COMMANDS.md`, and `docs/spec-rails/RAILS.md`
 
 #### Scenario: Pruning legacy shell scripts and duplicate config
 - **GIVEN** an existing repository containing legacy `openspec/spec-rails/spec-rails-check`, `spec-rails-verify`, `rails.conf` or `spec-rails.config.json`
@@ -406,20 +401,20 @@ The CI template MUST NOT call `spec-rails` or `openspec`, MUST NOT install eithe
 - **THEN** it contains no `spec-rails` or `openspec` invocation or install step, no `make test` step, and stack steps are comments
 
 ### Requirement: REQ-OSA-50 Agent Skill Footprint Docs
-Docs MUST state that `/opsx-*` commands and `openspec-*` skills are interchangeable, advise committing `.claude/`, `.agents/` and `.github/skills`, and advise keeping skills only for tools in use.
+Docs MUST name the `openspec-*` skills as the way to drive changes, advise committing `.claude/`, `.agents/` and `.github/skills`, and advise keeping skills only for tools in use.
 
-#### Scenario: Docs document both names
-- **GIVEN** `docs/how-tos/05-configure-ai-agents.md`
+#### Scenario: Docs document skill names
+- **GIVEN** `docs/agentic-how-tos/05-configure-ai-agents.md`
 - **WHEN** it is read
-- **THEN** it documents both name forms and the commit-skills guidance
+- **THEN** it documents the skill names and the commit-skills guidance
 
-### Requirement: REQ-OSA-51 Worktree Intermediate Commit Rails
-In multi-agent and parallel development workflows, intermediate atomic commits within isolated Git worktrees (`.worktrees/<id>-<stream>`) MAY bypass local commit hooks (`git commit --no-verify`) to facilitate fine-grained test-driven development (such as committing failing Red tests); however, stream merges into the base feature branch, feature merges into `main`, and Gate 4 verification MUST strictly enforce all pre-commit hooks and testing rails with zero bypass.
+### Requirement: REQ-OSA-51 Zero-Bypass Commit Rails
+The protocol MUST forbid `git commit --no-verify` and `-n` everywhere, including isolated stream worktrees (`.worktrees/<id>-<stream>`). A Red test MUST be committed together with its Green code instead of bypassing hooks.
 
-#### Scenario: Intermediate slice commit in worktree
+#### Scenario: Worktree commit still runs hooks
 - **GIVEN** an isolated Git worktree under `.worktrees/`
-- **WHEN** an intermediate TDD slice or Red reproduction commit is created
-- **THEN** `--no-verify` is permitted to commit failing Red tests or partial slice progress without triggering full pre-commit blocks
+- **WHEN** an intermediate TDD slice is committed
+- **THEN** the commit runs all pre-commit hooks and `--no-verify` is not permitted
 
 #### Scenario: Stream merge zero-bypass enforcement
 - **GIVEN** a completed stream branch in a worktree ready for integration
@@ -479,7 +474,7 @@ Generated `.pre-commit-config.yaml` hooks and `.github/workflows/spec-rails-ci.y
 - **THEN** its content is unchanged
 
 ### Requirement: REQ-OSA-57 Stale Artifact Cleanup
-`spec-rails init` MUST remove stale artifacts from earlier versions: the `spec-rails-check`, `spec-rails-verify` and `check-lgtm-directives` pre-commit hooks; the legacy files `spec-rails.config.json`, `rails.conf`, `mutmut.ini`, `openspec/spec-rails/rails.conf`, `openspec/spec-rails/spec-rails-check`, `openspec/spec-rails/spec-rails-verify`, `openspec/spec-rails/mutation/` and `docs/spec-rails/WORKFLOW.md`; and `opsx-*` entries under `.github/skills/`; and replace a `spec-rails-ci.yml` that invokes `spec-rails`, `openspec` or `openspec/spec-rails/spec-rails-*` with the skeleton. Shipped docs (`rules/WORKFLOW.md` and `openspec/spec-rails/WORKFLOW.md`) MUST NOT reference `rails.conf`, "checks" or mutmut. Re-running `init` MUST produce no further changes.
+`spec-rails init` MUST remove stale artifacts from earlier versions: the `spec-rails-check`, `spec-rails-verify` and `check-lgtm-directives` pre-commit hooks; the legacy files `spec-rails.config.json`, `rails.conf`, `mutmut.ini`, `openspec/spec-rails/rails.conf`, `openspec/spec-rails/spec-rails-check`, `openspec/spec-rails/spec-rails-verify`, `openspec/spec-rails/mutation/` and `docs/spec-rails/{WORKFLOW,GUIDE,COMMANDS,RAILS}.md`; and `opsx-*` entries under `.github/skills/`; and replace a `spec-rails-ci.yml` that invokes `spec-rails`, `openspec` or `openspec/spec-rails/spec-rails-*` with the skeleton. Shipped docs (`rules/WORKFLOW.md` and `openspec/spec-rails/WORKFLOW.md`) MUST NOT reference `rails.conf`, "checks" or mutmut. Re-running `init` MUST produce no further changes.
 
 #### Scenario: Stale workflow replaced
 - **GIVEN** a `spec-rails-ci.yml` calling `sh openspec/spec-rails/spec-rails-verify`
@@ -503,3 +498,11 @@ Generated `.pre-commit-config.yaml` hooks and `.github/workflows/spec-rails-ci.y
 - **GIVEN** a repository with a stale workflow and a root `mutmut.ini`
 - **WHEN** `spec-rails init` runs
 - **THEN** the output lists the removed `mutmut.ini`, the updated workflow, the created `TODO.md` and the reminder to complete it
+
+### Requirement: REQ-OSA-59 Root AGENTS.md Managed Block
+`spec-rails init` MUST ensure the root `AGENTS.md` contains a block delimited by `<!-- spec-rails:start -->` and `<!-- spec-rails:end -->` that points agents to `openspec/spec-rails/AGENTS.md` and `WORKFLOW.md`. It MUST create the file when absent, append the block when the markers are absent, replace only the block's content otherwise, and never modify text outside the markers.
+
+#### Scenario: Existing AGENTS.md is preserved
+- **GIVEN** a root `AGENTS.md` with developer-written content and no markers
+- **WHEN** `spec-rails init` runs twice
+- **THEN** the developer content is unchanged and exactly one managed block follows it

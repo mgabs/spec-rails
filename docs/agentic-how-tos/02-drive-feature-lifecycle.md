@@ -9,18 +9,18 @@ Deliver a behavior change as `feat/<id>-<slug>` through five human-reviewed gate
 - The human has given a work item or description. If it is vague, speculative or larger than one capability, push back (default answer is "No") before drafting.
 - Real `make lint`, `make test`, `make coverage`, `make mutation` (or your stack's equivalents) exist. If they are still echo placeholders, tell the human; rails evidence will otherwise be meaningless.
 
-## Commands: `/opsx-*` skills (CLI-free)
+## Commands: `openspec-*` skills (CLI-free)
 After `init`, the workflows run by reading files; no `openspec` CLI is needed.
 
 | Command (or equivalent skill) | Does | Gate rule |
 | :-- | :-- | :-- |
-| `/opsx-explore` (`openspec-explore`) | Think and investigate; no artifacts forced | any time |
-| `/opsx-propose` (`openspec-propose`) | Creates `openspec/changes/<id>-<slug>/` with `.openspec.yaml` and drafts artifacts from `schema.yaml` | **Draft one artifact, then stop** for the gate (see below) |
-| `/opsx-apply` (`openspec-apply-change`) | Implements pending `tasks.md` checkboxes | only after Gate 3 is ticked by a human |
-| `/opsx-archive` (`openspec-archive-change`) | Syncs delta specs into `openspec/specs/` and moves the change to `openspec/changes/archive/` | only after Gate 4 prerequisites below |
-| `/opsx-sync`, `/opsx-update` | Sync deltas without archiving; revise artifacts | as needed |
+| `openspec-explore` | Think and investigate; no artifacts forced | any time |
+| `openspec-propose` | Creates `openspec/changes/<id>-<slug>/` with `.openspec.yaml` and drafts artifacts from `schema.yaml` | **Draft one artifact, then stop** for the gate (see below) |
+| `openspec-apply-change` | Implements pending `tasks.md` checkboxes | only after Gate 3 is ticked by a human |
+| `openspec-archive-change` | Syncs delta specs into `openspec/specs/` and moves the change to `openspec/changes/archive/` | only after Gate 4 prerequisites below |
+| `openspec-sync-specs`, `openspec-update-change` | Sync deltas without archiving; revise artifacts | as needed |
 
-The generic propose flow can draft every artifact in one pass; Spec-Rails forbids that. Draft **one artifact at a time** and stop after each; continue only when the human has ticked that artifact's Review Gate and told you to proceed. Other generated workflows (not listed above) still need the `openspec` CLI. If the CLI is installed, `openspec validate <change> --strict` and `openspec status --change <change>` are optional extra checks; without it, read `schema.yaml` and the change folder.
+The Spec-Rails propose port drafts one gate at a time (the upstream generic flow drafts everything in one pass; Spec-Rails forbids that). Draft **one artifact at a time** and stop after each; continue only when the human has ticked that artifact's Review Gate and told you to proceed. Other generated workflows (not listed above) still need the `openspec` CLI. If the CLI is installed, `openspec validate <change> --strict` and `openspec status --change <change>` are optional extra checks; without it, read `schema.yaml` and the change folder.
 
 ## Steps
 
@@ -29,7 +29,7 @@ The generic propose flow can draft every artifact in one pass; Spec-Rails forbid
 2. ```bash
    git checkout -b feat/w1-2-data-ingestion
    ```
-3. Run `/opsx-propose` for `w1-2-data-ingestion`. It creates `openspec/changes/w1-2-data-ingestion/.openspec.yaml` (`schema: spec-rails`, `created: <date>`). Stop after the first artifact.
+3. Run `openspec-propose` for `w1-2-data-ingestion`. It creates `openspec/changes/w1-2-data-ingestion/.openspec.yaml` (`schema: spec-rails`, `created: <date>`). Stop after the first artifact.
 
 Artifact order (from `schema.yaml`): `research` -> `proposal` -> `specs` -> `design` -> `tasks`. Each template ends with an unticked `## Review Gate` box.
 
@@ -48,7 +48,7 @@ Artifact order (from `schema.yaml`): `research` -> `proposal` -> `specs` -> `des
 - `specs/<capability-path>/spec.md` (delta, no gate footer). Headers: `## ADDED|MODIFIED|REMOVED|RENAMED Requirements`; each requirement `### Requirement: REQ-<DOMAIN>-<N> <Name>` (or `NFR-<DOMAIN>-<N>`), body with `MUST`/`SHALL`, at least one `#### Scenario:` using exactly four hashtags with GIVEN/WHEN/THEN. MODIFIED/REMOVED repeat the existing header verbatim; deprecated requirements keep the header and start the body with `**[DEPRECATED by <change>]**`; keys are never reused. A new capability's delta starts with `## Purpose`. Preserve an existing capability's full path.
 - `design.md`: Overview & Invariants; Domain Models, State & Interface Contracts; Architecture & Data Flow; Boundary Rules (pure core vs I/O shell); Concurrency, Latency & Resource Budgets matching each `NFR-*`; Testing Strategy & Concrete Test Cases covering every `REQ-*`/`NFR-*`.
 - Stop for the human to tick **Gate 2 Approval** (in `design.md`).
-- After approval, commit contract scaffolding (types, interfaces, schemas, empty signatures) as the contract for parallel work.
+- Contract scaffolding (types, interfaces, schemas, empty signatures) is specified in `design.md` here and committed as task 3.0 during apply, before any slice logic.
 
 ### Gate 3: `tasks.md`
 - Draft only after Gate 2 is ticked. Sections: Dependency DAG, Streams & Worktrees (`.worktrees/<id>-<stream>`), per-slice tasks in fixed order (3.0 Contract scaffolding, 3.1 Red, 3.2 Green, 3.3 Coverage and Mutation), Integration & Rebase Plan.
@@ -64,7 +64,7 @@ git commit -m "docs(w1-2): plan data ingestion (Gates 0-3)"
 ```
 Hooks must pass (`pre-commit` runs `make lint` / `make test`).
 
-### Apply: vertical slices (`/opsx-apply`)
+### Apply: vertical slices (`openspec-apply-change`)
 Run only if Gate 3 is ticked in the file on disk. For each slice, in order:
 1. **Contract scaffolding**: commit interfaces/types/signatures; tick 3.0.
 2. **Red**: write tests for every `REQ-*`/`NFR-*` and scenario; run `make test`; it must fail **for the expected reason**. Keep uncommitted. Paste the failing output in the task note: `- [x] 3.1 ... Evidence: make test -> 3 failed (REQ-X-1 not implemented)`.
@@ -85,7 +85,7 @@ Task tick format: `- [x] 3.2 Green implementation ... Evidence: make test -> 42 
    (adapt the test directory to the repo). Any untested key blocks Gate 4.
 4. Human comprehension check: the reviewer must be able to explain every line; delete and revert what they cannot.
 5. Tick completed slice items and final integration task 4.2 with `Evidence:`. 4.1 (comprehension) is ticked only after the human confirms.
-6. Run `/opsx-archive` (add `openspec validate w1-2-data-ingestion --strict` first if the CLI exists). It merges deltas into `openspec/specs/<capability>/spec.md` and moves the change to `openspec/changes/archive/YYYY-MM-DD-w1-2-data-ingestion/`.
+6. Run `openspec-archive-change` (run `openspec validate w1-2-data-ingestion --strict` first; if the CLI is unavailable, re-read the delta specs against the schema by hand). It merges deltas into `openspec/specs/<capability>/spec.md` and moves the change to `openspec/changes/archive/YYYY-MM-DD-w1-2-data-ingestion/`.
 7. Commit once after archive, then merge:
    ```bash
    git status --short && git diff --stat
@@ -99,7 +99,7 @@ Task tick format: `- [x] 3.2 Green implementation ... Evidence: make test -> 42 
    Merging to `main` and the final PR sign-off are the human's call; stop and ask if unsure.
 
 ## Commit cadence
-One commit after planning, one per slice (or one after the code), one after archive. Exceptions: Green slice commits, rebases and stream merges.
+One commit after planning, one per slice (or one after the code), one after archive. Exceptions: the contract scaffolding commit (task 3.0), Green slice commits, rebases and stream merges.
 
 ## Expected outputs / verification
 - Each of `research.md`, `proposal.md`, `design.md`, `tasks.md` exists with its Review Gate ticked **by the human**; `specs/**/spec.md` exists.
@@ -123,11 +123,11 @@ One commit after planning, one per slice (or one after the code), one after arch
 - [ ] Verify the branch is a `feat/<id>-<slug>` lane before every edit.
 - [ ] Draft one planning artifact at a time; stop after each; never generate all in one unreviewed pass.
 - [ ] **Never tick a Review Gate box** (Gates 0–3, B1–B3). Only the human does.
-- [ ] Never run `/opsx-apply` or `/opsx-archive` before the prerequisite gates are ticked in the files on disk.
+- [ ] Never run `openspec-apply-change` or `openspec-archive-change` before the prerequisite gates are ticked in the files on disk.
 - [ ] Re-read dependency artifacts from disk before drafting; the human may have edited them.
 - [ ] Tick task boxes only with `Evidence:` (command + result) on Red/Green/Coverage/Mutation tasks; never invent evidence.
 - [ ] Red before Green; Red never committed alone; never weaken or delete assertions.
 - [ ] Out-of-Scope in `proposal.md` is binding; smallest diff wins; no speculative abstractions.
-- [ ] Never `--no-verify` outside the stream-worktree exception in 03.
+- [ ] Never `--no-verify`.
 - [ ] Rebase, re-verify, `--ff-only`; then remove worktree, delete branch, `git worktree prune`.
-- [ ] Never edit managed files under `openspec/spec-rails/`, `openspec/schemas/spec-rails/`, `docs/spec-rails/`, `docs/agentic-how-tos/`.
+- [ ] Never edit managed files under `openspec/spec-rails/`, `openspec/schemas/spec-rails/`, `docs/agentic-how-tos/`.

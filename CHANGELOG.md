@@ -4,6 +4,40 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+- The propose port drafts one gated artifact at a time and stops at each Review Gate instead of generating everything in one pass; the overlay now also replaces the generated `description:` with the port's.
+
+### Removed
+- `init` no longer writes `docs/spec-rails/GUIDE.md`, `COMMANDS.md` and `RAILS.md` (duplicates of `WORKFLOW.md`/`AGENTS.md`); existing copies are removed as legacy files.
+
+## [0.7.0] - 2026-11-10
+
+### Added
+- `init` creates the root `AGENTS.md` or maintains only its `<!-- spec-rails:start/end -->` block, pointing agents to the always-on guardrails (REQ-OSA-59).
+- `npm run sync:self` (maintainers) syncs this repository's self-copies; drifted files are kept and reported unless `-- --force`.
+- Guide templates moved to `templates/spec-rails-docs/`.
+
+### Changed
+- `--no-verify` is forbidden everywhere, including stream worktrees (REQ-OSA-51 now states the prohibition).
+- Merging into `main` may go through a pull request instead of a local `--ff-only`.
+- Docs refer to `openspec-*` skill names; `/opsx-*` stay as command aliases.
+- `docs/WAY_OF_WORKING.md` slimmed to a summary of `WORKFLOW.md`; `docs/ROADMAP.md` trimmed to open items.
+- Gate ranges written as `0–4` and `B1–B3`.
+
+### Fixed
+- Generated `GUIDE.md` listed stale Gates 5/6; `RAILS.md` had broken math markup; the bugfix step no longer uses `cd`; `ROADMAP.md` is no longer listed as a created file.
+
+### Removed
+- `docs/how-tos/` (superseded by `docs/agentic-how-tos/`), `docs/designs/`, and vendor-specific (Antigravity, `~/.gemini`) and video references.
+
+## [0.6.1] - 2026-11-10
+
+### Added
+- Rule precedence in `rules/AGENTS.md`, `rules/WORKFLOW.md` and how-to 05: the stricter rule wins; if unclear or mutually exclusive, the human decides.
+
+### Removed
+- OpenSpec-generated `.github/workflows/copilot-setup-steps.yml` from this repository.
+
 ## [0.6.0] - 2026-11-10
 
 ### Added

@@ -21,18 +21,17 @@ describe("REQ-OSA-49 CI and hook templates", () => {
 });
 
 describe("REQ-OSA-50 docs", () => {
-  it("documents both names and commit guidance", () => {
-    const doc = fs.readFileSync(path.join(__dirname, "../../docs/how-tos/05-configure-ai-agents.md"), "utf-8");
-    expect(doc).toContain("/opsx-");
+  it("documents skill names and commit guidance", () => {
+    const doc = fs.readFileSync(path.join(__dirname, "../../docs/agentic-how-tos/05-configure-ai-agents.md"), "utf-8");
     expect(doc).toContain("openspec-");
-    expect(doc).toContain("Commit `.claude/`");
+    expect(doc).toContain("commit `.agents/`, `.claude/`");
   });
 });
 
 describe("docs describe the single init command (REQ-OSA-32)", () => {
   const root = path.join(__dirname, "../..");
   const agentic = fs.readdirSync(path.join(root, "docs/agentic-how-tos")).map((f) => `docs/agentic-how-tos/${f}`);
-  const files = ["README.md", "docs/WAY_OF_WORKING.md", "docs/WIKI.md", "docs/DESIGN.md", "docs/how-tos/01-bootstrap-new-project.md", "docs/how-tos/02-drive-feature-lifecycle.md", "docs/how-tos/03-parallel-worktrees-multi-agent.md", "docs/how-tos/04-fast-track-bugfix.md", "docs/how-tos/05-configure-ai-agents.md", ...agentic, "rules/AGENTS.md", "rules/WORKFLOW.md", "skills/spec-rails/SKILL.md", "templates/TODO.md"];
+  const files = ["README.md", "docs/WAY_OF_WORKING.md", "docs/WIKI.md", "docs/agentic-how-tos/05-configure-ai-agents.md", ...agentic, "rules/AGENTS.md", "rules/WORKFLOW.md", "skills/spec-rails/SKILL.md", "templates/TODO.md"];
   it("lists all five agentic runbooks and the index", () => {
     expect(agentic.map((f) => path.basename(f))).toEqual([
       "01-bootstrap-new-project.md",
@@ -44,7 +43,7 @@ describe("docs describe the single init command (REQ-OSA-32)", () => {
     ]);
   });
 
-  it("agentic docs link only to sibling runbooks (docs/spec-rails is referenced as plain paths)", () => {
+  it("agentic docs link only to sibling runbooks", () => {
     for (const f of agentic) {
       const links = [...fs.readFileSync(path.join(root, f), "utf-8").matchAll(/\]\((?!https?:)([^)#]+)/g)].map((m) => m[1]);
       for (const l of links) expect(l, f).toMatch(/^[\w-]+\.md$/);
